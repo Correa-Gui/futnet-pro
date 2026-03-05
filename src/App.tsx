@@ -15,6 +15,11 @@ import ResetPassword from "./pages/ResetPassword";
 
 import AdminLayout from "./layouts/AdminLayout";
 import AdminDashboard from "./pages/admin/Dashboard";
+import Courts from "./pages/admin/Courts";
+import Plans from "./pages/admin/Plans";
+import Teachers from "./pages/admin/Teachers";
+import Classes from "./pages/admin/Classes";
+import Students from "./pages/admin/Students";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
@@ -48,6 +53,11 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<AdminDashboard />} />
+              <Route path="quadras" element={<Courts />} />
+              <Route path="planos" element={<Plans />} />
+              <Route path="professores" element={<Teachers />} />
+              <Route path="turmas" element={<Classes />} />
+              <Route path="alunos" element={<Students />} />
             </Route>
 
             {/* Student routes */}
