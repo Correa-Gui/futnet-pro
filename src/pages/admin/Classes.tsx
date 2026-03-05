@@ -101,13 +101,12 @@ export default function Classes() {
   const { data: teachers = [] } = useQuery({
     queryKey: ['teachers-select'],
     queryFn: async () => {
-      const { data } = await supabase
-        .from('teacher_profiles')
-        .select('id, profiles:profiles!teacher_profiles_user_id_fkey(full_name)');
-      return (data || []).map((t: any) => ({
-        id: t.id,
-        name: Array.isArray(t.profiles) ? t.profiles[0]?.full_name : t.profiles?.full_name,
-      }));
+      const { data: tps } = await supabase.from('teacher_profiles').select('id, user_id');
+      if (!tps || tps.length === 0) return [];
+      const userIds = tps.map(t => t.user_id);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
+      const userToName = Object.fromEntries((profiles || []).map(p => [p.user_id, p.full_name]));
+      return tps.map(t => ({ id: t.id, name: userToName[t.user_id] || 'Professor' }));
     },
   });
 
