@@ -74,6 +74,8 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<StudentHome />} />
+              <Route path="aulas" element={<StudentClasses />} />
+              <Route path="presenca" element={<StudentAttendance />} />
             </Route>
 
             {/* Teacher routes */}
