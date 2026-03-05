@@ -45,6 +45,7 @@ type StudentRow = {
 export default function Students() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', phone: '', cpf: '',
@@ -104,6 +105,24 @@ export default function Students() {
     onError: (e: Error) => toast.error('Erro ao criar aluno', { description: e.message }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ student, data }: { student: StudentRow; data: typeof form }) => {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: data.full_name, phone: data.phone || null, cpf: data.cpf || null })
+        .eq('user_id', student.user_id);
+      if (profileError) throw profileError;
+
+      const { error: studentError } = await supabase
+        .from('student_profiles')
+        .update({ skill_level: data.skill_level as any, plan_id: data.plan_id || null })
+        .eq('id', student.id);
+      if (studentError) throw studentError;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['students'] }); toast.success('Aluno atualizado!'); handleClose(); },
+    onError: (e: Error) => toast.error('Erro ao atualizar aluno', { description: e.message }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('student_profiles').delete().eq('id', id);
@@ -114,7 +133,31 @@ export default function Students() {
 
   const handleClose = () => {
     setOpen(false);
+    setEditingStudent(null);
     setForm({ full_name: '', email: '', password: '', phone: '', cpf: '', skill_level: 'beginner', plan_id: '' });
+  };
+
+  const handleEdit = (s: StudentRow) => {
+    setEditingStudent(s);
+    setForm({
+      full_name: s.profile?.full_name || '',
+      email: s.profile?.email || '',
+      password: '',
+      phone: s.profile?.phone || '',
+      cpf: s.profile?.cpf || '',
+      skill_level: s.skill_level,
+      plan_id: s.plan_id || '',
+    });
+    setOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStudent) {
+      updateMutation.mutate({ student: editingStudent, data: form });
+    } else {
+      createMutation.mutate(form);
+    }
   };
 
   const filtered = students.filter((s) => {
