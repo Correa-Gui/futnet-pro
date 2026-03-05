@@ -79,6 +79,7 @@ const App = () => (
               <Route index element={<StudentHome />} />
               <Route path="aulas" element={<StudentClasses />} />
               <Route path="presenca" element={<StudentAttendance />} />
+              <Route path="faturas" element={<StudentInvoices />} />
             </Route>
 
             {/* Teacher routes */}
