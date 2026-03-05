@@ -85,6 +85,8 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<TeacherHome />} />
+              <Route path="turmas" element={<TeacherClasses />} />
+              <Route path="presenca" element={<TeacherAttendance />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />
