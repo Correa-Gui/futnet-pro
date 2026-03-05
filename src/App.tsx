@@ -78,7 +78,7 @@ const App = () => (
             }>
               <Route index element={<StudentHome />} />
               <Route path="aulas" element={<StudentClasses />} />
-              <Route path="presenca" element={<StudentAttendance />} />
+              {/* Presença removida - integrada na tela de Aulas */}
               <Route path="faturas" element={<StudentInvoices />} />
             </Route>
 
