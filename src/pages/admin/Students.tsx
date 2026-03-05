@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, Search, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -40,6 +41,7 @@ type StudentRow = {
   plan_id: string | null;
   profile: { full_name: string; email: string | null; phone: string | null; cpf: string | null; status: string };
   plan: { name: string } | null;
+  enrolledClassIds: string[];
 };
 
 export default function Students() {
@@ -49,7 +51,7 @@ export default function Students() {
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', phone: '', cpf: '',
-    skill_level: 'beginner', plan_id: '',
+    skill_level: 'beginner', plan_id: '', class_ids: [] as string[],
   });
 
   const { data: students = [], isLoading } = useQuery({
@@ -61,9 +63,22 @@ export default function Students() {
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) return [] as StudentRow[];
+
+      const studentIds = data.map(s => s.id);
       const userIds = data.map(s => s.user_id);
-      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, email, phone, cpf, status').in('user_id', userIds);
-      const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
+
+      const [profilesRes, enrollmentsRes] = await Promise.all([
+        supabase.from('profiles').select('user_id, full_name, email, phone, cpf, status').in('user_id', userIds),
+        supabase.from('enrollments').select('student_id, class_id').in('student_id', studentIds).eq('status', 'active'),
+      ]);
+
+      const profileMap = Object.fromEntries((profilesRes.data || []).map(p => [p.user_id, p]));
+      const enrollMap: Record<string, string[]> = {};
+      (enrollmentsRes.data || []).forEach(e => {
+        if (!enrollMap[e.student_id]) enrollMap[e.student_id] = [];
+        enrollMap[e.student_id].push(e.class_id);
+      });
+
       return data.map(s => ({
         id: s.id,
         user_id: s.user_id,
@@ -71,6 +86,7 @@ export default function Students() {
         plan_id: s.plan_id,
         profile: profileMap[s.user_id] || { full_name: '—', email: null, phone: null, cpf: null, status: 'active' },
         plan: s.plans,
+        enrolledClassIds: enrollMap[s.id] || [],
       })) as StudentRow[];
     },
   });
@@ -79,6 +95,14 @@ export default function Students() {
     queryKey: ['plans-select'],
     queryFn: async () => {
       const { data } = await supabase.from('plans').select('id, name').eq('is_active', true);
+      return data || [];
+    },
+  });
+
+  const { data: classes = [] } = useQuery({
+    queryKey: ['classes-select'],
+    queryFn: async () => {
+      const { data } = await supabase.from('classes').select('id, name').eq('status', 'active').order('name');
       return data || [];
     },
   });
@@ -99,9 +123,34 @@ export default function Students() {
       });
       if (error) throw error;
       if (result?.error) throw new Error(result.error);
+
+      // Enroll in selected classes
+      if (data.class_ids.length > 0) {
+        // Get the student_profile id for the new user
+        const { data: sp } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', result.user_id)
+          .single();
+        if (sp) {
+          const enrollments = data.class_ids.map(class_id => ({
+            class_id,
+            student_id: sp.id,
+            status: 'active' as const,
+          }));
+          const { error: enrollError } = await supabase.from('enrollments').insert(enrollments);
+          if (enrollError) throw enrollError;
+        }
+      }
+
       return result;
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['students'] }); toast.success('Aluno criado!'); handleClose(); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-counts'] });
+      toast.success('Aluno criado!');
+      handleClose();
+    },
     onError: (e: Error) => toast.error('Erro ao criar aluno', { description: e.message }),
   });
 
@@ -118,8 +167,41 @@ export default function Students() {
         .update({ skill_level: data.skill_level as any, plan_id: data.plan_id || null })
         .eq('id', student.id);
       if (studentError) throw studentError;
+
+      // Sync enrollments
+      const currentIds = new Set(student.enrolledClassIds);
+      const newIds = new Set(data.class_ids);
+
+      // Add new enrollments
+      const toAdd = data.class_ids.filter(id => !currentIds.has(id));
+      if (toAdd.length > 0) {
+        const enrollments = toAdd.map(class_id => ({
+          class_id,
+          student_id: student.id,
+          status: 'active' as const,
+        }));
+        const { error } = await supabase.from('enrollments').insert(enrollments);
+        if (error) throw error;
+      }
+
+      // Cancel removed enrollments
+      const toRemove = student.enrolledClassIds.filter(id => !newIds.has(id));
+      if (toRemove.length > 0) {
+        for (const classId of toRemove) {
+          await supabase.from('enrollments')
+            .update({ status: 'cancelled' as any })
+            .eq('student_id', student.id)
+            .eq('class_id', classId)
+            .eq('status', 'active');
+        }
+      }
     },
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['students'] }); toast.success('Aluno atualizado!'); handleClose(); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['students'] });
+      queryClient.invalidateQueries({ queryKey: ['enrollment-counts'] });
+      toast.success('Aluno atualizado!');
+      handleClose();
+    },
     onError: (e: Error) => toast.error('Erro ao atualizar aluno', { description: e.message }),
   });
 
@@ -134,7 +216,7 @@ export default function Students() {
   const handleClose = () => {
     setOpen(false);
     setEditingStudent(null);
-    setForm({ full_name: '', email: '', password: '', phone: '', cpf: '', skill_level: 'beginner', plan_id: '' });
+    setForm({ full_name: '', email: '', password: '', phone: '', cpf: '', skill_level: 'beginner', plan_id: '', class_ids: [] });
   };
 
   const handleEdit = (s: StudentRow) => {
@@ -147,6 +229,7 @@ export default function Students() {
       cpf: s.profile?.cpf || '',
       skill_level: s.skill_level,
       plan_id: s.plan_id || '',
+      class_ids: s.enrolledClassIds,
     });
     setOpen(true);
   };
@@ -158,6 +241,15 @@ export default function Students() {
     } else {
       createMutation.mutate(form);
     }
+  };
+
+  const toggleClass = (classId: string) => {
+    setForm(prev => ({
+      ...prev,
+      class_ids: prev.class_ids.includes(classId)
+        ? prev.class_ids.filter(id => id !== classId)
+        : [...prev.class_ids, classId],
+    }));
   };
 
   const filtered = students.filter((s) => {
@@ -195,15 +287,16 @@ export default function Students() {
                 <TableHead>Telefone</TableHead>
                 <TableHead>Nível</TableHead>
                 <TableHead>Plano</TableHead>
+                <TableHead>Turmas</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-16">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum aluno encontrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum aluno encontrado</TableCell></TableRow>
               ) : filtered.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.profile?.full_name}</TableCell>
@@ -211,6 +304,13 @@ export default function Students() {
                   <TableCell>{s.profile?.phone || '—'}</TableCell>
                   <TableCell>{SKILL_LABELS[s.skill_level] || s.skill_level}</TableCell>
                   <TableCell>{s.plan?.name || <span className="text-muted-foreground">Sem plano</span>}</TableCell>
+                  <TableCell>
+                    {s.enrolledClassIds.length > 0 ? (
+                      <Badge variant="secondary">{s.enrolledClassIds.length} turma(s)</Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">Nenhuma</span>
+                    )}
+                  </TableCell>
                   <TableCell><Badge variant={STATUS_VARIANTS[s.profile?.status] || 'secondary'}>{STATUS_LABELS[s.profile?.status] || s.profile?.status}</Badge></TableCell>
                   <TableCell className="flex gap-1">
                     <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
@@ -228,7 +328,7 @@ export default function Students() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</DialogTitle></DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
@@ -277,6 +377,33 @@ export default function Students() {
                 </Select>
               </div>
             </div>
+
+            {/* Turmas */}
+            <div className="space-y-2">
+              <Label>Turmas</Label>
+              {classes.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhuma turma ativa disponível.</p>
+              ) : (
+                <div className="rounded-md border border-input p-3 space-y-2 max-h-40 overflow-y-auto">
+                  {classes.map((c) => (
+                    <div key={c.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`class-${c.id}`}
+                        checked={form.class_ids.includes(c.id)}
+                        onCheckedChange={() => toggleClass(c.id)}
+                      />
+                      <label htmlFor={`class-${c.id}`} className="text-sm cursor-pointer flex-1">
+                        {c.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {form.class_ids.length > 0 && (
+                <p className="text-xs text-muted-foreground">{form.class_ids.length} turma(s) selecionada(s)</p>
+              )}
+            </div>
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
               <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
