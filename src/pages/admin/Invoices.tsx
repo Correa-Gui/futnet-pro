@@ -139,9 +139,11 @@ export default function AdminInvoices() {
       const skipped = studentsWithPlan.length - eligibleStudents.length;
       return { created: eligibleStudents.length, skipped };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ created, skipped }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      toast.success(`${count} faturas geradas!`);
+      let msg = `${created} fatura(s) gerada(s)!`;
+      if (skipped > 0) msg += ` ${skipped} aluno(s) já possuíam fatura e foram ignorados.`;
+      toast.success(msg);
       setBatchOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),
