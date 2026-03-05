@@ -20,6 +20,7 @@ const menuItems = [
   { title: 'Alunos', url: '/admin/alunos', icon: Users },
   { title: 'Professores', url: '/admin/professores', icon: UserCheck },
   { title: 'Planos', url: '/admin/planos', icon: CreditCard },
+  { title: 'Presença', url: '/admin/presenca', icon: ClipboardCheck },
   { title: 'Faturas', url: '/admin/faturas', icon: Receipt },
   { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
   { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
