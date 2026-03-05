@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Search } from 'lucide-react';
+import { Plus, Trash2, Search, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 const SKILL_LABELS: Record<string, string> = {
@@ -45,6 +45,7 @@ type StudentRow = {
 export default function Students() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
     full_name: '', email: '', password: '', phone: '', cpf: '',
@@ -104,6 +105,24 @@ export default function Students() {
     onError: (e: Error) => toast.error('Erro ao criar aluno', { description: e.message }),
   });
 
+  const updateMutation = useMutation({
+    mutationFn: async ({ student, data }: { student: StudentRow; data: typeof form }) => {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: data.full_name, phone: data.phone || null, cpf: data.cpf || null })
+        .eq('user_id', student.user_id);
+      if (profileError) throw profileError;
+
+      const { error: studentError } = await supabase
+        .from('student_profiles')
+        .update({ skill_level: data.skill_level as any, plan_id: data.plan_id || null })
+        .eq('id', student.id);
+      if (studentError) throw studentError;
+    },
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['students'] }); toast.success('Aluno atualizado!'); handleClose(); },
+    onError: (e: Error) => toast.error('Erro ao atualizar aluno', { description: e.message }),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from('student_profiles').delete().eq('id', id);
@@ -114,7 +133,31 @@ export default function Students() {
 
   const handleClose = () => {
     setOpen(false);
+    setEditingStudent(null);
     setForm({ full_name: '', email: '', password: '', phone: '', cpf: '', skill_level: 'beginner', plan_id: '' });
+  };
+
+  const handleEdit = (s: StudentRow) => {
+    setEditingStudent(s);
+    setForm({
+      full_name: s.profile?.full_name || '',
+      email: s.profile?.email || '',
+      password: '',
+      phone: s.profile?.phone || '',
+      cpf: s.profile?.cpf || '',
+      skill_level: s.skill_level,
+      plan_id: s.plan_id || '',
+    });
+    setOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingStudent) {
+      updateMutation.mutate({ student: editingStudent, data: form });
+    } else {
+      createMutation.mutate(form);
+    }
   };
 
   const filtered = students.filter((s) => {
@@ -169,7 +212,10 @@ export default function Students() {
                   <TableCell>{SKILL_LABELS[s.skill_level] || s.skill_level}</TableCell>
                   <TableCell>{s.plan?.name || <span className="text-muted-foreground">Sem plano</span>}</TableCell>
                   <TableCell><Badge variant={STATUS_VARIANTS[s.profile?.status] || 'secondary'}>{STATUS_LABELS[s.profile?.status] || s.profile?.status}</Badge></TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
@@ -183,22 +229,24 @@ export default function Students() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Novo Aluno</DialogTitle></DialogHeader>
-          <form onSubmit={(e) => { e.preventDefault(); createMutation.mutate(form); }} className="space-y-4">
+          <DialogHeader><DialogTitle>{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</DialogTitle></DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Maria Santos" required />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>E-mail *</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" required />
+            {!editingStudent && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>E-mail *</Label>
+                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Senha *</Label>
+                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" required minLength={6} />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label>Senha *</Label>
-                <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" required minLength={6} />
-              </div>
-            </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Telefone</Label>
@@ -231,7 +279,11 @@ export default function Students() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-              <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? 'Criando...' : 'Criar Aluno'}</Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingStudent
+                  ? (updateMutation.isPending ? 'Salvando...' : 'Salvar')
+                  : (createMutation.isPending ? 'Criando...' : 'Criar Aluno')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
