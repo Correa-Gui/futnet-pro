@@ -66,10 +66,27 @@ export default function Classes() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('classes')
-        .select('*, courts(name), teacher_profiles(id, profiles:profiles!teacher_profiles_user_id_fkey(full_name))')
+        .select('*, courts(name), teacher_profiles(id)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []) as ClassRow[];
+      // Fetch teacher names separately
+      const teacherIds = [...new Set((data || []).map((c: any) => c.teacher_profiles?.id).filter(Boolean))];
+      let teacherNames: Record<string, string> = {};
+      if (teacherIds.length > 0) {
+        const { data: tps } = await supabase.from('teacher_profiles').select('id, user_id').in('id', teacherIds);
+        if (tps) {
+          const userIds = tps.map(t => t.user_id);
+          const { data: profiles } = await supabase.from('profiles').select('user_id, full_name').in('user_id', userIds);
+          if (profiles) {
+            const userToName = Object.fromEntries(profiles.map(p => [p.user_id, p.full_name]));
+            tps.forEach(t => { teacherNames[t.id] = userToName[t.user_id] || '—'; });
+          }
+        }
+      }
+      return (data || []).map((c: any) => ({
+        ...c,
+        _teacherName: teacherNames[c.teacher_profiles?.id] || '—',
+      })) as (ClassRow & { _teacherName: string })[];
     },
   });
 
