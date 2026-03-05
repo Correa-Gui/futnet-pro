@@ -218,6 +218,7 @@ export default function Classes() {
                     <TableCell><Badge variant={cls.status === 'active' ? 'default' : 'secondary'}>{STATUS_LABELS[cls.status]}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setEnrollClass({ id: cls.id, name: cls.name })} title="Gerenciar alunos"><Users className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleOpen(cls)}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover esta turma?')) deleteMutation.mutate(cls.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
