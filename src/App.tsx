@@ -24,7 +24,7 @@ import Students from "./pages/admin/Students";
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
 import StudentClasses from "./pages/student/Classes";
-// StudentAttendance removed - attendance handled within Classes page
+import StudentProfile from "./pages/student/Profile";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
@@ -80,6 +80,7 @@ const App = () => (
               <Route path="aulas" element={<StudentClasses />} />
               {/* Presença removida - integrada na tela de Aulas */}
               <Route path="faturas" element={<StudentInvoices />} />
+              <Route path="perfil" element={<StudentProfile />} />
             </Route>
 
             {/* Teacher routes */}
