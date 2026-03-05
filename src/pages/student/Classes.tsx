@@ -10,10 +10,10 @@ import { format, parseISO, isToday, isTomorrow, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  not_confirmed: { label: 'Pendente', variant: 'outline' },
-  confirmed: { label: 'Confirmado', variant: 'default' },
-  cancelled: { label: 'Cancelado', variant: 'destructive' },
-  present: { label: 'Presente', variant: 'default' },
+  not_confirmed: { label: 'Aguardando resposta', variant: 'outline' },
+  confirmed: { label: '✅ Vou', variant: 'default' },
+  cancelled: { label: '❌ Não vou', variant: 'destructive' },
+  present: { label: 'Presente ✓', variant: 'default' },
   absent: { label: 'Ausente', variant: 'destructive' },
 };
 
