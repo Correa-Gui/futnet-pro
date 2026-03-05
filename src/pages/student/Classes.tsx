@@ -103,8 +103,8 @@ export default function StudentClasses() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold">Minhas Aulas</h2>
-        <p className="text-sm text-muted-foreground">Confirme sua presença nas próximas aulas</p>
+        <h2 className="text-xl font-bold">Próximas Aulas</h2>
+        <p className="text-sm text-muted-foreground">Confirme se você vai ou não nas próximas aulas</p>
       </div>
 
       {isLoading ? (
