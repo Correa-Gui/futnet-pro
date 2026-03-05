@@ -10,8 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import EnrollmentDialog from '@/components/admin/EnrollmentDialog';
 
 const DAYS = [
   { value: 1, label: 'Seg' },
@@ -55,6 +56,7 @@ export default function Classes() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ClassRow | null>(null);
+  const [enrollClass, setEnrollClass] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({
     name: '', level: 'beginner' as string, day_of_week: [] as number[],
     start_time: '17:30', end_time: '18:30', max_students: 12,
@@ -216,6 +218,7 @@ export default function Classes() {
                     <TableCell><Badge variant={cls.status === 'active' ? 'default' : 'secondary'}>{STATUS_LABELS[cls.status]}</Badge></TableCell>
                     <TableCell>
                       <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => setEnrollClass({ id: cls.id, name: cls.name })} title="Gerenciar alunos"><Users className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => handleOpen(cls)}><Pencil className="h-4 w-4" /></Button>
                         <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover esta turma?')) deleteMutation.mutate(cls.id); }}><Trash2 className="h-4 w-4 text-destructive" /></Button>
                       </div>
@@ -308,6 +311,15 @@ export default function Classes() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {enrollClass && (
+        <EnrollmentDialog
+          classId={enrollClass.id}
+          className={enrollClass.name}
+          open={!!enrollClass}
+          onOpenChange={(open) => { if (!open) setEnrollClass(null); }}
+        />
+      )}
     </div>
   );
 }
