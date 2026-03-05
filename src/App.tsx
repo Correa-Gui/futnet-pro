@@ -23,9 +23,15 @@ import Students from "./pages/admin/Students";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
+import StudentClasses from "./pages/student/Classes";
+import StudentAttendance from "./pages/student/Attendance";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
+import TeacherClasses from "./pages/teacher/Classes";
+import TeacherAttendance from "./pages/teacher/Attendance";
+
+import AdminAttendance from "./pages/admin/Attendance";
 
 const queryClient = new QueryClient();
 
@@ -58,6 +64,7 @@ const App = () => (
               <Route path="professores" element={<Teachers />} />
               <Route path="turmas" element={<Classes />} />
               <Route path="alunos" element={<Students />} />
+              <Route path="presenca" element={<AdminAttendance />} />
             </Route>
 
             {/* Student routes */}
@@ -67,6 +74,8 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<StudentHome />} />
+              <Route path="aulas" element={<StudentClasses />} />
+              <Route path="presenca" element={<StudentAttendance />} />
             </Route>
 
             {/* Teacher routes */}
@@ -76,6 +85,8 @@ const App = () => (
               </ProtectedRoute>
             }>
               <Route index element={<TeacherHome />} />
+              <Route path="turmas" element={<TeacherClasses />} />
+              <Route path="presenca" element={<TeacherAttendance />} />
             </Route>
 
             <Route path="*" element={<NotFound />} />

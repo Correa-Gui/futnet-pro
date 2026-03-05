@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
-  Receipt, CalendarDays, Settings, CreditCard, LogOut, Menu
+  Receipt, CalendarDays, Settings, CreditCard, LogOut, Menu, ClipboardCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,6 +20,7 @@ const menuItems = [
   { title: 'Alunos', url: '/admin/alunos', icon: Users },
   { title: 'Professores', url: '/admin/professores', icon: UserCheck },
   { title: 'Planos', url: '/admin/planos', icon: CreditCard },
+  { title: 'Presença', url: '/admin/presenca', icon: ClipboardCheck },
   { title: 'Faturas', url: '/admin/faturas', icon: Receipt },
   { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
   { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
