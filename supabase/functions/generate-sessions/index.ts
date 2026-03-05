@@ -69,19 +69,14 @@ Deno.serve(async (req) => {
       s => !existingSet.has(`${s.class_id}_${s.date}`)
     );
 
-    if (newSessions.length === 0) {
-      return new Response(JSON.stringify({ created: 0, message: "Sessões já existem" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (newSessions.length > 0) {
+      const { error: insertErr } = await adminClient
+        .from("class_sessions")
+        .insert(newSessions);
+      if (insertErr) throw insertErr;
     }
 
-    const { error: insertErr } = await adminClient
-      .from("class_sessions")
-      .insert(newSessions);
-
-    if (insertErr) throw insertErr;
-
-    // Auto-create attendance records for enrolled students
+    // Auto-create attendance records for enrolled students (for ALL sessions in range, not just new ones)
     const { data: enrollments } = await adminClient
       .from("enrollments")
       .select("class_id, student_id")
@@ -89,15 +84,15 @@ Deno.serve(async (req) => {
       .in("class_id", classIds);
 
     if (enrollments && enrollments.length > 0) {
-      // Get newly created sessions
-      const { data: createdSessions } = await adminClient
+      // Get all sessions in the date range for these classes
+      const { data: allSessions } = await adminClient
         .from("class_sessions")
         .select("id, class_id, date")
         .in("class_id", classIds)
         .in("date", dates);
 
       const attendanceRecords: { session_id: string; student_id: string }[] = [];
-      for (const session of createdSessions || []) {
+      for (const session of allSessions || []) {
         const classEnrollments = enrollments.filter(e => e.class_id === session.class_id);
         for (const enrollment of classEnrollments) {
           attendanceRecords.push({
