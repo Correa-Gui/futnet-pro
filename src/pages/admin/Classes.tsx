@@ -311,6 +311,15 @@ export default function Classes() {
           </form>
         </DialogContent>
       </Dialog>
+
+      {enrollClass && (
+        <EnrollmentDialog
+          classId={enrollClass.id}
+          className={enrollClass.name}
+          open={!!enrollClass}
+          onOpenChange={(open) => { if (!open) setEnrollClass(null); }}
+        />
+      )}
     </div>
   );
 }
