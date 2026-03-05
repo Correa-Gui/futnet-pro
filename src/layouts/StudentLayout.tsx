@@ -1,12 +1,11 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarDays, Receipt, User, ClipboardCheck, Home } from 'lucide-react';
+import { CalendarDays, Receipt, User, Home } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { title: 'Início', url: '/aluno', icon: Home },
   { title: 'Aulas', url: '/aluno/aulas', icon: CalendarDays },
-  { title: 'Presença', url: '/aluno/presenca', icon: ClipboardCheck },
   { title: 'Faturas', url: '/aluno/faturas', icon: Receipt },
   { title: 'Perfil', url: '/aluno/perfil', icon: User },
 ];
