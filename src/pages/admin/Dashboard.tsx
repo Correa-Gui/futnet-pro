@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, GraduationCap, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
+import { motion } from 'framer-motion';
 
 const formatCurrency = (v: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
@@ -94,60 +95,71 @@ export default function AdminDashboard() {
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, i) => (
-          <Card key={i} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${kpi.color}`}>
-                <kpi.icon className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${kpi.valueColor || ''}`}>{kpi.value}</div>
-              <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1, ease: 'easeOut' }}
+          >
+            <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${kpi.color}`}>
+                  <kpi.icon className="h-5 w-5" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${kpi.valueColor || ''}`}>{kpi.value}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Faturamento Mensal</CardTitle></CardHeader>
-          <CardContent>
-            {s.monthlyRevenue.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados de faturamento ainda.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={s.monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis tickFormatter={v => `R$${v}`} className="text-xs" />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.5 }}>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Faturamento Mensal</CardTitle></CardHeader>
+            <CardContent>
+              {s.monthlyRevenue.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sem dados de faturamento ainda.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={s.monthlyRevenue}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis tickFormatter={v => `R$${v}`} className="text-xs" />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">Status das Faturas</CardTitle></CardHeader>
-          <CardContent>
-            {s.statusDist.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem faturas registradas.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={s.statusDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                    {s.statusDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.6 }}>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Status das Faturas</CardTitle></CardHeader>
+            <CardContent>
+              {s.statusDist.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sem faturas registradas.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={s.statusDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                      {s.statusDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Today's sessions */}

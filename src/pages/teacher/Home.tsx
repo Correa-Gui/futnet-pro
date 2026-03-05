@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, Users, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -58,25 +59,27 @@ export default function TeacherHome() {
   return (
     <div className="space-y-5 pb-4">
       {/* Greeting */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-lg">
-        <p className="text-sm opacity-80">{getGreeting()} 👋</p>
-        <h2 className="text-xl font-bold mt-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
-          {firstName}
-        </h2>
-        <div className="mt-3 flex gap-4 text-sm">
-          <div className="flex items-center gap-1.5 bg-primary-foreground/15 rounded-full px-3 py-1">
-            <CalendarDays className="h-3.5 w-3.5" />
-            <span className="font-medium">{todayClasses.length} aula(s) hoje</span>
-          </div>
-          <div className="flex items-center gap-1.5 bg-primary-foreground/15 rounded-full px-3 py-1">
-            <Users className="h-3.5 w-3.5" />
-            <span className="font-medium">{data?.totalClasses || 0} turma(s)</span>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-lg">
+          <p className="text-sm opacity-80">{getGreeting()} 👋</p>
+          <h2 className="text-xl font-bold mt-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
+            {firstName}
+          </h2>
+          <div className="mt-3 flex gap-4 text-sm">
+            <div className="flex items-center gap-1.5 bg-primary-foreground/15 rounded-full px-3 py-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              <span className="font-medium">{todayClasses.length} aula(s) hoje</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-primary-foreground/15 rounded-full px-3 py-1">
+              <Users className="h-3.5 w-3.5" />
+              <span className="font-medium">{data?.totalClasses || 0} turma(s)</span>
+            </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Today's classes */}
-      <div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Aulas de Hoje</h3>
@@ -90,55 +93,59 @@ export default function TeacherHome() {
           </Card>
         ) : (
           <div className="space-y-2">
-            {todayClasses.map((c: any) => (
-              <Card key={c.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm font-semibold">{c.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {data?.enrollmentCounts[c.id] || 0}/{c.max_students} alunos
-                    </p>
-                  </div>
-                  <span className="text-sm font-mono text-muted-foreground">
-                    {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
-                  </span>
-                </CardContent>
-              </Card>
+            {todayClasses.map((c: any, i: number) => (
+              <motion.div key={c.id} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.25 + i * 0.08 }}>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="text-sm font-semibold">{c.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {data?.enrollmentCounts[c.id] || 0}/{c.max_students} alunos
+                      </p>
+                    </div>
+                    <span className="text-sm font-mono text-muted-foreground">
+                      {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
+                    </span>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
 
       {/* All classes */}
       {(data?.classes || []).length > 0 && (
-        <div>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
           <h3 className="text-sm font-bold text-foreground mb-3">Todas as Turmas</h3>
           <div className="space-y-2">
-            {data!.classes.map((c: any) => {
+            {data!.classes.map((c: any, i: number) => {
               const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
               return (
-                <Card key={c.id} className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-semibold">{c.name}</p>
-                      <span className="text-xs text-muted-foreground font-mono">
-                        {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between mt-1">
-                      <p className="text-xs text-muted-foreground">
-                        {(c.day_of_week as number[]).map((d: number) => DAY_NAMES[d]).join(', ')}
-                      </p>
-                      <span className="text-xs text-muted-foreground">
-                        {data?.enrollmentCounts[c.id] || 0}/{c.max_students}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <motion.div key={c.id} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.4 + i * 0.08 }}>
+                  <Card className="hover:shadow-md transition-shadow">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-semibold">{c.name}</p>
+                        <span className="text-xs text-muted-foreground font-mono">
+                          {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <p className="text-xs text-muted-foreground">
+                          {(c.day_of_week as number[]).map((d: number) => DAY_NAMES[d]).join(', ')}
+                        </p>
+                        <span className="text-xs text-muted-foreground">
+                          {data?.enrollmentCounts[c.id] || 0}/{c.max_students}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
               );
             })}
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

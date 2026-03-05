@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, Star, BookOpen } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
@@ -49,40 +50,44 @@ export default function StudentHome() {
   return (
     <div className="space-y-5 pb-4">
       {/* Greeting */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-lg">
-        <p className="text-sm opacity-80">{getGreeting()} 👋</p>
-        <h2 className="text-xl font-bold mt-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
-          {firstName}
-        </h2>
-        {studentData?.student && (
-          <span className="mt-2 inline-block rounded-full bg-primary-foreground/20 px-3 py-0.5 text-xs font-medium">
-            {levelLabels[studentData.student.skill_level] || studentData.student.skill_level}
-          </span>
-        )}
-      </div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+        <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-lg">
+          <p className="text-sm opacity-80">{getGreeting()} 👋</p>
+          <h2 className="text-xl font-bold mt-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
+            {firstName}
+          </h2>
+          {studentData?.student && (
+            <span className="mt-2 inline-block rounded-full bg-primary-foreground/20 px-3 py-0.5 text-xs font-medium">
+              {levelLabels[studentData.student.skill_level] || studentData.student.skill_level}
+            </span>
+          )}
+        </div>
+      </motion.div>
 
       {/* Plan card */}
       {studentData?.plan && (
-        <Card className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center gap-2 pb-2">
-            <Star className="h-4 w-4 text-secondary" />
-            <CardTitle className="text-sm font-medium">Meu Plano</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg font-bold">{studentData.plan.name}</p>
-            <div className="mt-1 flex items-baseline gap-1">
-              <span className="text-xl font-bold text-primary">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(studentData.plan.monthly_price)}
-              </span>
-              <span className="text-xs text-muted-foreground">/mês</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">{studentData.plan.classes_per_week}x por semana</p>
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
+          <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center gap-2 pb-2">
+              <Star className="h-4 w-4 text-secondary" />
+              <CardTitle className="text-sm font-medium">Meu Plano</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-lg font-bold">{studentData.plan.name}</p>
+              <div className="mt-1 flex items-baseline gap-1">
+                <span className="text-xl font-bold text-primary">
+                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(studentData.plan.monthly_price)}
+                </span>
+                <span className="text-xs text-muted-foreground">/mês</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">{studentData.plan.classes_per_week}x por semana</p>
+            </CardContent>
+          </Card>
+        </motion.div>
       )}
 
       {/* Classes */}
-      <div>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
         <div className="flex items-center gap-2 mb-3">
           <BookOpen className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-bold text-foreground">Minhas Turmas</h3>
@@ -97,23 +102,25 @@ export default function StudentHome() {
         ) : (
           <div className="space-y-2">
             {studentData.classes.map((c: any, i: number) => (
-              <Card key={i} className="hover:shadow-md transition-shadow">
-                <CardContent className="flex items-center justify-between p-4">
-                  <div>
-                    <p className="text-sm font-semibold">{c.name}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {(c.day_of_week as number[]).map((d: number) => DAY_NAMES[d]).join(', ')}
-                    </p>
-                  </div>
-                  <span className="text-sm font-mono text-muted-foreground">
-                    {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
-                  </span>
-                </CardContent>
-              </Card>
+              <motion.div key={i} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.4 + i * 0.08 }}>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardContent className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="text-sm font-semibold">{c.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {(c.day_of_week as number[]).map((d: number) => DAY_NAMES[d]).join(', ')}
+                      </p>
+                    </div>
+                    <span className="text-sm font-mono text-muted-foreground">
+                      {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
+                    </span>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
           </div>
         )}
-      </div>
+      </motion.div>
     </div>
   );
 }
