@@ -61,7 +61,7 @@ export default function AdminInvoices() {
     queryKey: ['admin-invoices', statusFilter],
     queryFn: async () => {
       let query = supabase.from('invoices').select('*').order('due_date', { ascending: false });
-      if (statusFilter !== 'all') query = query.eq('status', statusFilter);
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter as any);
       const { data, error } = await query;
       if (error) throw error;
 
