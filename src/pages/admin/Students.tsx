@@ -56,15 +56,19 @@ export default function Students() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('student_profiles')
-        .select('id, user_id, skill_level, plan_id, profiles!student_profiles_user_id_fkey(full_name, email, phone, cpf, status), plans(name)')
+        .select('id, user_id, skill_level, plan_id, plans(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((s: any) => ({
+      if (!data || data.length === 0) return [] as StudentRow[];
+      const userIds = data.map(s => s.user_id);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, email, phone, cpf, status').in('user_id', userIds);
+      const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
+      return data.map(s => ({
         id: s.id,
         user_id: s.user_id,
         skill_level: s.skill_level,
         plan_id: s.plan_id,
-        profile: Array.isArray(s.profiles) ? s.profiles[0] : s.profiles,
+        profile: profileMap[s.user_id] || { full_name: '—', email: null, phone: null, cpf: null, status: 'active' },
         plan: s.plans,
       })) as StudentRow[];
     },
