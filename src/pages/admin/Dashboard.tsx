@@ -119,43 +119,47 @@ export default function AdminDashboard() {
 
       {/* Charts */}
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Faturamento Mensal</CardTitle></CardHeader>
-          <CardContent>
-            {s.monthlyRevenue.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem dados de faturamento ainda.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <BarChart data={s.monthlyRevenue}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis dataKey="month" className="text-xs" />
-                  <YAxis tickFormatter={v => `R$${v}`} className="text-xs" />
-                  <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.5 }}>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Faturamento Mensal</CardTitle></CardHeader>
+            <CardContent>
+              {s.monthlyRevenue.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sem dados de faturamento ainda.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <BarChart data={s.monthlyRevenue}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                    <XAxis dataKey="month" className="text-xs" />
+                    <YAxis tickFormatter={v => `R$${v}`} className="text-xs" />
+                    <Tooltip formatter={(v: number) => formatCurrency(v)} />
+                    <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader><CardTitle className="text-base">Status das Faturas</CardTitle></CardHeader>
-          <CardContent>
-            {s.statusDist.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Sem faturas registradas.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie data={s.statusDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
-                    {s.statusDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.6 }}>
+          <Card>
+            <CardHeader><CardTitle className="text-base">Status das Faturas</CardTitle></CardHeader>
+            <CardContent>
+              {s.statusDist.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">Sem faturas registradas.</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie data={s.statusDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                      {s.statusDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
 
       {/* Today's sessions */}
