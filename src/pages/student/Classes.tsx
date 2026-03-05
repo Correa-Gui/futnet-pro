@@ -121,7 +121,7 @@ export default function StudentClasses() {
           {sessions.map((session) => {
             const att = session.attendance;
             const statusInfo = STATUS_LABELS[att?.status || 'not_confirmed'];
-            const canConfirm = att && ['not_confirmed', 'cancelled'].includes(att.status) && session.status === 'scheduled';
+            const canConfirm = att && att.status === 'not_confirmed' && session.status === 'scheduled';
             const canCancel = att && att.status === 'confirmed' && session.status === 'scheduled';
 
             return (
