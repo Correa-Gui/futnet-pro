@@ -76,7 +76,7 @@ function AdminSidebar() {
 
       <SidebarContent className="px-2 py-3">
         {menuGroups.map((group) => (
-          <SidebarGroup key={group.label} defaultOpen>
+          <SidebarGroup key={group.label}>
             <SidebarGroupLabel className="text-[10px] font-bold tracking-[0.15em] uppercase text-sidebar-foreground/40 px-3 mb-1">
               {group.label}
             </SidebarGroupLabel>
