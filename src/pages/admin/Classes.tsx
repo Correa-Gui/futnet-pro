@@ -56,6 +56,7 @@ export default function Classes() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<ClassRow | null>(null);
+  const [enrollClass, setEnrollClass] = useState<{ id: string; name: string } | null>(null);
   const [form, setForm] = useState({
     name: '', level: 'beginner' as string, day_of_week: [] as number[],
     start_time: '17:30', end_time: '18:30', max_students: 12,
