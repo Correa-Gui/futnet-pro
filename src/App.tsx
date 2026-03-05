@@ -80,6 +80,7 @@ const App = () => (
               <Route path="aulas" element={<StudentClasses />} />
               {/* Presença removida - integrada na tela de Aulas */}
               <Route path="faturas" element={<StudentInvoices />} />
+              <Route path="perfil" element={<StudentProfile />} />
             </Route>
 
             {/* Teacher routes */}
