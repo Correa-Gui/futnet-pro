@@ -97,6 +97,17 @@ export default function AdminInvoices() {
         const { error } = await supabase.from('invoices').update(payload).eq('id', data.id);
         if (error) throw error;
       } else {
+        // Check for duplicate before inserting
+        const { data: existing } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('student_id', data.student_id)
+          .eq('reference_month', data.reference_month)
+          .in('status', ['pending', 'paid', 'overdue'] as any)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          throw new Error('Já existe uma fatura para este aluno neste mês de referência');
+        }
         const { error } = await supabase.from('invoices').insert(payload);
         if (error) throw error;
       }
@@ -114,7 +125,18 @@ export default function AdminInvoices() {
       const studentsWithPlan = students.filter(s => s.plan);
       if (studentsWithPlan.length === 0) throw new Error('Nenhum aluno com plano ativo');
 
-      const invoicesToCreate = studentsWithPlan.map(s => ({
+      // Check for existing invoices in this reference_month to avoid duplicates
+      const { data: existing } = await supabase
+        .from('invoices')
+        .select('student_id')
+        .eq('reference_month', batchForm.reference_month)
+        .in('status', ['pending', 'paid', 'overdue'] as any);
+      const existingSet = new Set((existing || []).map(e => e.student_id));
+
+      const eligibleStudents = studentsWithPlan.filter(s => !existingSet.has(s.id));
+      if (eligibleStudents.length === 0) throw new Error('Todos os alunos já possuem fatura para este mês');
+
+      const invoicesToCreate = eligibleStudents.map(s => ({
         student_id: s.id,
         amount: s.plan.monthly_price,
         discount: 0,
@@ -125,11 +147,14 @@ export default function AdminInvoices() {
 
       const { error } = await supabase.from('invoices').insert(invoicesToCreate);
       if (error) throw error;
-      return invoicesToCreate.length;
+      const skipped = studentsWithPlan.length - eligibleStudents.length;
+      return { created: eligibleStudents.length, skipped };
     },
-    onSuccess: (count) => {
+    onSuccess: ({ created, skipped }) => {
       queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-      toast.success(`${count} faturas geradas!`);
+      let msg = `${created} fatura(s) gerada(s)!`;
+      if (skipped > 0) msg += ` ${skipped} aluno(s) já possuíam fatura e foram ignorados.`;
+      toast.success(msg);
       setBatchOpen(false);
     },
     onError: (e: Error) => toast.error(e.message),

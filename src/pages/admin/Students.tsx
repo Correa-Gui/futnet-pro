@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { format, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -126,7 +127,6 @@ export default function Students() {
 
       // Enroll in selected classes
       if (data.class_ids.length > 0) {
-        // Get the student_profile id for the new user
         const { data: sp } = await supabase
           .from('student_profiles')
           .select('id')
@@ -140,6 +140,55 @@ export default function Students() {
           }));
           const { error: enrollError } = await supabase.from('enrollments').insert(enrollments);
           if (enrollError) throw enrollError;
+
+          // Auto-generate first invoice if student has a plan
+          if (data.plan_id) {
+            const { data: planData } = await supabase
+              .from('plans')
+              .select('monthly_price, name')
+              .eq('id', data.plan_id)
+              .single();
+            if (planData) {
+              const now = new Date();
+              const dueDate = addDays(now, 30);
+              const refMonth = format(now, 'MMM/yyyy');
+              await supabase.from('invoices').insert({
+                student_id: sp.id,
+                amount: planData.monthly_price,
+                discount: 0,
+                due_date: format(dueDate, 'yyyy-MM-dd'),
+                reference_month: refMonth,
+                status: 'pending' as const,
+              });
+            }
+          }
+        }
+      } else if (data.plan_id) {
+        // No classes but has plan — still generate invoice
+        const { data: sp } = await supabase
+          .from('student_profiles')
+          .select('id')
+          .eq('user_id', result.user_id)
+          .single();
+        if (sp) {
+          const { data: planData } = await supabase
+            .from('plans')
+            .select('monthly_price, name')
+            .eq('id', data.plan_id)
+            .single();
+          if (planData) {
+            const now = new Date();
+            const dueDate = addDays(now, 30);
+            const refMonth = format(now, 'MMM/yyyy');
+            await supabase.from('invoices').insert({
+              student_id: sp.id,
+              amount: planData.monthly_price,
+              discount: 0,
+              due_date: format(dueDate, 'yyyy-MM-dd'),
+              reference_month: refMonth,
+              status: 'pending' as const,
+            });
+          }
         }
       }
 
