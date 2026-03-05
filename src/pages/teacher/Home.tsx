@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarDays, Users, Clock } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 function getGreeting() {
   const h = new Date().getHours();
