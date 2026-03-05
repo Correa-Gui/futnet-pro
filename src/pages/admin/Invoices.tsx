@@ -97,6 +97,17 @@ export default function AdminInvoices() {
         const { error } = await supabase.from('invoices').update(payload).eq('id', data.id);
         if (error) throw error;
       } else {
+        // Check for duplicate before inserting
+        const { data: existing } = await supabase
+          .from('invoices')
+          .select('id')
+          .eq('student_id', data.student_id)
+          .eq('reference_month', data.reference_month)
+          .in('status', ['pending', 'paid', 'overdue'] as any)
+          .limit(1);
+        if (existing && existing.length > 0) {
+          throw new Error('Já existe uma fatura para este aluno neste mês de referência');
+        }
         const { error } = await supabase.from('invoices').insert(payload);
         if (error) throw error;
       }
