@@ -146,14 +146,25 @@ export default function StudentClasses() {
                     <div className="flex flex-col items-end gap-2">
                       <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                       {canConfirm && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateAttendance.mutate({ id: att.id, status: 'confirmed' })}
-                          disabled={updateAttendance.isPending}
-                        >
-                          <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                          Confirmar
-                        </Button>
+                        <div className="flex flex-col gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={() => updateAttendance.mutate({ id: att.id, status: 'confirmed' })}
+                            disabled={updateAttendance.isPending}
+                          >
+                            <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                            Vou
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateAttendance.mutate({ id: att.id, status: 'cancelled' })}
+                            disabled={updateAttendance.isPending}
+                          >
+                            <XCircle className="mr-1 h-3.5 w-3.5" />
+                            Não vou
+                          </Button>
+                        </div>
                       )}
                       {canCancel && (
                         <Button
@@ -163,7 +174,7 @@ export default function StudentClasses() {
                           disabled={updateAttendance.isPending}
                         >
                           <XCircle className="mr-1 h-3.5 w-3.5" />
-                          Cancelar
+                          Não vou mais
                         </Button>
                       )}
                     </div>
