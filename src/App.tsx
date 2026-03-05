@@ -24,7 +24,7 @@ import Students from "./pages/admin/Students";
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
 import StudentClasses from "./pages/student/Classes";
-// StudentAttendance removed - attendance handled within Classes page
+import StudentProfile from "./pages/student/Profile";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
