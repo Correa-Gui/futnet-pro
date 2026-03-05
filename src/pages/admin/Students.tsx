@@ -212,7 +212,10 @@ export default function Students() {
                   <TableCell>{SKILL_LABELS[s.skill_level] || s.skill_level}</TableCell>
                   <TableCell>{s.plan?.name || <span className="text-muted-foreground">Sem plano</span>}</TableCell>
                   <TableCell><Badge variant={STATUS_VARIANTS[s.profile?.status] || 'secondary'}>{STATUS_LABELS[s.profile?.status] || s.profile?.status}</Badge></TableCell>
-                  <TableCell>
+                  <TableCell className="flex gap-1">
+                    <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
+                      <Pencil className="h-4 w-4" />
+                    </Button>
                     <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
