@@ -48,7 +48,7 @@ type ClassRow = {
   court_id: string;
   teacher_id: string;
   courts?: { name: string } | null;
-  teacher_profiles?: { id: string; profiles?: { full_name: string } | null } | null;
+  _teacherName?: string;
 };
 
 export default function Classes() {
