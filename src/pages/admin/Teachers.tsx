@@ -28,14 +28,18 @@ export default function Teachers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teacher_profiles')
-        .select('id, user_id, rate_per_class, profiles!teacher_profiles_user_id_fkey(full_name, email, phone, status)')
+        .select('id, user_id, rate_per_class')
         .order('created_at', { ascending: false });
       if (error) throw error;
-      return (data || []).map((t: any) => ({
+      if (!data || data.length === 0) return [] as TeacherRow[];
+      const userIds = data.map(t => t.user_id);
+      const { data: profiles } = await supabase.from('profiles').select('user_id, full_name, email, phone, status').in('user_id', userIds);
+      const profileMap = Object.fromEntries((profiles || []).map(p => [p.user_id, p]));
+      return data.map(t => ({
         id: t.id,
         user_id: t.user_id,
         rate_per_class: t.rate_per_class,
-        profile: Array.isArray(t.profiles) ? t.profiles[0] : t.profiles,
+        profile: profileMap[t.user_id] || { full_name: '—', email: null, phone: null, status: 'active' },
       })) as TeacherRow[];
     },
   });
