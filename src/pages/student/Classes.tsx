@@ -10,10 +10,10 @@ import { format, parseISO, isToday, isTomorrow, isFuture } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  not_confirmed: { label: 'Pendente', variant: 'outline' },
-  confirmed: { label: 'Confirmado', variant: 'default' },
-  cancelled: { label: 'Cancelado', variant: 'destructive' },
-  present: { label: 'Presente', variant: 'default' },
+  not_confirmed: { label: 'Aguardando resposta', variant: 'outline' },
+  confirmed: { label: '✅ Vou', variant: 'default' },
+  cancelled: { label: '❌ Não vou', variant: 'destructive' },
+  present: { label: 'Presente ✓', variant: 'default' },
   absent: { label: 'Ausente', variant: 'destructive' },
 };
 
@@ -103,8 +103,8 @@ export default function StudentClasses() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold">Minhas Aulas</h2>
-        <p className="text-sm text-muted-foreground">Confirme sua presença nas próximas aulas</p>
+        <h2 className="text-xl font-bold">Próximas Aulas</h2>
+        <p className="text-sm text-muted-foreground">Confirme se você vai ou não nas próximas aulas</p>
       </div>
 
       {isLoading ? (
@@ -121,7 +121,7 @@ export default function StudentClasses() {
           {sessions.map((session) => {
             const att = session.attendance;
             const statusInfo = STATUS_LABELS[att?.status || 'not_confirmed'];
-            const canConfirm = att && ['not_confirmed', 'cancelled'].includes(att.status) && session.status === 'scheduled';
+            const canConfirm = att && att.status === 'not_confirmed' && session.status === 'scheduled';
             const canCancel = att && att.status === 'confirmed' && session.status === 'scheduled';
 
             return (
@@ -146,14 +146,25 @@ export default function StudentClasses() {
                     <div className="flex flex-col items-end gap-2">
                       <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                       {canConfirm && (
-                        <Button
-                          size="sm"
-                          onClick={() => updateAttendance.mutate({ id: att.id, status: 'confirmed' })}
-                          disabled={updateAttendance.isPending}
-                        >
-                          <CheckCircle className="mr-1 h-3.5 w-3.5" />
-                          Confirmar
-                        </Button>
+                        <div className="flex flex-col gap-1.5">
+                          <Button
+                            size="sm"
+                            onClick={() => updateAttendance.mutate({ id: att.id, status: 'confirmed' })}
+                            disabled={updateAttendance.isPending}
+                          >
+                            <CheckCircle className="mr-1 h-3.5 w-3.5" />
+                            Vou
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => updateAttendance.mutate({ id: att.id, status: 'cancelled' })}
+                            disabled={updateAttendance.isPending}
+                          >
+                            <XCircle className="mr-1 h-3.5 w-3.5" />
+                            Não vou
+                          </Button>
+                        </div>
                       )}
                       {canCancel && (
                         <Button
@@ -163,7 +174,7 @@ export default function StudentClasses() {
                           disabled={updateAttendance.isPending}
                         >
                           <XCircle className="mr-1 h-3.5 w-3.5" />
-                          Cancelar
+                          Não vou mais
                         </Button>
                       )}
                     </div>
