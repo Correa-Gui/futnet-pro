@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Users, GraduationCap, MapPin, Receipt, TrendingUp, AlertTriangle } from 'lucide-react';
+import { Users, GraduationCap, TrendingUp, AlertTriangle, Clock } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 const formatCurrency = (v: number) =>
@@ -28,7 +28,6 @@ export default function AdminDashboard() {
       const totalRevenue = paidInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discount || 0), 0);
       const totalPending = pendingInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discount || 0), 0);
 
-      // Monthly revenue breakdown
       const monthlyMap: Record<string, number> = {};
       paidInvoices.forEach(i => {
         const month = i.reference_month || 'N/A';
@@ -39,7 +38,6 @@ export default function AdminDashboard() {
         .sort((a, b) => a.month.localeCompare(b.month))
         .slice(-6);
 
-      // Invoice status distribution
       const statusDist = [
         { name: 'Pago', value: paidInvoices.length },
         { name: 'Vencido', value: overdueInvoices.length },
@@ -79,6 +77,13 @@ export default function AdminDashboard() {
 
   const s = stats || { students: 0, classes: 0, courts: 0, totalRevenue: 0, totalPending: 0, overdueCount: 0, monthlyRevenue: [], statusDist: [] };
 
+  const kpis = [
+    { label: 'Alunos Ativos', value: s.students, sub: 'matriculados', icon: Users, color: 'text-primary' },
+    { label: 'Turmas Ativas', value: s.classes, sub: 'em andamento', icon: GraduationCap, color: 'text-primary' },
+    { label: 'Receita Total', value: formatCurrency(s.totalRevenue), sub: 'faturas pagas', icon: TrendingUp, color: 'text-primary' },
+    { label: 'Em Aberto', value: formatCurrency(s.totalPending), sub: `${s.overdueCount} vencida(s)`, icon: AlertTriangle, color: 'text-destructive', valueColor: 'text-destructive' },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
@@ -88,37 +93,20 @@ export default function AdminDashboard() {
 
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Alunos Ativos</CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{s.students}</div><p className="text-xs text-muted-foreground">matriculados</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Turmas Ativas</CardTitle>
-            <GraduationCap className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{s.classes}</div><p className="text-xs text-muted-foreground">em andamento</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Receita Total</CardTitle>
-            <TrendingUp className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{formatCurrency(s.totalRevenue)}</div><p className="text-xs text-muted-foreground">faturas pagas</p></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Em Aberto</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-destructive" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-destructive">{formatCurrency(s.totalPending)}</div>
-            <p className="text-xs text-muted-foreground">{s.overdueCount} vencida(s)</p>
-          </CardContent>
-        </Card>
+        {kpis.map((kpi, i) => (
+          <Card key={i} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
+              <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${kpi.color}`}>
+                <kpi.icon className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className={`text-2xl font-bold ${kpi.valueColor || ''}`}>{kpi.value}</div>
+              <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Charts */}
@@ -135,7 +123,7 @@ export default function AdminDashboard() {
                   <XAxis dataKey="month" className="text-xs" />
                   <YAxis tickFormatter={v => `R$${v}`} className="text-xs" />
                   <Tooltip formatter={(v: number) => formatCurrency(v)} />
-                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="total" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -164,16 +152,26 @@ export default function AdminDashboard() {
 
       {/* Today's sessions */}
       <Card>
-        <CardHeader><CardTitle>Aulas de Hoje</CardTitle></CardHeader>
+        <CardHeader className="flex flex-row items-center gap-2">
+          <Clock className="h-5 w-5 text-primary" />
+          <CardTitle>Aulas de Hoje</CardTitle>
+        </CardHeader>
         <CardContent>
           {todaySessions.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma aula agendada para hoje.</p>
+            <div className="text-center py-6">
+              <p className="text-muted-foreground">Nenhuma aula agendada para hoje.</p>
+            </div>
           ) : (
             <div className="space-y-2">
-              {todaySessions.map((s: any) => (
-                <div key={s.id} className="flex items-center justify-between rounded-md border border-border p-3">
-                  <p className="text-sm font-medium">{s.class?.name || 'Aula'}</p>
-                  <p className="text-sm text-muted-foreground">{s.class?.start_time?.slice(0, 5)} - {s.class?.end_time?.slice(0, 5)}</p>
+              {todaySessions.map((session: any) => (
+                <div key={session.id} className="flex items-center justify-between rounded-lg border border-border p-3 hover:bg-muted/50 transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="h-2 w-2 rounded-full bg-primary" />
+                    <p className="text-sm font-medium">{session.class?.name || 'Aula'}</p>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-mono">
+                    {session.class?.start_time?.slice(0, 5)} - {session.class?.end_time?.slice(0, 5)}
+                  </p>
                 </div>
               ))}
             </div>
