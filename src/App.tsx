@@ -32,6 +32,8 @@ import TeacherClasses from "./pages/teacher/Classes";
 import TeacherAttendance from "./pages/teacher/Attendance";
 
 import AdminAttendance from "./pages/admin/Attendance";
+import AdminInvoices from "./pages/admin/Invoices";
+import StudentInvoices from "./pages/student/Invoices";
 
 const queryClient = new QueryClient();
 
