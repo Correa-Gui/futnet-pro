@@ -279,7 +279,11 @@ export default function Students() {
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>
-              <Button type="submit" disabled={createMutation.isPending}>{createMutation.isPending ? 'Criando...' : 'Criar Aluno'}</Button>
+              <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
+                {editingStudent
+                  ? (updateMutation.isPending ? 'Salvando...' : 'Salvar')
+                  : (createMutation.isPending ? 'Criando...' : 'Criar Aluno')}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>
