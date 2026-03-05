@@ -23,9 +23,15 @@ import Students from "./pages/admin/Students";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
+import StudentClasses from "./pages/student/Classes";
+import StudentAttendance from "./pages/student/Attendance";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
+import TeacherClasses from "./pages/teacher/Classes";
+import TeacherAttendance from "./pages/teacher/Attendance";
+
+import AdminAttendance from "./pages/admin/Attendance";
 
 const queryClient = new QueryClient();
 
