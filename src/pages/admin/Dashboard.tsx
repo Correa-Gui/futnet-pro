@@ -95,18 +95,25 @@ export default function AdminDashboard() {
       {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {kpis.map((kpi, i) => (
-          <Card key={i} className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
-              <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${kpi.color}`}>
-                <kpi.icon className="h-5 w-5" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-bold ${kpi.valueColor || ''}`}>{kpi.value}</div>
-              <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
-            </CardContent>
-          </Card>
+          <motion.div
+            key={i}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, delay: i * 0.1, ease: 'easeOut' }}
+          >
+            <Card className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">{kpi.label}</CardTitle>
+                <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-muted ${kpi.color}`}>
+                  <kpi.icon className="h-5 w-5" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-2xl font-bold ${kpi.valueColor || ''}`}>{kpi.value}</div>
+                <p className="text-xs text-muted-foreground mt-0.5">{kpi.sub}</p>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
       </div>
 
