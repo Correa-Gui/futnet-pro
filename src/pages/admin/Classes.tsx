@@ -167,13 +167,7 @@ export default function Classes() {
 
   const getDaysLabel = (days: number[]) => days.map((d) => DAYS.find((dd) => dd.value === d)?.label).filter(Boolean).join(', ');
 
-  const getTeacherName = (cls: ClassRow) => {
-    const tp = cls.teacher_profiles as any;
-    if (!tp) return '—';
-    const profiles = tp.profiles;
-    if (Array.isArray(profiles)) return profiles[0]?.full_name || '—';
-    return profiles?.full_name || '—';
-  };
+  const getTeacherName = (cls: any) => cls._teacherName || '—';
 
   return (
     <div className="space-y-6">
