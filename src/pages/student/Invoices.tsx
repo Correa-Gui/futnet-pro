@@ -10,6 +10,7 @@ import { Receipt, Calendar, AlertCircle, QrCode, Copy, CheckCircle, Clock } from
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'outline' },
@@ -23,12 +24,13 @@ export default function StudentInvoices() {
   const queryClient = useQueryClient();
   const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string; expiresAt?: string } | null>(null);
   const [timeLeft, setTimeLeft] = useState<number>(0);
+  const [paymentState, setPaymentState] = useState<'waiting' | 'confirmed' | 'done'>('waiting');
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll for payment status while PIX dialog is open
   useEffect(() => {
-    if (pixDialog?.invoiceId) {
+    if (pixDialog?.invoiceId && paymentState === 'waiting') {
       pollingRef.current = setInterval(async () => {
         const { data } = await supabase
           .from('invoices')
@@ -37,9 +39,20 @@ export default function StudentInvoices() {
           .single();
         
         if (data?.status === 'paid') {
-          setPixDialog(null);
-          toast.success('Pagamento confirmado!');
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setPaymentState('confirmed');
           queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+          
+          // Auto-close after animation
+          setTimeout(() => {
+            setPaymentState('done');
+            setTimeout(() => {
+              setPixDialog(null);
+              setPaymentState('waiting');
+              toast.success('Pagamento confirmado!');
+            }, 600);
+          }, 2500);
         }
       }, 5000);
 
@@ -47,11 +60,11 @@ export default function StudentInvoices() {
         if (pollingRef.current) clearInterval(pollingRef.current);
       };
     }
-  }, [pixDialog?.invoiceId, queryClient]);
+  }, [pixDialog?.invoiceId, paymentState, queryClient]);
 
   // Countdown timer for QR code expiration
   useEffect(() => {
-    if (pixDialog?.expiresAt) {
+    if (pixDialog?.expiresAt && paymentState === 'waiting') {
       const updateCountdown = () => {
         const remaining = Math.max(0, Math.floor((new Date(pixDialog.expiresAt!).getTime() - Date.now()) / 1000));
         setTimeLeft(remaining);
@@ -70,7 +83,7 @@ export default function StudentInvoices() {
         if (countdownRef.current) clearInterval(countdownRef.current);
       };
     }
-  }, [pixDialog?.expiresAt, queryClient]);
+  }, [pixDialog?.expiresAt, paymentState, queryClient]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -109,6 +122,7 @@ export default function StudentInvoices() {
     },
     onSuccess: (data, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+      setPaymentState('waiting');
       setPixDialog({
         qr_code: data.qr_code,
         qr_code_base64: data.qr_code_base64,
@@ -223,51 +237,129 @@ export default function StudentInvoices() {
 
       {/* PIX Dialog */}
       <Dialog open={!!pixDialog} onOpenChange={(open) => {
-        if (!open) {
+        if (!open && paymentState === 'waiting') {
           if (pollingRef.current) clearInterval(pollingRef.current);
           if (countdownRef.current) clearInterval(countdownRef.current);
           setPixDialog(null);
         }
       }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm overflow-hidden">
           <DialogHeader>
             <DialogTitle className="text-center">Pagamento PIX</DialogTitle>
-            <DialogDescription className="text-center">Escaneie o QR Code ou copie o código para pagar</DialogDescription>
+            <DialogDescription className="text-center">
+              {paymentState === 'waiting' && 'Escaneie o QR Code ou copie o código para pagar'}
+              {paymentState === 'confirmed' && 'Pagamento recebido!'}
+              {paymentState === 'done' && 'Concluído'}
+            </DialogDescription>
           </DialogHeader>
           {pixDialog && (
-            <div className="space-y-4">
-              {/* Countdown timer */}
-              {timeLeft > 0 && (
-                <div className={`flex items-center justify-center gap-2 rounded-md p-2 text-sm font-medium ${
-                  timeLeft <= 60 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
-                }`}>
-                  <Clock className="h-4 w-4" />
-                  <span>Expira em {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
-                </div>
-              )}
+            <div className="relative">
+              <AnimatePresence mode="wait">
+                {paymentState === 'waiting' && (
+                  <motion.div
+                    key="qr"
+                    initial={{ opacity: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-4"
+                  >
+                    {/* Countdown timer */}
+                    {timeLeft > 0 && (
+                      <div className={`flex items-center justify-center gap-2 rounded-md p-2 text-sm font-medium ${
+                        timeLeft <= 60 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
+                      }`}>
+                        <Clock className="h-4 w-4" />
+                        <span>Expira em {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
+                      </div>
+                    )}
 
-              {pixDialog.qr_code_base64 && (
-                <div className="flex justify-center">
-                  <img
-                    src={`data:image/png;base64,${pixDialog.qr_code_base64}`}
-                    alt="QR Code PIX"
-                    className="w-48 h-48 rounded-lg border"
-                  />
-                </div>
-              )}
-              <div className="rounded-md border bg-muted/50 p-3">
-                <p className="text-xs text-muted-foreground break-all select-all font-mono">
-                  {pixDialog.copy_paste}
-                </p>
-              </div>
-              <Button
-                className="w-full"
-                variant="outline"
-                onClick={() => handleCopyPix(pixDialog.copy_paste)}
-              >
-                <Copy className="mr-2 h-4 w-4" />
-                Copiar código PIX
-              </Button>
+                    {pixDialog.qr_code_base64 && (
+                      <div className="flex justify-center">
+                        <div className="relative">
+                          <img
+                            src={`data:image/png;base64,${pixDialog.qr_code_base64}`}
+                            alt="QR Code PIX"
+                            className="w-48 h-48 rounded-lg border"
+                          />
+                          {/* Scanning line animation */}
+                          <motion.div
+                            className="absolute left-2 right-2 h-0.5 bg-primary/60 rounded-full shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
+                            animate={{ top: ['8px', '184px', '8px'] }}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="rounded-md border bg-muted/50 p-3">
+                      <p className="text-xs text-muted-foreground break-all select-all font-mono">
+                        {pixDialog.copy_paste}
+                      </p>
+                    </div>
+                    <Button
+                      className="w-full"
+                      variant="outline"
+                      onClick={() => handleCopyPix(pixDialog.copy_paste)}
+                    >
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copiar código PIX
+                    </Button>
+                    <p className="text-xs text-center text-muted-foreground animate-pulse">
+                      Aguardando pagamento...
+                    </p>
+                  </motion.div>
+                )}
+
+                {(paymentState === 'confirmed' || paymentState === 'done') && (
+                  <motion.div
+                    key="success"
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: paymentState === 'done' ? 0 : 1, scale: paymentState === 'done' ? 0.8 : 1 }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                    className="flex flex-col items-center justify-center py-8 space-y-4"
+                  >
+                    {/* Success circle animation */}
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.1 }}
+                      className="relative flex items-center justify-center"
+                    >
+                      {/* Ripple rings */}
+                      <motion.div
+                        className="absolute h-24 w-24 rounded-full border-2 border-primary/30"
+                        initial={{ scale: 0.8, opacity: 1 }}
+                        animate={{ scale: 1.6, opacity: 0 }}
+                        transition={{ duration: 1, repeat: 2, ease: 'easeOut' }}
+                      />
+                      <motion.div
+                        className="absolute h-24 w-24 rounded-full border-2 border-primary/20"
+                        initial={{ scale: 0.8, opacity: 1 }}
+                        animate={{ scale: 2, opacity: 0 }}
+                        transition={{ duration: 1, repeat: 2, ease: 'easeOut', delay: 0.2 }}
+                      />
+                      <div className="flex h-24 w-24 items-center justify-center rounded-full bg-primary">
+                        <motion.div
+                          initial={{ pathLength: 0 }}
+                          animate={{ pathLength: 1 }}
+                          transition={{ duration: 0.5, delay: 0.3 }}
+                        >
+                          <CheckCircle className="h-12 w-12 text-primary-foreground" strokeWidth={2.5} />
+                        </motion.div>
+                      </div>
+                    </motion.div>
+
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.5 }}
+                      className="text-center space-y-1"
+                    >
+                      <p className="text-lg font-bold text-primary">Pagamento confirmado!</p>
+                      <p className="text-sm text-muted-foreground">Sua fatura foi paga com sucesso</p>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
         </DialogContent>
