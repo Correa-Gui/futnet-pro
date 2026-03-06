@@ -210,10 +210,16 @@ export default function StudentInvoices() {
       )}
 
       {/* PIX Dialog */}
-      <Dialog open={!!pixDialog} onOpenChange={() => setPixDialog(null)}>
+      <Dialog open={!!pixDialog} onOpenChange={(open) => {
+        if (!open) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setPixDialog(null);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center">Pagamento PIX</DialogTitle>
+            <DialogDescription className="text-center">Escaneie o QR Code ou copie o código para pagar</DialogDescription>
           </DialogHeader>
           {pixDialog && (
             <div className="space-y-4">
