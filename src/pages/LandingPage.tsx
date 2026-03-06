@@ -647,7 +647,7 @@ export default function LandingPage() {
         {isVisible("plans") && <PlansSection settings={settings} />}
         {isVisible("faq") && <FAQSection settings={settings} />}
         {isVisible("final_cta") && <FinalCTA settings={settings} />}
-        <Footer settings={settings} />
+        <Footer settings={settings} businessHours={businessHours} />
       </div>
     </>
   );
