@@ -317,7 +317,69 @@ export default function LandingPageEditor() {
                 </CardContent>
               </Card>
 
-              <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5" /> Horário de Funcionamento
+                  </CardTitle>
+                  <CardDescription>Define os dias e horários exibidos nos agendamentos</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Dias abertos</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {DAY_NAMES.map((day) => (
+                        <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={businessHours.open_days.includes(day.value)}
+                            onCheckedChange={(checked) => {
+                              setBusinessHours((prev) => ({
+                                ...prev,
+                                open_days: checked
+                                  ? [...prev.open_days, day.value].sort()
+                                  : prev.open_days.filter((d) => d !== day.value),
+                              }));
+                            }}
+                          />
+                          <span className="text-sm">{day.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Abertura</Label>
+                      <Select
+                        value={String(businessHours.open_hour)}
+                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, open_hour: parseInt(v) }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {HOUR_OPTIONS.map((h) => (
+                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fechamento</Label>
+                      <Select
+                        value={String(businessHours.close_hour)}
+                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, close_hour: parseInt(v) }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {HOUR_OPTIONS.map((h) => (
+                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={saveSettingsAndHours} disabled={saving} className="w-full sm:w-auto">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Salvar Configurações
               </Button>
