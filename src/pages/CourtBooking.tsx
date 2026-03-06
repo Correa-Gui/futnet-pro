@@ -22,6 +22,15 @@ const bookingSchema = z.object({
 });
 
 export default function CourtBooking() {
+  const { data: businessHours } = useBusinessHours();
+  const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
+  const openHour = businessHours?.open_hour ?? 6;
+  const closeHour = businessHours?.close_hour ?? 22;
+  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
+    const h = i + openHour;
+    return `${String(h).padStart(2, "0")}:00`;
+  });
+
   const [step, setStep] = useState(1);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
