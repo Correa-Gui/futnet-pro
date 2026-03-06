@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { CalendarDays, Star, BookOpen } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { CalendarDays, BookOpen, Clock, MapPin, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+import { format, parseISO, isToday, isTomorrow } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 function getGreeting() {
   const h = new Date().getHours();
@@ -23,29 +23,55 @@ export default function StudentHome() {
     queryFn: async () => {
       const { data: sp } = await supabase
         .from('student_profiles')
-        .select('id, skill_level, plan_id')
+        .select('id, skill_level')
         .eq('user_id', user!.id)
         .single();
       if (!sp) return null;
 
-      const [enrollRes, planRes] = await Promise.all([
-        supabase.from('enrollments').select('class_id').eq('student_id', sp.id).eq('status', 'active'),
-        sp.plan_id ? supabase.from('plans').select('name, monthly_price, classes_per_week').eq('id', sp.plan_id).single() : Promise.resolve({ data: null }),
-      ]);
+      // Get confirmed attendances
+      const { data: attendances } = await supabase
+        .from('attendances')
+        .select('id, status, session_id')
+        .eq('student_id', sp.id)
+        .eq('status', 'confirmed');
 
-      let classes: any[] = [];
-      if (enrollRes.data && enrollRes.data.length > 0) {
-        const ids = enrollRes.data.map(e => e.class_id);
-        const { data } = await supabase.from('classes').select('name, day_of_week, start_time, end_time').in('id', ids).eq('status', 'active');
-        classes = data || [];
+      let upcomingSessions: any[] = [];
+      if (attendances && attendances.length > 0) {
+        const sessionIds = attendances.map(a => a.session_id);
+        const today = new Date().toISOString().split('T')[0];
+        const { data: sessions } = await supabase
+          .from('class_sessions')
+          .select('id, date, class_id')
+          .in('id', sessionIds)
+          .gte('date', today)
+          .eq('status', 'scheduled')
+          .order('date', { ascending: true })
+          .limit(5);
+
+        if (sessions && sessions.length > 0) {
+          const classIds = [...new Set(sessions.map(s => s.class_id))];
+          const { data: classes } = await supabase
+            .from('classes')
+            .select('id, name, start_time, end_time, courts(name)')
+            .in('id', classIds);
+          const classMap = Object.fromEntries((classes || []).map(c => [c.id, c]));
+          upcomingSessions = sessions.map(s => ({ ...s, class: classMap[s.class_id] }));
+        }
       }
 
-      return { student: sp, plan: planRes.data, classes };
+      return { student: sp, upcomingSessions };
     },
   });
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Aluno';
   const levelLabels: Record<string, string> = { beginner: 'Iniciante', elementary: 'Básico', intermediate: 'Intermediário', advanced: 'Avançado' };
+
+  const getDateLabel = (dateStr: string) => {
+    const date = parseISO(dateStr);
+    if (isToday(date)) return 'Hoje';
+    if (isTomorrow(date)) return 'Amanhã';
+    return format(date, "EEEE, dd/MM", { locale: ptBR });
+  };
 
   return (
     <div className="space-y-5 pb-4">
@@ -64,56 +90,46 @@ export default function StudentHome() {
         </div>
       </motion.div>
 
-      {/* Plan card */}
-      {studentData?.plan && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
-          <Card className="hover:shadow-md transition-shadow">
-            <CardHeader className="flex flex-row items-center gap-2 pb-2">
-              <Star className="h-4 w-4 text-secondary" />
-              <CardTitle className="text-sm font-medium">Meu Plano</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-lg font-bold">{studentData.plan.name}</p>
-              <div className="mt-1 flex items-baseline gap-1">
-                <span className="text-xl font-bold text-primary">
-                  {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(studentData.plan.monthly_price)}
-                </span>
-                <span className="text-xs text-muted-foreground">/mês</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">{studentData.plan.classes_per_week}x por semana</p>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-
-      {/* Classes */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }}>
+      {/* Upcoming confirmed sessions */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.15 }}>
         <div className="flex items-center gap-2 mb-3">
           <BookOpen className="h-4 w-4 text-primary" />
-          <h3 className="text-sm font-bold text-foreground">Minhas Turmas</h3>
+          <h3 className="text-sm font-bold text-foreground">Próximas Aulas Confirmadas</h3>
         </div>
-        {!studentData?.classes?.length ? (
+        {!studentData?.upcomingSessions?.length ? (
           <Card>
             <CardContent className="py-6 text-center">
               <CalendarDays className="mx-auto h-8 w-8 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">Nenhuma turma ativa encontrada.</p>
+              <p className="text-sm text-muted-foreground">Nenhuma aula confirmada.</p>
+              <p className="text-xs text-muted-foreground mt-1">Confirme presença na aba Aulas.</p>
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-2">
-            {studentData.classes.map((c: any, i: number) => (
-              <motion.div key={i} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.4 + i * 0.08 }}>
+            {studentData.upcomingSessions.map((s: any, i: number) => (
+              <motion.div key={s.id} initial={{ opacity: 0, x: -15 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.3, delay: 0.25 + i * 0.08 }}>
                 <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div>
-                      <p className="text-sm font-semibold">{c.name}</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {(c.day_of_week as number[]).map((d: number) => DAY_NAMES[d]).join(', ')}
-                      </p>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium capitalize text-muted-foreground">
+                        {getDateLabel(s.date)}
+                      </span>
+                      <span className="flex items-center gap-1 text-xs text-primary font-medium">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Confirmado
+                      </span>
                     </div>
-                    <span className="text-sm font-mono text-muted-foreground">
-                      {c.start_time?.slice(0, 5)} - {c.end_time?.slice(0, 5)}
-                    </span>
+                    <p className="text-sm font-semibold">{s.class?.name || 'Aula'}</p>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {s.class?.start_time?.slice(0, 5)} – {s.class?.end_time?.slice(0, 5)}
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <MapPin className="h-3 w-3" />
+                        {(s.class?.courts as any)?.name || '—'}
+                      </span>
+                    </div>
                   </CardContent>
                 </Card>
               </motion.div>
