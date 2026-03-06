@@ -21,7 +21,31 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 export default function StudentInvoices() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string } | null>(null);
+  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string } | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll for payment status while PIX dialog is open
+  useEffect(() => {
+    if (pixDialog?.invoiceId) {
+      pollingRef.current = setInterval(async () => {
+        const { data } = await supabase
+          .from('invoices')
+          .select('status')
+          .eq('id', pixDialog.invoiceId!)
+          .single();
+        
+        if (data?.status === 'paid') {
+          setPixDialog(null);
+          toast.success('Pagamento confirmado!');
+          queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+        }
+      }, 5000); // Check every 5 seconds
+
+      return () => {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+      };
+    }
+  }, [pixDialog?.invoiceId, queryClient]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
