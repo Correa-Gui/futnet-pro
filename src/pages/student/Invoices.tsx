@@ -82,12 +82,13 @@ export default function StudentInvoices() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
       setPixDialog({
         qr_code: data.qr_code,
         qr_code_base64: data.qr_code_base64,
         copy_paste: data.qr_code,
+        invoiceId,
       });
     },
     onError: (e: Error) => toast.error(e.message),
