@@ -90,8 +90,18 @@ Deno.serve(async (req) => {
             { headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
-        // Payment expired, will create a new one below
+        // Payment expired or not pending — clear old payment data
       }
+
+      // Clean up old payment data so a fresh PIX is generated
+      const adminSupabaseClean = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await adminSupabaseClean
+        .from("invoices")
+        .update({ payment_id: null, pix_copy_paste: null, pix_qr_code: null })
+        .eq("id", invoice_id);
     }
 
     const finalAmount = Number(invoice.amount) - Number(invoice.discount || 0);
