@@ -544,8 +544,10 @@ function Nav({ settings }: { settings: LandingSettings }) {
   );
 }
 
-function Footer({ settings }: { settings: LandingSettings }) {
+function Footer({ settings, businessHours }: { settings: LandingSettings; businessHours: { open_days: number[]; open_hour: number; close_hour: number } | null }) {
   const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
+  const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
   return (
     <footer style={{ background: COLORS.dark, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "60px 24px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40, marginBottom: 40 }}>
@@ -582,6 +584,29 @@ function Footer({ settings }: { settings: LandingSettings }) {
             ))}
           </div>
         </div>
+        {businessHours && (
+          <div>
+            <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Funcionamento</p>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginBottom: 8 }}>
+              {String(businessHours.open_hour).padStart(2, "0")}:00 — {String(businessHours.close_hour).padStart(2, "0")}:00
+            </p>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {dayLabels.map((label, i) => (
+                <span key={i} style={{
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: businessHours.open_days.includes(i) ? `${COLORS.sunset}30` : "rgba(255,255,255,0.05)",
+                  color: businessHours.open_days.includes(i) ? COLORS.sunsetLight : "rgba(255,255,255,0.2)",
+                  border: `1px solid ${businessHours.open_days.includes(i) ? `${COLORS.sunset}50` : "rgba(255,255,255,0.08)"}`,
+                }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>© {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.</p>
