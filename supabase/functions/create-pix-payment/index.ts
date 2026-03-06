@@ -114,7 +114,7 @@ Deno.serve(async (req) => {
       .single();
 
     // Create PIX payment via Mercado Pago with 5-minute expiration
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
     const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
