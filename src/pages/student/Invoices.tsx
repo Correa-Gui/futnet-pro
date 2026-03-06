@@ -41,13 +41,36 @@ export default function StudentInvoices() {
           toast.success('Pagamento confirmado!');
           queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
         }
-      }, 5000); // Check every 5 seconds
+      }, 5000);
 
       return () => {
         if (pollingRef.current) clearInterval(pollingRef.current);
       };
     }
   }, [pixDialog?.invoiceId, queryClient]);
+
+  // Countdown timer for QR code expiration
+  useEffect(() => {
+    if (pixDialog?.expiresAt) {
+      const updateCountdown = () => {
+        const remaining = Math.max(0, Math.floor((new Date(pixDialog.expiresAt!).getTime() - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setPixDialog(null);
+          toast.info('QR Code expirado. Gere um novo para continuar.');
+          queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+        }
+      };
+      updateCountdown();
+      countdownRef.current = setInterval(updateCountdown, 1000);
+
+      return () => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    }
+  }, [pixDialog?.expiresAt, queryClient]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
