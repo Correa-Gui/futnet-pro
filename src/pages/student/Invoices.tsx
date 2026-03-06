@@ -114,6 +114,7 @@ export default function StudentInvoices() {
         qr_code_base64: data.qr_code_base64,
         copy_paste: data.qr_code,
         invoiceId,
+        expiresAt: data.expires_at,
       });
     },
     onError: (e: Error) => toast.error(e.message),
