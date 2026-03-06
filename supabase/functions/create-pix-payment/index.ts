@@ -117,6 +117,7 @@ Deno.serve(async (req) => {
         description: `Fatura ${invoice.reference_month}`,
         payment_method_id: "pix",
         date_of_expiration: expiresAt,
+        external_reference: invoice_id,
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
         payer: {
           email: profile?.email || "aluno@email.com",
