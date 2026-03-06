@@ -1,11 +1,15 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Receipt, Calendar, AlertCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Receipt, Calendar, AlertCircle, QrCode, Copy, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pendente', variant: 'outline' },
@@ -16,6 +20,8 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 
 export default function StudentInvoices() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string } | null>(null);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -39,6 +45,34 @@ export default function StudentInvoices() {
     },
     enabled: !!studentProfile,
   });
+
+  const generatePixMutation = useMutation({
+    mutationFn: async (invoiceId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Sessão expirada, faça login novamente');
+
+      const { data, error } = await supabase.functions.invoke('create-pix-payment', {
+        body: { invoice_id: invoiceId },
+      });
+      if (error) throw new Error(error.message || 'Erro ao gerar PIX');
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+      setPixDialog({
+        qr_code: data.qr_code,
+        qr_code_base64: data.qr_code_base64,
+        copy_paste: data.qr_code,
+      });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const handleCopyPix = (text: string) => {
+    navigator.clipboard.writeText(text);
+    toast.success('Código PIX copiado!');
+  };
 
   const pendingTotal = invoices
     .filter(i => ['pending', 'overdue'].includes(i.status))
@@ -79,6 +113,7 @@ export default function StudentInvoices() {
           {invoices.map((inv) => {
             const statusInfo = STATUS_MAP[inv.status] || STATUS_MAP.pending;
             const finalAmount = Number(inv.amount) - Number(inv.discount || 0);
+            const canPay = inv.status === 'pending' || inv.status === 'overdue';
             return (
               <Card key={inv.id}>
                 <CardContent className="p-4">
@@ -107,10 +142,38 @@ export default function StudentInvoices() {
                       )}
                     </div>
                   </div>
-                  {inv.pix_copy_paste && inv.status === 'pending' && (
-                    <div className="mt-3 rounded-md border border-border bg-muted/50 p-3">
-                      <p className="text-xs font-medium mb-1">PIX Copia e Cola:</p>
-                      <p className="text-xs text-muted-foreground break-all select-all">{inv.pix_copy_paste}</p>
+
+                  {canPay && (
+                    <div className="mt-3 flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() => generatePixMutation.mutate(inv.id)}
+                        disabled={generatePixMutation.isPending}
+                      >
+                        <QrCode className="mr-2 h-4 w-4" />
+                        {generatePixMutation.isPending ? 'Gerando...' : 'Pagar via PIX'}
+                      </Button>
+                      {inv.pix_copy_paste && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setPixDialog({
+                            qr_code: inv.pix_copy_paste!,
+                            qr_code_base64: inv.pix_qr_code || '',
+                            copy_paste: inv.pix_copy_paste!,
+                          })}
+                        >
+                          Ver PIX
+                        </Button>
+                      )}
+                    </div>
+                  )}
+
+                  {inv.status === 'paid' && (
+                    <div className="mt-3 flex items-center gap-2 text-sm text-primary">
+                      <CheckCircle className="h-4 w-4" />
+                      <span>Pagamento confirmado</span>
                     </div>
                   )}
                 </CardContent>
@@ -119,6 +182,44 @@ export default function StudentInvoices() {
           })}
         </div>
       )}
+
+      {/* PIX Dialog */}
+      <Dialog open={!!pixDialog} onOpenChange={() => setPixDialog(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">Pagamento PIX</DialogTitle>
+          </DialogHeader>
+          {pixDialog && (
+            <div className="space-y-4">
+              {pixDialog.qr_code_base64 && (
+                <div className="flex justify-center">
+                  <img
+                    src={`data:image/png;base64,${pixDialog.qr_code_base64}`}
+                    alt="QR Code PIX"
+                    className="w-48 h-48 rounded-lg border"
+                  />
+                </div>
+              )}
+              <p className="text-center text-sm text-muted-foreground">
+                Escaneie o QR Code ou copie o código abaixo
+              </p>
+              <div className="rounded-md border bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground break-all select-all font-mono">
+                  {pixDialog.copy_paste}
+                </p>
+              </div>
+              <Button
+                className="w-full"
+                variant="outline"
+                onClick={() => handleCopyPix(pixDialog.copy_paste)}
+              >
+                <Copy className="mr-2 h-4 w-4" />
+                Copiar código PIX
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
