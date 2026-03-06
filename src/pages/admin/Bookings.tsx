@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
+import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
@@ -47,11 +48,15 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   cancelled: "Cancelado",
 };
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6h to 21h
-
 export default function Bookings() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const { data: businessHours } = useBusinessHours();
+
+  const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
+  const openHour = businessHours?.open_hour ?? 6;
+  const closeHour = businessHours?.close_hour ?? 22;
+  const HOURS = Array.from({ length: closeHour - openHour }, (_, i) => i + openHour);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
