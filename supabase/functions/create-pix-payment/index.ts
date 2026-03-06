@@ -77,14 +77,20 @@ Deno.serve(async (req) => {
       );
       const checkData = await checkRes.json();
       if (checkRes.ok && checkData.status === "pending" && checkData.point_of_interaction?.transaction_data) {
-        return new Response(
-          JSON.stringify({
-            qr_code: checkData.point_of_interaction.transaction_data.qr_code,
-            qr_code_base64: checkData.point_of_interaction.transaction_data.qr_code_base64,
-            payment_id: checkData.id,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Check if payment is not expired
+        const expirationDate = checkData.date_of_expiration ? new Date(checkData.date_of_expiration) : null;
+        if (expirationDate && expirationDate > new Date()) {
+          return new Response(
+            JSON.stringify({
+              qr_code: checkData.point_of_interaction.transaction_data.qr_code,
+              qr_code_base64: checkData.point_of_interaction.transaction_data.qr_code_base64,
+              payment_id: checkData.id,
+              expires_at: checkData.date_of_expiration,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // Payment expired, will create a new one below
       }
     }
 
