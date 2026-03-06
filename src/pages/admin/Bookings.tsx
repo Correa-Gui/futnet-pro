@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, getDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
-import { CalendarDays, CheckCircle, XCircle, Clock, Filter } from "lucide-react";
+import { CalendarDays, CheckCircle, XCircle, Clock, Filter, GraduationCap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -23,6 +23,8 @@ const STATUS_MAP: Record<BookingStatus, { label: string; variant: "default" | "s
   paid: { label: "Pago", variant: "secondary" },
   cancelled: { label: "Cancelado", variant: "destructive" },
 };
+
+const DAY_NAMES = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 export default function Bookings() {
   const queryClient = useQueryClient();
@@ -50,6 +52,25 @@ export default function Bookings() {
       return data;
     },
   });
+
+  // Fetch active classes with court names
+  const { data: classes = [] } = useQuery({
+    queryKey: ["admin-classes-schedule"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("classes")
+        .select("*, courts(name)")
+        .eq("status", "active")
+        .order("start_time", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Filter classes by selected date's day of week
+  const filteredClasses = dateFilter
+    ? classes.filter((c) => c.day_of_week.includes(getDay(dateFilter)))
+    : classes;
 
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BookingStatus }) => {
@@ -79,7 +100,7 @@ export default function Bookings() {
         <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em" }}>
           Agendamentos
         </h2>
-        <p className="text-sm text-muted-foreground">Gerencie as reservas de quadras</p>
+        <p className="text-sm text-muted-foreground">Gerencie as reservas de quadras e visualize os horários das turmas</p>
       </div>
 
       {/* Stats */}
@@ -142,6 +163,42 @@ export default function Bookings() {
           </Button>
         )}
       </div>
+
+      {/* Classes Schedule */}
+      {filteredClasses.length > 0 && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <GraduationCap className="h-5 w-5 text-primary" />
+              <h3 className="font-semibold text-sm">
+                Horários das Turmas {dateFilter ? `— ${format(dateFilter, "EEEE", { locale: ptBR })}` : "(fixos)"}
+              </h3>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {filteredClasses.map((cls) => (
+                <div
+                  key={cls.id}
+                  className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 px-3 py-2"
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{cls.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(cls as any).courts?.name} · {cls.start_time?.slice(0, 5)} - {cls.end_time?.slice(0, 5)}
+                    </p>
+                  </div>
+                  <div className="flex gap-1 ml-2 shrink-0">
+                    {cls.day_of_week.map((d: number) => (
+                      <Badge key={d} variant="secondary" className="text-[10px] px-1.5 py-0">
+                        {DAY_NAMES[d]}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Table */}
       <Card>
