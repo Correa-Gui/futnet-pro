@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
         qr_code: qrCode,
         qr_code_base64: qrCodeBase64,
         payment_id: mpData.id,
+        expires_at: mpData.date_of_expiration || expiresAt,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
