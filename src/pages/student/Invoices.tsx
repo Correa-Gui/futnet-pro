@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Receipt, Calendar, AlertCircle, QrCode, Copy, CheckCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -21,7 +21,31 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 export default function StudentInvoices() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string } | null>(null);
+  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string } | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Poll for payment status while PIX dialog is open
+  useEffect(() => {
+    if (pixDialog?.invoiceId) {
+      pollingRef.current = setInterval(async () => {
+        const { data } = await supabase
+          .from('invoices')
+          .select('status')
+          .eq('id', pixDialog.invoiceId!)
+          .single();
+        
+        if (data?.status === 'paid') {
+          setPixDialog(null);
+          toast.success('Pagamento confirmado!');
+          queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+        }
+      }, 5000); // Check every 5 seconds
+
+      return () => {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+      };
+    }
+  }, [pixDialog?.invoiceId, queryClient]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -58,12 +82,13 @@ export default function StudentInvoices() {
       if (data?.error) throw new Error(data.error);
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, invoiceId) => {
       queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
       setPixDialog({
         qr_code: data.qr_code,
         qr_code_base64: data.qr_code_base64,
         copy_paste: data.qr_code,
+        invoiceId,
       });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -162,6 +187,7 @@ export default function StudentInvoices() {
                             qr_code: inv.pix_copy_paste!,
                             qr_code_base64: inv.pix_qr_code || '',
                             copy_paste: inv.pix_copy_paste!,
+                            invoiceId: inv.id,
                           })}
                         >
                           Ver PIX
@@ -184,10 +210,16 @@ export default function StudentInvoices() {
       )}
 
       {/* PIX Dialog */}
-      <Dialog open={!!pixDialog} onOpenChange={() => setPixDialog(null)}>
+      <Dialog open={!!pixDialog} onOpenChange={(open) => {
+        if (!open) {
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setPixDialog(null);
+        }
+      }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center">Pagamento PIX</DialogTitle>
+            <DialogDescription className="text-center">Escaneie o QR Code ou copie o código para pagar</DialogDescription>
           </DialogHeader>
           {pixDialog && (
             <div className="space-y-4">
