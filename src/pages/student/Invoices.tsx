@@ -239,6 +239,7 @@ export default function StudentInvoices() {
       <Dialog open={!!pixDialog} onOpenChange={(open) => {
         if (!open) {
           if (pollingRef.current) clearInterval(pollingRef.current);
+          if (countdownRef.current) clearInterval(countdownRef.current);
           setPixDialog(null);
         }
       }}>
@@ -249,6 +250,16 @@ export default function StudentInvoices() {
           </DialogHeader>
           {pixDialog && (
             <div className="space-y-4">
+              {/* Countdown timer */}
+              {timeLeft > 0 && (
+                <div className={`flex items-center justify-center gap-2 rounded-md p-2 text-sm font-medium ${
+                  timeLeft <= 60 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
+                }`}>
+                  <Clock className="h-4 w-4" />
+                  <span>Expira em {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
+                </div>
+              )}
+
               {pixDialog.qr_code_base64 && (
                 <div className="flex justify-center">
                   <img
@@ -258,9 +269,6 @@ export default function StudentInvoices() {
                   />
                 </div>
               )}
-              <p className="text-center text-sm text-muted-foreground">
-                Escaneie o QR Code ou copie o código abaixo
-              </p>
               <div className="rounded-md border bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground break-all select-all font-mono">
                   {pixDialog.copy_paste}
