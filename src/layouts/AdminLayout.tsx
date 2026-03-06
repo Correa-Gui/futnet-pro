@@ -39,6 +39,7 @@ const menuGroups = [
   {
     label: 'Sistema',
     items: [
+      { title: 'Landing Page', url: '/admin/landing-page', icon: Settings },
       { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
     ],

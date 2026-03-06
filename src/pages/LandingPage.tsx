@@ -1,37 +1,74 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import {
-  Star,
-  CheckCircle,
-  Users,
-  MapPin,
-  Trophy,
-  Heart,
-  Target,
-  ArrowRight,
-  Phone,
-  Sun,
-  Dumbbell,
-  ChevronDown,
-  Instagram,
-  Youtube,
-  Menu,
-  X,
+  Star, CheckCircle, Users, MapPin, Trophy, Heart, Target, ArrowRight,
+  Phone, Sun, Dumbbell, ChevronDown, Instagram, Youtube, Menu, X,
 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const COLORS = {
-  sand: "#F5E6C8",
-  sandLight: "#FDF6EC",
-  ocean: "#0C4A6E",
-  oceanLight: "#0369A1",
-  sunset: "#F97316",
-  sunsetDark: "#EA580C",
-  sunsetLight: "#FDBA74",
-  white: "#FFFFFF",
-  dark: "#0F172A",
-  gray: "#64748B",
-  grayLight: "#F1F5F9",
+  sand: "#F5E6C8", sandLight: "#FDF6EC", ocean: "#0C4A6E", oceanLight: "#0369A1",
+  sunset: "#F97316", sunsetDark: "#EA580C", sunsetLight: "#FDBA74",
+  white: "#FFFFFF", dark: "#0F172A", gray: "#64748B", grayLight: "#F1F5F9",
 };
+
+interface LandingSettings {
+  business_mode: string;
+  hero_image_url: string | null;
+  whatsapp_number: string | null;
+  instagram_url: string | null;
+  youtube_url: string | null;
+  primary_cta_text: string;
+  primary_cta_url: string;
+}
+
+interface SectionConfig {
+  section_key: string;
+  is_visible: boolean;
+  title: string | null;
+  subtitle: string | null;
+  content: any;
+  image_url: string | null;
+  display_order: number;
+}
+
+const DEFAULT_SETTINGS: LandingSettings = {
+  business_mode: "both", hero_image_url: null, whatsapp_number: "5511999999999",
+  instagram_url: null, youtube_url: null, primary_cta_text: "Agende Sua Aula Grátis", primary_cta_url: "/cadastro",
+};
+
+function useLandingData() {
+  const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
+  const [sections, setSections] = useState<Record<string, SectionConfig>>({});
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("landing_page_settings").select("*").limit(1).single(),
+      supabase.from("landing_page_config").select("*").order("display_order"),
+    ]).then(([settingsRes, sectionsRes]) => {
+      if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
+      if (sectionsRes.data) {
+        const map: Record<string, SectionConfig> = {};
+        (sectionsRes.data as unknown as SectionConfig[]).forEach((s) => { map[s.section_key] = s; });
+        setSections(map);
+      }
+      setLoaded(true);
+    });
+  }, []);
+
+  const isVisible = useCallback((key: string) => {
+    return sections[key]?.is_visible !== false;
+  }, [sections]);
+
+  const getImage = useCallback((key: string, fallback: string) => {
+    return sections[key]?.image_url || fallback;
+  }, [sections]);
+
+  return { settings, sections, loaded, isVisible, getImage };
+}
+
+// --- Utility Components ---
 
 function Section({ children, className = "", id, style = {} }: { children: React.ReactNode; className?: string; id?: string; style?: React.CSSProperties }) {
   const ref = useRef<HTMLElement>(null);
@@ -61,24 +98,28 @@ function SectionTitle({ children, light = false, style = {} }: { children: React
   );
 }
 
-function CTAButton({ text = "Agende Sua Aula Grátis", large = false, dark = false, style = {} }: { text?: string; large?: boolean; dark?: boolean; style?: React.CSSProperties }) {
+function CTAButton({ text = "Agende Sua Aula Grátis", large = false, dark = false, style = {}, href = "/cadastro" }: { text?: string; large?: boolean; dark?: boolean; style?: React.CSSProperties; href?: string }) {
   return (
-    <a href="/cadastro" className="cta-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: large ? "18px 36px" : "14px 28px", background: dark ? COLORS.dark : `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, color: COLORS.white, borderRadius: 12, fontSize: large ? 18 : 16, fontWeight: 700, textDecoration: "none", border: "none", cursor: "pointer", transition: "all 0.3s", fontFamily: "'DM Sans', sans-serif", ...style }}>
+    <a href={href} className="cta-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: large ? "18px 36px" : "14px 28px", background: dark ? COLORS.dark : `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, color: COLORS.white, borderRadius: 12, fontSize: large ? 18 : 16, fontWeight: 700, textDecoration: "none", border: "none", cursor: "pointer", transition: "all 0.3s", fontFamily: "'DM Sans', sans-serif", ...style }}>
       {text}
       <ArrowRight size={large ? 20 : 18} />
     </a>
   );
 }
 
-function HeroSection() {
+// --- Sections ---
+
+function HeroSection({ settings, getImage }: { settings: LandingSettings; getImage: (k: string, f: string) => string }) {
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 600], [0, 200]);
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
+  const heroImg = settings.hero_image_url || getImage("hero", "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=1920&q=80");
+  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
 
   return (
     <section id="hero" style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
       <motion.div style={{ position: "absolute", inset: 0, y }}>
-        <img src="https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=1920&q=80" alt="Futevôlei na praia" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+        <img src={heroImg} alt="Hero" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
       </motion.div>
       <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, rgba(15,23,42,0.6) 50%, rgba(15,23,42,0.85) 100%)" }} />
       <motion.div style={{ position: "relative", zIndex: 10, maxWidth: 800, margin: "0 auto", padding: "120px 24px 80px", textAlign: "center", opacity }}>
@@ -90,11 +131,13 @@ function HeroSection() {
           <span style={{ background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>AULA É GRÁTIS</span>
         </h1>
         <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", color: "rgba(255,255,255,0.8)", maxWidth: 560, margin: "0 auto 36px", lineHeight: 1.6 }}>
-          Turmas para todos os níveis, professores certificados e a melhor estrutura da região. Venha descobrir o esporte que vai mudar sua rotina.
+          {settings.business_mode === "rentals"
+            ? "Quadras profissionais para você e seus amigos. Reserve online e jogue quando quiser."
+            : "Turmas para todos os níveis, professores certificados e a melhor estrutura da região. Venha descobrir o esporte que vai mudar sua rotina."}
         </p>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <CTAButton text="Agende Sua Aula Grátis" large />
-          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>
+          <CTAButton text={settings.primary_cta_text} large href={settings.primary_cta_url} />
+          <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
             <Phone size={18} /> Fale no WhatsApp
           </a>
         </div>
@@ -142,18 +185,18 @@ function StatsStrip() {
   );
 }
 
-function AboutSection() {
+function AboutSection({ getImage }: { getImage: (k: string, f: string) => string }) {
   return (
     <Section id="sobre" style={{ padding: "80px 24px", background: COLORS.white }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48, alignItems: "center" }}>
         <div style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "4/3" }}>
-          <img src="https://images.unsplash.com/photo-1593786459953-62f5e5e23c16?w=800&q=80" alt="Arena de futevôlei" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+          <img src={getImage("about", "https://images.unsplash.com/photo-1593786459953-62f5e5e23c16?w=800&q=80")} alt="Arena de futevôlei" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
         </div>
         <div>
           <SectionLabel>Sobre nós</SectionLabel>
           <SectionTitle>Mais que uma quadra. <span style={{ color: COLORS.sunset }}>Uma comunidade.</span></SectionTitle>
           <p style={{ fontSize: 16, color: COLORS.gray, lineHeight: 1.7, marginBottom: 24 }}>
-            Nascemos da paixão pelo futevôlei e do desejo de criar um espaço onde qualquer pessoa — do iniciante ao competidor — pudesse evoluir de verdade. Com estrutura profissional, professores certificados e um método que funciona, já transformamos a rotina de mais de 500 alunos.
+            Nascemos da paixão pelo futevôlei e do desejo de criar um espaço onde qualquer pessoa — do iniciante ao competidor — pudesse evoluir de verdade.
           </p>
           <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             {["Quadras com areia de qualidade profissional", "Turmas separadas por nível de habilidade", "Método progressivo com feedback constante", "Horários flexíveis de manhã à noite"].map((item, idx) => (
@@ -169,7 +212,7 @@ function AboutSection() {
   );
 }
 
-function GallerySection() {
+function GallerySection({ getImage }: { getImage: (k: string, f: string) => string }) {
   const images = [
     { src: "https://images.unsplash.com/photo-1593786459953-62f5e5e23c16?w=600&q=80", span: 2, label: "Aulas em grupo" },
     { src: "https://images.unsplash.com/photo-1591343395082-e120087004b4?w=600&q=80", span: 1, label: "Técnica individual" },
@@ -196,8 +239,8 @@ function GallerySection() {
   );
 }
 
-function BenefitsSection() {
-  const benefits = [
+function BenefitsSection({ settings }: { settings: LandingSettings }) {
+  const classeBenefits = [
     { icon: Heart, title: "Saúde & Condicionamento", desc: "Queime até 600 calorias por aula treinando na areia com diversão.", color: "#EF4444" },
     { icon: Users, title: "Comunidade Vibrante", desc: "Faça amigos, participe de eventos e encontre motivação no grupo.", color: "#3B82F6" },
     { icon: Target, title: "Evolução Técnica Real", desc: "Método progressivo do básico ao avançado, com feedback constante.", color: "#10B981" },
@@ -205,11 +248,25 @@ function BenefitsSection() {
     { icon: Trophy, title: "Competições Internas", desc: "Teste suas habilidades em campeonatos entre alunos.", color: "#8B5CF6" },
     { icon: Dumbbell, title: "Preparo Completo", desc: "Trabalhe pernas, core, agilidade e reflexo em cada sessão.", color: COLORS.sunset },
   ];
+  const rentalBenefits = [
+    { icon: MapPin, title: "Quadras Profissionais", desc: "Areia de qualidade, redes oficiais e iluminação noturna.", color: "#EF4444" },
+    { icon: Users, title: "Jogue com Amigos", desc: "Reserve para sua turma e aproveite com liberdade total.", color: "#3B82F6" },
+    { icon: Target, title: "Reserva Online Fácil", desc: "Escolha data, horário e quadra direto pelo app.", color: "#10B981" },
+    { icon: Sun, title: "Horários Flexíveis", desc: "Quadras disponíveis de manhã à noite, todos os dias.", color: "#F59E0B" },
+    { icon: Trophy, title: "Preço Justo", desc: "Valores acessíveis por hora, sem mensalidade.", color: "#8B5CF6" },
+    { icon: Dumbbell, title: "Estrutura Completa", desc: "Estacionamento, vestiários e área de convivência.", color: COLORS.sunset },
+  ];
+  const benefits = settings.business_mode === "rentals" ? rentalBenefits : classeBenefits;
+
   return (
     <Section id="beneficios" style={{ padding: "80px 24px", background: COLORS.white }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
         <SectionLabel>Benefícios</SectionLabel>
-        <SectionTitle>O Que Você Ganha <span style={{ color: COLORS.sunset }}>Treinando Com a Gente</span></SectionTitle>
+        <SectionTitle>
+          {settings.business_mode === "rentals"
+            ? <>Por Que <span style={{ color: COLORS.sunset }}>Alugar Com a Gente</span></>
+            : <>O Que Você Ganha <span style={{ color: COLORS.sunset }}>Treinando Com a Gente</span></>}
+        </SectionTitle>
       </div>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
         {benefits.map((b, i) => (
@@ -230,12 +287,19 @@ function BenefitsSection() {
   );
 }
 
-function HowItWorksSection() {
-  const steps = [
-    { num: "01", title: "Escolha seu horário", desc: "Veja as turmas disponíveis, filtre por nível e reserve o horário que cabe na sua rotina.", img: "https://images.unsplash.com/photo-1434596922112-19c563067271?w=400&q=80" },
-    { num: "02", title: "Venha para sua aula", desc: "Chegue na quadra, conheça seu professor e viva sua primeira experiência no futevôlei.", img: "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?w=400&q=80" },
-    { num: "03", title: "Escolha seu plano", desc: "Sem pressão. Se curtir, escolha o plano ideal — 2x, 3x por semana ou livre. Simples assim.", img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&q=80" },
+function HowItWorksSection({ settings, getImage }: { settings: LandingSettings; getImage: (k: string, f: string) => string }) {
+  const classSteps = [
+    { num: "01", title: "Escolha seu horário", desc: "Veja as turmas disponíveis, filtre por nível e reserve.", img: "https://images.unsplash.com/photo-1434596922112-19c563067271?w=400&q=80" },
+    { num: "02", title: "Venha para sua aula", desc: "Chegue na quadra, conheça seu professor e viva a experiência.", img: "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?w=400&q=80" },
+    { num: "03", title: "Escolha seu plano", desc: "Se curtir, escolha o plano ideal. Simples assim.", img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&q=80" },
   ];
+  const rentalSteps = [
+    { num: "01", title: "Escolha a quadra e horário", desc: "Veja disponibilidade em tempo real e reserve online.", img: "https://images.unsplash.com/photo-1434596922112-19c563067271?w=400&q=80" },
+    { num: "02", title: "Confirme o pagamento", desc: "Pague via Pix de forma rápida e segura.", img: "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?w=400&q=80" },
+    { num: "03", title: "Jogue!", desc: "Chegue no horário marcado e aproveite sua quadra.", img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&q=80" },
+  ];
+  const steps = settings.business_mode === "rentals" ? rentalSteps : classSteps;
+
   return (
     <Section id="como-funciona" style={{ padding: "80px 24px", background: COLORS.sandLight }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
@@ -256,7 +320,7 @@ function HowItWorksSection() {
           </div>
         ))}
       </div>
-      <div style={{ textAlign: "center", marginTop: 48 }}><CTAButton /></div>
+      <div style={{ textAlign: "center", marginTop: 48 }}><CTAButton text={settings.primary_cta_text} href={settings.primary_cta_url} /></div>
     </Section>
   );
 }
@@ -264,9 +328,9 @@ function HowItWorksSection() {
 function TestimonialsSection() {
   const reviews = [
     { name: "Lucas M.", role: "Aluno há 8 meses", text: "Nunca tinha jogado futevôlei e em 2 meses já estava jogando com amigos. Os professores são incríveis!", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" },
-    { name: "Camila R.", role: "Aluna há 1 ano", text: "A melhor decisão que tomei! Emagreci, fiz amigos e aprendi um esporte que amo. Super recomendo!", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" },
-    { name: "Rafael S.", role: "Aluno há 6 meses", text: "Estrutura de primeira. Quadras profissionais, horários que cabem na minha rotina e aulas muito divertidas.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" },
-    { name: "Ana P.", role: "Mãe de aluno", text: "Meu filho de 14 anos adora! Além de exercício, ele desenvolveu disciplina e trabalho em equipe.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80" },
+    { name: "Camila R.", role: "Aluna há 1 ano", text: "A melhor decisão que tomei! Emagreci, fiz amigos e aprendi um esporte que amo.", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" },
+    { name: "Rafael S.", role: "Aluno há 6 meses", text: "Estrutura de primeira. Quadras profissionais, horários que cabem na minha rotina.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" },
+    { name: "Ana P.", role: "Mãe de aluno", text: "Meu filho de 14 anos adora! Desenvolveu disciplina e trabalho em equipe.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80" },
   ];
   return (
     <Section style={{ padding: "80px 24px", background: COLORS.white }}>
@@ -295,18 +359,29 @@ function TestimonialsSection() {
   );
 }
 
-function PlansSection() {
-  const plans = [
+function PlansSection({ settings }: { settings: LandingSettings }) {
+  const classPlans = [
     { name: "2x por semana", price: "149", period: "/mês", features: ["2 aulas semanais", "Turma do seu nível", "Acesso ao app", "Aula experimental grátis"], popular: false },
     { name: "3x por semana", price: "199", period: "/mês", features: ["3 aulas semanais", "Turma do seu nível", "Acesso ao app", "Aula experimental grátis", "Prioridade de horário"], popular: true },
-    { name: "Livre", price: "279", period: "/mês", features: ["Aulas ilimitadas", "Qualquer turma e horário", "Acesso ao app", "Aula experimental grátis", "Prioridade de horário", "Eventos exclusivos"], popular: false },
+    { name: "Livre", price: "279", period: "/mês", features: ["Aulas ilimitadas", "Qualquer turma e horário", "Acesso ao app", "Prioridade de horário", "Eventos exclusivos"], popular: false },
   ];
+  const rentalPlans = [
+    { name: "Avulso", price: "80", period: "/hora", features: ["1 hora de quadra", "Até 8 jogadores", "Reserva online"], popular: false },
+    { name: "Pacote 5h", price: "350", period: "/5h", features: ["5 horas de quadra", "Válido por 30 dias", "Reserva online", "10% de desconto"], popular: true },
+    { name: "Pacote 10h", price: "600", period: "/10h", features: ["10 horas de quadra", "Válido por 60 dias", "Reserva online", "25% de desconto", "Horário preferencial"], popular: false },
+  ];
+  const plans = settings.business_mode === "rentals" ? rentalPlans : classPlans;
+
   return (
     <Section id="planos" style={{ padding: "80px 24px", background: COLORS.sandLight }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
         <SectionLabel>Planos</SectionLabel>
         <SectionTitle>Escolha o Plano <span style={{ color: COLORS.sunset }}>Ideal Para Você</span></SectionTitle>
-        <p style={{ fontSize: 16, color: COLORS.gray, maxWidth: 500, margin: "0 auto" }}>Todos os planos incluem aula experimental gratuita. Sem fidelidade, cancele quando quiser.</p>
+        <p style={{ fontSize: 16, color: COLORS.gray, maxWidth: 500, margin: "0 auto" }}>
+          {settings.business_mode === "rentals"
+            ? "Reserve sua quadra de forma rápida e prática."
+            : "Todos os planos incluem aula experimental gratuita. Sem fidelidade, cancele quando quiser."}
+        </p>
       </div>
       <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
         {plans.map((p, i) => (
@@ -326,7 +401,7 @@ function PlansSection() {
                 </div>
               ))}
             </div>
-            <CTAButton text="Começar Agora" dark={!p.popular} style={{ width: "100%", justifyContent: "center" }} />
+            <CTAButton text="Começar Agora" dark={!p.popular} style={{ width: "100%", justifyContent: "center" }} href={settings.primary_cta_url} />
           </div>
         ))}
       </div>
@@ -334,16 +409,26 @@ function PlansSection() {
   );
 }
 
-function FAQSection() {
+function FAQSection({ settings }: { settings: LandingSettings }) {
   const [open, setOpen] = useState<number | null>(null);
-  const faqs = [
-    { q: "Preciso ter experiência para começar?", a: "Não! Temos turmas especiais para iniciantes completos. Nossos professores vão te guiar do zero, sem pressão." },
-    { q: "Quanto custa a aula experimental?", a: "A primeira aula é 100% gratuita e sem compromisso. Você só investe se decidir continuar." },
-    { q: "O que preciso levar?", a: "Apenas roupa confortável e vontade de se divertir. Nós fornecemos todo o equipamento necessário." },
-    { q: "Posso cancelar a qualquer momento?", a: "Sim! Nossos planos são flexíveis e sem fidelidade. Cancele quando quiser, sem burocracia." },
-    { q: "Qual a duração de cada aula?", a: "As aulas têm em média 1 hora, com aquecimento, treino técnico e jogo." },
-    { q: "Vocês têm estacionamento?", a: "Sim, temos estacionamento gratuito para alunos em todas as nossas unidades." },
+  const classFaqs = [
+    { q: "Preciso ter experiência para começar?", a: "Não! Temos turmas especiais para iniciantes completos." },
+    { q: "Quanto custa a aula experimental?", a: "A primeira aula é 100% gratuita e sem compromisso." },
+    { q: "O que preciso levar?", a: "Apenas roupa confortável e vontade de se divertir." },
+    { q: "Posso cancelar a qualquer momento?", a: "Sim! Nossos planos são flexíveis e sem fidelidade." },
+    { q: "Qual a duração de cada aula?", a: "As aulas têm em média 1 hora." },
+    { q: "Vocês têm estacionamento?", a: "Sim, temos estacionamento gratuito." },
   ];
+  const rentalFaqs = [
+    { q: "Como faço para reservar uma quadra?", a: "Reserve online pelo nosso app ou entre em contato via WhatsApp." },
+    { q: "Qual o valor da hora?", a: "A partir de R$80/hora. Temos pacotes com desconto." },
+    { q: "Posso cancelar uma reserva?", a: "Sim, cancele até 24h antes sem custo." },
+    { q: "Vocês fornecem bola e rede?", a: "Sim, tudo está incluído na reserva." },
+    { q: "Quantas pessoas cabem por quadra?", a: "Até 8 jogadores por quadra." },
+    { q: "Vocês têm estacionamento?", a: "Sim, temos estacionamento gratuito." },
+  ];
+  const faqs = settings.business_mode === "rentals" ? rentalFaqs : classFaqs;
+
   return (
     <Section id="faq" style={{ padding: "80px 24px", background: COLORS.white }}>
       <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
@@ -367,7 +452,8 @@ function FAQSection() {
   );
 }
 
-function FinalCTA() {
+function FinalCTA({ settings }: { settings: LandingSettings }) {
+  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
   return (
     <section style={{ position: "relative", padding: "100px 24px", background: COLORS.dark, overflow: "hidden", textAlign: "center" }}>
       <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: `radial-gradient(circle, ${COLORS.sunset}20, transparent 70%)` }} />
@@ -379,10 +465,15 @@ function FinalCTA() {
           <span style={{ background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>JOGAR?</span>
         </h2>
         <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, marginBottom: 32 }}>
-          Sua jornada no futevôlei começa com uma decisão simples. Agende sua aula experimental gratuita e descubra o esporte que vai transformar sua rotina.
+          {settings.business_mode === "rentals"
+            ? "Reserve sua quadra agora e garanta o melhor horário para você e seus amigos."
+            : "Sua jornada no futevôlei começa com uma decisão simples. Agende sua aula experimental gratuita."}
         </p>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
-          {["Aula grátis", "Sem compromisso", "Cancele quando quiser"].map((item, idx) => (
+          {(settings.business_mode === "rentals"
+            ? ["Reserva online", "Quadras profissionais", "Preço justo"]
+            : ["Aula grátis", "Sem compromisso", "Cancele quando quiser"]
+          ).map((item, idx) => (
             <span key={idx} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
               <CheckCircle size={16} color={COLORS.sunset} />
               {item}
@@ -390,8 +481,8 @@ function FinalCTA() {
           ))}
         </div>
         <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
-          <CTAButton text="Agende Sua Aula Grátis" large />
-          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
+          <CTAButton text={settings.primary_cta_text} large href={settings.primary_cta_url} />
+          <a href={waLink} target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
             <Phone size={18} /> WhatsApp
           </a>
         </div>
@@ -400,7 +491,7 @@ function FinalCTA() {
   );
 }
 
-function Nav() {
+function Nav({ settings }: { settings: LandingSettings }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   useEffect(() => {
@@ -430,7 +521,7 @@ function Nav() {
               {l.label}
             </a>
           ))}
-          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} />
+          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} href={settings.primary_cta_url} />
         </div>
         <button className="show-mobile" onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "none" }}>
           {menuOpen ? <X size={24} color={COLORS.white} /> : <Menu size={24} color={COLORS.white} />}
@@ -441,14 +532,15 @@ function Nav() {
           {links.map((l) => (
             <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 16, fontWeight: 500 }}>{l.label}</a>
           ))}
-          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} />
+          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} href={settings.primary_cta_url} />
         </div>
       )}
     </nav>
   );
 }
 
-function Footer() {
+function Footer({ settings }: { settings: LandingSettings }) {
+  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
   return (
     <footer style={{ background: COLORS.dark, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "60px 24px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40, marginBottom: 40 }}>
@@ -457,7 +549,7 @@ function Footer() {
             <div style={{ width: 36, height: 36, borderRadius: 8, background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, fontFamily: "'Bebas Neue', sans-serif", fontSize: 16 }}>FV</div>
             <span style={{ color: COLORS.white, fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700 }}>FutVôlei Arena</span>
           </div>
-          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1.6 }}>A melhor arena de futevôlei da cidade. Venha fazer parte da nossa comunidade.</p>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1.6 }}>A melhor arena de futevôlei da cidade.</p>
         </div>
         <div>
           <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Links</p>
@@ -471,11 +563,13 @@ function Footer() {
         </div>
         <div>
           <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Contato</p>
-          <a href="tel:+5511999999999" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 8, display: "block" }}>(11) 99999-9999</a>
-          <a href="mailto:contato@futvolei.com" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 16, display: "block" }}>contato@futvolei.com</a>
+          <a href={waLink} style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 16, display: "block" }}>WhatsApp</a>
           <div style={{ display: "flex", gap: 8 }}>
-            {[Instagram, Youtube].map((Icon, i) => (
-              <a key={i} href="#" style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, transition: "all 0.3s", background: "transparent" }}
+            {[
+              { Icon: Instagram, url: settings.instagram_url },
+              { Icon: Youtube, url: settings.youtube_url },
+            ].map(({ Icon, url }, i) => (
+              <a key={i} href={url || "#"} target="_blank" rel="noopener noreferrer" style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, transition: "all 0.3s", background: "transparent" }}
                 onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = COLORS.sunset; (e.currentTarget as HTMLAnchorElement).style.borderColor = COLORS.sunset; }}
                 onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.15)"; }}>
                 <Icon size={16} />
@@ -486,16 +580,20 @@ function Footer() {
       </div>
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>© {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.</p>
-        <div style={{ display: "flex", gap: 20 }}>
-          <a href="#" style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "none" }}>Termos de Uso</a>
-          <a href="#" style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "none" }}>Privacidade</a>
-        </div>
       </div>
     </footer>
   );
 }
 
+// --- Main Page ---
+
 export default function LandingPage() {
+  const { settings, isVisible, getImage, loaded } = useLandingData();
+
+  if (!loaded) {
+    return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.dark, color: COLORS.white }}>Carregando...</div>;
+  }
+
   return (
     <>
       <style>{`
@@ -508,18 +606,18 @@ export default function LandingPage() {
         @media (min-width: 769px) { .show-mobile { display: none !important; } }
       `}</style>
       <div style={{ fontFamily: "'DM Sans', sans-serif", color: COLORS.dark, overflowX: "hidden" }}>
-        <Nav />
-        <HeroSection />
-        <StatsStrip />
-        <AboutSection />
-        <GallerySection />
-        <BenefitsSection />
-        <HowItWorksSection />
-        <TestimonialsSection />
-        <PlansSection />
-        <FAQSection />
-        <FinalCTA />
-        <Footer />
+        <Nav settings={settings} />
+        {isVisible("hero") && <HeroSection settings={settings} getImage={getImage} />}
+        {isVisible("stats") && <StatsStrip />}
+        {isVisible("about") && <AboutSection getImage={getImage} />}
+        {isVisible("gallery") && <GallerySection getImage={getImage} />}
+        {isVisible("benefits") && <BenefitsSection settings={settings} />}
+        {isVisible("how_it_works") && <HowItWorksSection settings={settings} getImage={getImage} />}
+        {isVisible("testimonials") && <TestimonialsSection />}
+        {isVisible("plans") && <PlansSection settings={settings} />}
+        {isVisible("faq") && <FAQSection settings={settings} />}
+        {isVisible("final_cta") && <FinalCTA settings={settings} />}
+        <Footer settings={settings} />
       </div>
     </>
   );

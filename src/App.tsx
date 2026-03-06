@@ -34,6 +34,7 @@ import TeacherAttendance from "./pages/teacher/Attendance";
 
 import AdminAttendance from "./pages/admin/Attendance";
 import AdminInvoices from "./pages/admin/Invoices";
+import LandingPageEditor from "./pages/admin/LandingPageEditor";
 import StudentInvoices from "./pages/student/Invoices";
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const App = () => (
               <Route path="alunos" element={<Students />} />
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
+              <Route path="landing-page" element={<LandingPageEditor />} />
             </Route>
 
             {/* Student routes */}
