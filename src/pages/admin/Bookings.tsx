@@ -274,7 +274,7 @@ export default function Bookings() {
                 >
                   {String(hour).padStart(2, "0")}:00
                 </div>
-                {dayEvents.map(({ day, events }) => {
+                {filteredDayEvents.map(({ day, events }) => {
                   const cellEvents = events.filter((e) => {
                     const startHour = parseInt(e.startTime?.slice(0, 2) || "0", 10);
                     return startHour === hour;
