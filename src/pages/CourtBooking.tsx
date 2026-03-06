@@ -14,17 +14,12 @@ import { toast } from "sonner";
 import { MapPin, Clock, ArrowLeft, CheckCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 const bookingSchema = z.object({
   requester_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   requester_phone: z.string().trim().min(10, "Telefone inválido").max(20),
 });
-
-const TIME_SLOTS = [
-  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
-  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
-  "18:00", "19:00", "20:00", "21:00",
-];
 
 export default function CourtBooking() {
   const [step, setStep] = useState(1);
