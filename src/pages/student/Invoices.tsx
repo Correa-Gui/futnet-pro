@@ -195,30 +195,16 @@ export default function StudentInvoices() {
                   </div>
 
                   {canPay && (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3">
                       <Button
                         size="sm"
-                        className="flex-1"
+                        className="w-full"
                         onClick={() => generatePixMutation.mutate(inv.id)}
                         disabled={generatePixMutation.isPending}
                       >
                         <QrCode className="mr-2 h-4 w-4" />
                         {generatePixMutation.isPending ? 'Gerando...' : 'Pagar via PIX'}
                       </Button>
-                      {inv.pix_copy_paste && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setPixDialog({
-                            qr_code: inv.pix_copy_paste!,
-                            qr_code_base64: inv.pix_qr_code || '',
-                            copy_paste: inv.pix_copy_paste!,
-                            invoiceId: inv.id,
-                          })}
-                        >
-                          Ver PIX
-                        </Button>
-                      )}
                     </div>
                   )}
 
