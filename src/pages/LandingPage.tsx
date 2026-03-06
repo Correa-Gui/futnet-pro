@@ -40,18 +40,23 @@ const DEFAULT_SETTINGS: LandingSettings = {
 function useLandingData() {
   const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [sections, setSections] = useState<Record<string, SectionConfig>>({});
+  const [businessHours, setBusinessHours] = useState<{ open_days: number[]; open_hour: number; close_hour: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     Promise.all([
       supabase.from("landing_page_settings").select("*").limit(1).single(),
       supabase.from("landing_page_config").select("*").order("display_order"),
-    ]).then(([settingsRes, sectionsRes]) => {
+      supabase.from("system_config").select("value").eq("key", "business_hours").maybeSingle(),
+    ]).then(([settingsRes, sectionsRes, hoursRes]) => {
       if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
       if (sectionsRes.data) {
         const map: Record<string, SectionConfig> = {};
         (sectionsRes.data as unknown as SectionConfig[]).forEach((s) => { map[s.section_key] = s; });
         setSections(map);
+      }
+      if (hoursRes.data?.value) {
+        try { setBusinessHours(JSON.parse(hoursRes.data.value)); } catch {}
       }
       setLoaded(true);
     });
@@ -65,7 +70,7 @@ function useLandingData() {
     return sections[key]?.image_url || fallback;
   }, [sections]);
 
-  return { settings, sections, loaded, isVisible, getImage };
+  return { settings, sections, loaded, isVisible, getImage, businessHours };
 }
 
 // --- Utility Components ---
@@ -539,8 +544,10 @@ function Nav({ settings }: { settings: LandingSettings }) {
   );
 }
 
-function Footer({ settings }: { settings: LandingSettings }) {
+function Footer({ settings, businessHours }: { settings: LandingSettings; businessHours: { open_days: number[]; open_hour: number; close_hour: number } | null }) {
   const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
+  const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
   return (
     <footer style={{ background: COLORS.dark, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "60px 24px 24px" }}>
       <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40, marginBottom: 40 }}>
@@ -577,6 +584,29 @@ function Footer({ settings }: { settings: LandingSettings }) {
             ))}
           </div>
         </div>
+        {businessHours && (
+          <div>
+            <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Funcionamento</p>
+            <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14, marginBottom: 8 }}>
+              {String(businessHours.open_hour).padStart(2, "0")}:00 — {String(businessHours.close_hour).padStart(2, "0")}:00
+            </p>
+            <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+              {dayLabels.map((label, i) => (
+                <span key={i} style={{
+                  padding: "3px 8px",
+                  borderRadius: 6,
+                  fontSize: 12,
+                  fontWeight: 600,
+                  background: businessHours.open_days.includes(i) ? `${COLORS.sunset}30` : "rgba(255,255,255,0.05)",
+                  color: businessHours.open_days.includes(i) ? COLORS.sunsetLight : "rgba(255,255,255,0.2)",
+                  border: `1px solid ${businessHours.open_days.includes(i) ? `${COLORS.sunset}50` : "rgba(255,255,255,0.08)"}`,
+                }}>
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
       <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
         <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>© {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.</p>
@@ -588,7 +618,7 @@ function Footer({ settings }: { settings: LandingSettings }) {
 // --- Main Page ---
 
 export default function LandingPage() {
-  const { settings, isVisible, getImage, loaded } = useLandingData();
+  const { settings, isVisible, getImage, loaded, businessHours } = useLandingData();
 
   if (!loaded) {
     return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.dark, color: COLORS.white }}>Carregando...</div>;
@@ -617,7 +647,7 @@ export default function LandingPage() {
         {isVisible("plans") && <PlansSection settings={settings} />}
         {isVisible("faq") && <FAQSection settings={settings} />}
         {isVisible("final_cta") && <FinalCTA settings={settings} />}
-        <Footer settings={settings} />
+        <Footer settings={settings} businessHours={businessHours} />
       </div>
     </>
   );

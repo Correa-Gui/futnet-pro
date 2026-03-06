@@ -10,7 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2 } from "lucide-react";
+import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2, Clock } from "lucide-react";
+import { useBusinessHours, DEFAULT_BUSINESS_HOURS, type BusinessHours } from "@/hooks/useBusinessHours";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LandingSettings {
   id: string;
@@ -47,6 +50,18 @@ const SECTION_LABELS: Record<string, string> = {
   final_cta: "CTA Final",
 };
 
+const DAY_NAMES = [
+  { value: 0, label: "Domingo" },
+  { value: 1, label: "Segunda" },
+  { value: 2, label: "Terça" },
+  { value: 3, label: "Quarta" },
+  { value: 4, label: "Quinta" },
+  { value: 5, label: "Sexta" },
+  { value: 6, label: "Sábado" },
+];
+
+const HOUR_OPTIONS = Array.from({ length: 19 }, (_, i) => i + 5); // 5h to 23h
+
 export default function LandingPageEditor() {
   const [settings, setSettings] = useState<LandingSettings | null>(null);
   const [sections, setSections] = useState<SectionConfig[]>([]);
@@ -55,7 +70,17 @@ export default function LandingPageEditor() {
   const [editSection, setEditSection] = useState<SectionConfig | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
+  const { data: fetchedHours } = useBusinessHours();
   const { toast } = useToast();
+
+  // Sync fetched hours
+  useState(() => { /* handled by effect below */ });
+  const [hoursLoaded, setHoursLoaded] = useState(false);
+  if (fetchedHours && !hoursLoaded) {
+    setBusinessHours(fetchedHours);
+    setHoursLoaded(true);
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -70,24 +95,29 @@ export default function LandingPageEditor() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const saveSettings = async () => {
+  const saveSettingsAndHours = async () => {
     if (!settings) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("landing_page_settings")
-      .update({
-        business_mode: settings.business_mode,
-        hero_image_url: settings.hero_image_url,
-        whatsapp_number: settings.whatsapp_number,
-        instagram_url: settings.instagram_url,
-        youtube_url: settings.youtube_url,
-        primary_cta_text: settings.primary_cta_text,
-        primary_cta_url: settings.primary_cta_url,
-      })
-      .eq("id", settings.id);
+    const [settingsRes, hoursRes] = await Promise.all([
+      supabase
+        .from("landing_page_settings")
+        .update({
+          business_mode: settings.business_mode,
+          hero_image_url: settings.hero_image_url,
+          whatsapp_number: settings.whatsapp_number,
+          instagram_url: settings.instagram_url,
+          youtube_url: settings.youtube_url,
+          primary_cta_text: settings.primary_cta_text,
+          primary_cta_url: settings.primary_cta_url,
+        })
+        .eq("id", settings.id),
+      supabase
+        .from("system_config")
+        .upsert({ key: "business_hours", value: JSON.stringify(businessHours) }, { onConflict: "key" }),
+    ]);
     setSaving(false);
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    if (settingsRes.error || hoursRes.error) {
+      toast({ title: "Erro ao salvar", description: (settingsRes.error || hoursRes.error)?.message, variant: "destructive" });
     } else {
       toast({ title: "Configurações salvas!" });
     }
@@ -292,7 +322,69 @@ export default function LandingPageEditor() {
                 </CardContent>
               </Card>
 
-              <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Clock className="h-5 w-5" /> Horário de Funcionamento
+                  </CardTitle>
+                  <CardDescription>Define os dias e horários exibidos nos agendamentos</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Dias abertos</Label>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      {DAY_NAMES.map((day) => (
+                        <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                          <Checkbox
+                            checked={businessHours.open_days.includes(day.value)}
+                            onCheckedChange={(checked) => {
+                              setBusinessHours((prev) => ({
+                                ...prev,
+                                open_days: checked
+                                  ? [...prev.open_days, day.value].sort()
+                                  : prev.open_days.filter((d) => d !== day.value),
+                              }));
+                            }}
+                          />
+                          <span className="text-sm">{day.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Abertura</Label>
+                      <Select
+                        value={String(businessHours.open_hour)}
+                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, open_hour: parseInt(v) }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {HOUR_OPTIONS.map((h) => (
+                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Fechamento</Label>
+                      <Select
+                        value={String(businessHours.close_hour)}
+                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, close_hour: parseInt(v) }))}
+                      >
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {HOUR_OPTIONS.map((h) => (
+                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={saveSettingsAndHours} disabled={saving} className="w-full sm:w-auto">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Salvar Configurações
               </Button>

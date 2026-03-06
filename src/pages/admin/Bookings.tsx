@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
+import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
@@ -47,11 +48,15 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   cancelled: "Cancelado",
 };
 
-const HOURS = Array.from({ length: 16 }, (_, i) => i + 6); // 6h to 21h
-
 export default function Bookings() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
+  const { data: businessHours } = useBusinessHours();
+
+  const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
+  const openHour = businessHours?.open_hour ?? 6;
+  const closeHour = businessHours?.close_hour ?? 22;
+  const HOURS = Array.from({ length: closeHour - openHour }, (_, i) => i + openHour);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
@@ -149,6 +154,10 @@ export default function Bookings() {
     paid: bookings.filter((b) => b.status === "paid").length,
   };
 
+  // Filter to only show open days
+  const filteredWeekDays = weekDays.filter((day) => openDays.includes(getDay(day)));
+  const filteredDayEvents = dayEvents.filter(({ day }) => openDays.includes(getDay(day)));
+
   const weekLabel = `${format(weekStart, "dd MMM", { locale: ptBR })} — ${format(weekEnd, "dd MMM yyyy", { locale: ptBR })}`;
 
   return (
@@ -235,10 +244,10 @@ export default function Bookings() {
       {/* Weekly Calendar Grid */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="grid grid-cols-[auto_repeat(7,1fr)] min-w-[700px] overflow-x-auto">
+          <div className={cn("grid min-w-[700px] overflow-x-auto", `grid-cols-[auto_repeat(${filteredWeekDays.length},1fr)]`)}>
             {/* Header row */}
             <div className="sticky left-0 bg-card z-10 border-b border-r p-2" />
-            {weekDays.map((day) => (
+            {filteredWeekDays.map((day) => (
               <div
                 key={day.toISOString()}
                 className={cn(
@@ -269,7 +278,7 @@ export default function Bookings() {
                 >
                   {String(hour).padStart(2, "0")}:00
                 </div>
-                {dayEvents.map(({ day, events }) => {
+                {filteredDayEvents.map(({ day, events }) => {
                   const cellEvents = events.filter((e) => {
                     const startHour = parseInt(e.startTime?.slice(0, 2) || "0", 10);
                     return startHour === hour;

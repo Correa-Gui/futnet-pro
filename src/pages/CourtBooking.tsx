@@ -14,19 +14,23 @@ import { toast } from "sonner";
 import { MapPin, Clock, ArrowLeft, CheckCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
+import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 const bookingSchema = z.object({
   requester_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   requester_phone: z.string().trim().min(10, "Telefone inválido").max(20),
 });
 
-const TIME_SLOTS = [
-  "06:00", "07:00", "08:00", "09:00", "10:00", "11:00",
-  "12:00", "13:00", "14:00", "15:00", "16:00", "17:00",
-  "18:00", "19:00", "20:00", "21:00",
-];
-
 export default function CourtBooking() {
+  const { data: businessHours } = useBusinessHours();
+  const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
+  const openHour = businessHours?.open_hour ?? 6;
+  const closeHour = businessHours?.close_hour ?? 22;
+  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
+    const h = i + openHour;
+    return `${String(h).padStart(2, "0")}:00`;
+  });
+
   const [step, setStep] = useState(1);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
@@ -249,7 +253,11 @@ export default function CourtBooking() {
                     mode="single"
                     selected={selectedDate}
                     onSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
-                    disabled={(date) => isBefore(date, today) || isBefore(maxDate, date)}
+                    disabled={(date) =>
+                      isBefore(date, today) ||
+                      isBefore(maxDate, date) ||
+                      !openDays.includes(date.getDay())
+                    }
                     locale={ptBR}
                     className={cn("p-3 pointer-events-auto")}
                   />
