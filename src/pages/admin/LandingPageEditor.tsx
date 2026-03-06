@@ -50,6 +50,18 @@ const SECTION_LABELS: Record<string, string> = {
   final_cta: "CTA Final",
 };
 
+const DAY_NAMES = [
+  { value: 0, label: "Domingo" },
+  { value: 1, label: "Segunda" },
+  { value: 2, label: "Terça" },
+  { value: 3, label: "Quarta" },
+  { value: 4, label: "Quinta" },
+  { value: 5, label: "Sexta" },
+  { value: 6, label: "Sábado" },
+];
+
+const HOUR_OPTIONS = Array.from({ length: 19 }, (_, i) => i + 5); // 5h to 23h
+
 export default function LandingPageEditor() {
   const [settings, setSettings] = useState<LandingSettings | null>(null);
   const [sections, setSections] = useState<SectionConfig[]>([]);
@@ -58,7 +70,17 @@ export default function LandingPageEditor() {
   const [editSection, setEditSection] = useState<SectionConfig | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const [businessHours, setBusinessHours] = useState<BusinessHours>(DEFAULT_BUSINESS_HOURS);
+  const { data: fetchedHours } = useBusinessHours();
   const { toast } = useToast();
+
+  // Sync fetched hours
+  useState(() => { /* handled by effect below */ });
+  const [hoursLoaded, setHoursLoaded] = useState(false);
+  if (fetchedHours && !hoursLoaded) {
+    setBusinessHours(fetchedHours);
+    setHoursLoaded(true);
+  }
 
   const fetchData = useCallback(async () => {
     setLoading(true);
