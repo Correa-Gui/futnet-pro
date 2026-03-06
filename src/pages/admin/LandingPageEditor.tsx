@@ -10,7 +10,10 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2 } from "lucide-react";
+import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2, Clock } from "lucide-react";
+import { useBusinessHours, DEFAULT_BUSINESS_HOURS, type BusinessHours } from "@/hooks/useBusinessHours";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface LandingSettings {
   id: string;
