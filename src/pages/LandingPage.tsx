@@ -1,579 +1,527 @@
-import { motion, type Variants } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect, useRef } from "react";
+import { motion, useScroll, useTransform, useInView } from "framer-motion";
 import {
-  Star, CheckCircle, Users, Clock, MapPin, Trophy,
-  Zap, Heart, Target, Shield, ArrowRight, Phone,
-  Flame, Sun, Dumbbell, Smile
-} from 'lucide-react';
+  Star,
+  CheckCircle,
+  Users,
+  MapPin,
+  Trophy,
+  Heart,
+  Target,
+  ArrowRight,
+  Phone,
+  Sun,
+  Dumbbell,
+  ChevronDown,
+  Instagram,
+  Youtube,
+  Menu,
+  X,
+} from "lucide-react";
 
-const fadeUp: Variants = {
-  hidden: { opacity: 0, y: 30 },
-  visible: (i: number = 0) => ({
-    opacity: 1, y: 0,
-    transition: { delay: i * 0.1, duration: 0.5, ease: [0.25, 0.1, 0.25, 1] },
-  }),
+const COLORS = {
+  sand: "#F5E6C8",
+  sandLight: "#FDF6EC",
+  ocean: "#0C4A6E",
+  oceanLight: "#0369A1",
+  sunset: "#F97316",
+  sunsetDark: "#EA580C",
+  sunsetLight: "#FDBA74",
+  white: "#FFFFFF",
+  dark: "#0F172A",
+  gray: "#64748B",
+  grayLight: "#F1F5F9",
 };
 
-const stagger: Variants = {
-  visible: { transition: { staggerChildren: 0.08 } },
-};
-
-function SectionWrapper({ children, className = '', id }: { children: React.ReactNode; className?: string; id?: string }) {
+function Section({ children, className = "", id, style = {} }: { children: React.ReactNode; className?: string; id?: string; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-80px" });
   return (
-    <motion.section
-      id={id}
-      initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, margin: '-60px' }}
-      variants={stagger}
-      className={`px-4 py-16 md:py-24 ${className}`}
-    >
-      <div className="mx-auto max-w-6xl">{children}</div>
+    <motion.section ref={ref} id={id} className={className} style={{ position: "relative", ...style }}>
+      <div style={{ opacity: isInView ? 1 : 0, transform: isInView ? "translateY(0)" : "translateY(40px)", transition: "all 0.8s cubic-bezier(0.16, 1, 0.3, 1)" }}>
+        {children}
+      </div>
     </motion.section>
   );
 }
 
-function CTAButton({ text = 'Agende Sua Aula Experimental Grátis', large = false }: { text?: string; large?: boolean }) {
+function SectionLabel({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
   return (
-    <Link to="/cadastro">
-      <Button size={large ? 'lg' : 'default'} className={`group font-bold ${large ? 'text-lg px-10 py-6' : 'px-8 py-5'} bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-lg hover:shadow-xl transition-all`}>
-        {text}
-        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-      </Button>
-    </Link>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, color: light ? COLORS.sunsetLight : COLORS.sunset, marginBottom: 12, fontFamily: "'DM Sans', sans-serif" }}>
+      {children}
+    </span>
   );
 }
 
-/* ──────────────────────────────────────
-   1. HERO — Acima da Dobra
-   ────────────────────────────────────── */
-function HeroSection() {
+function SectionTitle({ children, light = false, style = {} }: { children: React.ReactNode; light?: boolean; style?: React.CSSProperties }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-primary/80 px-4 pb-20 pt-28 md:pb-28 md:pt-36">
-      {/* decorative circles */}
-      <div className="pointer-events-none absolute -right-32 -top-32 h-96 w-96 rounded-full bg-secondary/20 blur-3xl" />
-      <div className="pointer-events-none absolute -left-20 bottom-0 h-72 w-72 rounded-full bg-secondary/10 blur-2xl" />
+    <h2 style={{ fontFamily: "'Syne', sans-serif", fontSize: "clamp(28px, 5vw, 44px)", fontWeight: 800, lineHeight: 1.15, color: light ? COLORS.white : COLORS.dark, marginBottom: 20, ...style }}>
+      {children}
+    </h2>
+  );
+}
 
-      <div className="relative mx-auto max-w-5xl text-center">
-        {/* Eyebrow */}
-        <motion.div variants={fadeUp} custom={0}>
-          <Badge className="mb-6 bg-secondary/20 text-primary-foreground border-secondary/30 text-sm px-4 py-1.5 backdrop-blur-sm">
-            🏐 A arena que transforma iniciantes em jogadores
-          </Badge>
-        </motion.div>
+function CTAButton({ text = "Agende Sua Aula Grátis", large = false, dark = false, style = {} }: { text?: string; large?: boolean; dark?: boolean; style?: React.CSSProperties }) {
+  return (
+    <a href="/cadastro" className="cta-pulse" style={{ display: "inline-flex", alignItems: "center", gap: 10, padding: large ? "18px 36px" : "14px 28px", background: dark ? COLORS.dark : `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, color: COLORS.white, borderRadius: 12, fontSize: large ? 18 : 16, fontWeight: 700, textDecoration: "none", border: "none", cursor: "pointer", transition: "all 0.3s", fontFamily: "'DM Sans', sans-serif", ...style }}>
+      {text}
+      <ArrowRight size={large ? 20 : 18} />
+    </a>
+  );
+}
 
-        {/* Título */}
-        <motion.h1 variants={fadeUp} custom={1} className="text-3xl font-extrabold leading-tight tracking-tight text-primary-foreground sm:text-4xl md:text-5xl lg:text-6xl">
-          Aprenda Futevôlei com Quem Entende.{' '}
-          <span className="text-secondary">Sua Primeira Aula é Por Nossa Conta.</span>
-        </motion.h1>
+function HeroSection() {
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 600], [0, 200]);
+  const opacity = useTransform(scrollY, [0, 400], [1, 0]);
 
-        {/* Marcadores de valor */}
-        <motion.div variants={fadeUp} custom={2} className="mt-8 flex flex-wrap items-center justify-center gap-4 text-primary-foreground/90">
+  return (
+    <section id="hero" style={{ position: "relative", minHeight: "100vh", display: "flex", alignItems: "center", overflow: "hidden" }}>
+      <motion.div style={{ position: "absolute", inset: 0, y }}>
+        <img src="https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=1920&q=80" alt="Futevôlei na praia" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+      </motion.div>
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(to bottom, rgba(15,23,42,0.4) 0%, rgba(15,23,42,0.6) 50%, rgba(15,23,42,0.85) 100%)" }} />
+      <motion.div style={{ position: "relative", zIndex: 10, maxWidth: 800, margin: "0 auto", padding: "120px 24px 80px", textAlign: "center", opacity }}>
+        <span style={{ display: "inline-block", padding: "6px 16px", background: "rgba(249,115,22,0.2)", border: "1px solid rgba(249,115,22,0.3)", borderRadius: 100, color: COLORS.sunsetLight, fontSize: 14, fontWeight: 600, marginBottom: 24, letterSpacing: 1 }}>
+          A arena de futevôlei nº1 da cidade
+        </span>
+        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(48px, 10vw, 88px)", lineHeight: 1, color: COLORS.white, marginBottom: 20, letterSpacing: 2 }}>
+          SUA PRIMEIRA{" "}
+          <span style={{ background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>AULA É GRÁTIS</span>
+        </h1>
+        <p style={{ fontSize: "clamp(16px, 2.5vw, 20px)", color: "rgba(255,255,255,0.8)", maxWidth: 560, margin: "0 auto 36px", lineHeight: 1.6 }}>
+          Turmas para todos os níveis, professores certificados e a melhor estrutura da região. Venha descobrir o esporte que vai mudar sua rotina.
+        </p>
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          <CTAButton text="Agende Sua Aula Grátis" large />
+          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none", cursor: "pointer" }}>
+            <Phone size={18} /> Fale no WhatsApp
+          </a>
+        </div>
+        <div style={{ display: "flex", gap: 24, justifyContent: "center", flexWrap: "wrap", marginTop: 48 }}>
           {[
-            { icon: Target, text: 'Aulas para todos os níveis' },
-            { icon: MapPin, text: 'Quadras profissionais' },
-            { icon: Clock, text: 'Horários flexíveis' },
-            { icon: Users, text: 'Turmas reduzidas' },
-          ].map(({ icon: Icon, text }) => (
-            <div key={text} className="flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 text-sm backdrop-blur-sm">
-              <Icon className="h-4 w-4 text-secondary" />
-              <span>{text}</span>
+            { icon: <div style={{ display: "flex", gap: 2 }}>{[...Array(5)].map((_, i) => <Star key={i} size={14} fill={COLORS.sunset} color={COLORS.sunset} />)}</div>, text: "4.9 no Google" },
+            { icon: <Users size={16} />, text: "+500 alunos ativos" },
+            { icon: <Trophy size={16} />, text: "Professores certificados" },
+          ].map((item, idx) => (
+            <div key={idx} style={{ display: "flex", alignItems: "center", gap: 8, color: "rgba(255,255,255,0.7)", fontSize: 14 }}>
+              {item.icon}
+              {item.text}
             </div>
           ))}
-        </motion.div>
-
-        {/* CTA */}
-        <motion.div variants={fadeUp} custom={3} className="mt-10">
-          <CTAButton large />
-        </motion.div>
-
-        {/* Removedor de atrito */}
-        <motion.p variants={fadeUp} custom={4} className="mt-4 text-sm text-primary-foreground/70">
-          Sem compromisso · Sem mensalidade antecipada · Cancele quando quiser
-        </motion.p>
-
-        {/* Prova social */}
-        <motion.div variants={fadeUp} custom={5} className="mt-8 flex flex-wrap items-center justify-center gap-6 text-primary-foreground/80">
-          <div className="flex items-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-4 w-4 fill-secondary text-secondary" />
-            ))}
-            <span className="ml-2 text-sm font-medium">4.9 no Google</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Users className="h-4 w-4 text-secondary" />
-            <span>+500 alunos treinando</span>
-          </div>
-          <div className="flex items-center gap-2 text-sm">
-            <Trophy className="h-4 w-4 text-secondary" />
-            <span>Professores certificados</span>
-          </div>
-        </motion.div>
+        </div>
+      </motion.div>
+      <div className="scroll-indicator" style={{ position: "absolute", bottom: 32, left: "50%", transform: "translateX(-50%)", zIndex: 10 }}>
+        <ChevronDown size={28} color="rgba(255,255,255,0.5)" />
       </div>
     </section>
   );
 }
 
-/* ──────────────────────────────────────
-   2. SEÇÃO DE LEADS
-   ────────────────────────────────────── */
-function LeadsSection() {
-  return (
-    <SectionWrapper className="bg-background">
-      <div className="grid gap-8 md:grid-cols-3">
-        {[
-          {
-            icon: Trophy,
-            title: '+500 alunos ativos',
-            desc: 'Uma comunidade crescendo todos os dias com pessoas como você.',
-          },
-          {
-            icon: Flame,
-            title: 'Cansado de treinar sem evolução?',
-            desc: 'Sem orientação profissional, é fácil se frustrar e desistir. Você merece um método que funciona.',
-          },
-          {
-            icon: Zap,
-            title: 'Evolua de verdade com a gente',
-            desc: 'Nossos treinos são estruturados para você sentir progresso desde a primeira aula.',
-          },
-        ].map((item, i) => (
-          <motion.div key={item.title} variants={fadeUp} custom={i}>
-            <Card className="h-full border-border/50 bg-card hover:shadow-md transition-shadow">
-              <CardContent className="flex flex-col items-center p-8 text-center">
-                <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-                  <item.icon className="h-7 w-7 text-primary" />
-                </div>
-                <h3 className="mb-2 text-lg font-bold text-foreground">{item.title}</h3>
-                <p className="text-sm text-muted-foreground">{item.desc}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    </SectionWrapper>
-  );
-}
-
-/* ──────────────────────────────────────
-   3. PROVA SOCIAL
-   ────────────────────────────────────── */
-function ProofSection() {
-  const reviews = [
-    { name: 'Lucas M.', text: 'Nunca tinha jogado futevôlei e em 2 meses já estava jogando com amigos. Os professores são incríveis!', rating: 5 },
-    { name: 'Camila R.', text: 'A melhor decisão que tomei! Emagreci, fiz amigos e aprendi um esporte que amo. Super recomendo!', rating: 5 },
-    { name: 'Rafael S.', text: 'Estrutura de primeira. Quadras profissionais, horários que cabem na minha rotina e aulas muito divertidas.', rating: 5 },
-    { name: 'Ana P.', text: 'Meu filho de 14 anos adora! Além de exercício, ele desenvolveu disciplina e trabalho em equipe.', rating: 5 },
+function StatsStrip() {
+  const stats = [
+    { value: "500+", label: "Alunos ativos", icon: Users },
+    { value: "15+", label: "Professores", icon: Target },
+    { value: "4.9", label: "Nota no Google", icon: Star },
+    { value: "3", label: "Quadras", icon: MapPin },
   ];
-
   return (
-    <SectionWrapper className="bg-muted/30" id="depoimentos">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Depoimentos reais</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">O Que Nossos Alunos Dizem</h2>
-      </motion.div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {reviews.map((r, i) => (
-          <motion.div key={r.name} variants={fadeUp} custom={i}>
-            <Card className="h-full border-border/50">
-              <CardContent className="p-6">
-                <div className="mb-3 flex gap-0.5">
-                  {[...Array(r.rating)].map((_, j) => (
-                    <Star key={j} className="h-4 w-4 fill-secondary text-secondary" />
-                  ))}
-                </div>
-                <p className="mb-4 text-sm text-muted-foreground italic">"{r.text}"</p>
-                <p className="text-sm font-semibold text-foreground">{r.name}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
-        ))}
-      </div>
-    </SectionWrapper>
-  );
-}
-
-/* ──────────────────────────────────────
-   4. BENEFÍCIOS
-   ────────────────────────────────────── */
-function BenefitsSection() {
-  const benefits = [
-    { icon: Heart, title: 'Saúde e Condicionamento', desc: 'Queime até 600 calorias por aula enquanto se diverte na areia.' },
-    { icon: Users, title: 'Comunidade Vibrante', desc: 'Faça amigos, participe de eventos e entre para um grupo motivado.' },
-    { icon: Target, title: 'Evolução Técnica Real', desc: 'Método progressivo: do básico ao avançado, com feedback constante.' },
-    { icon: Sun, title: 'Bem-Estar Mental', desc: 'Treinar ao ar livre reduz estresse e melhora o humor comprovadamente.' },
-    { icon: Trophy, title: 'Competições Internas', desc: 'Participe de campeonatos entre alunos e teste suas habilidades.' },
-    { icon: Dumbbell, title: 'Preparo Físico Completo', desc: 'Trabalhe pernas, core, agilidade e reflexo em cada sessão.' },
-  ];
-
-  return (
-    <SectionWrapper className="bg-background" id="beneficios">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-secondary/10 text-secondary-foreground border-secondary/20">Resultados reais</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">O Que Você Ganha Treinando Com a Gente</h2>
-      </motion.div>
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {benefits.map((b, i) => (
-          <motion.div key={b.title} variants={fadeUp} custom={i}>
-            <div className="flex gap-4 rounded-xl border border-border/50 bg-card p-6 hover:shadow-md transition-shadow">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <b.icon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-foreground">{b.title}</h3>
-                <p className="mt-1 text-sm text-muted-foreground">{b.desc}</p>
-              </div>
+    <div style={{ background: COLORS.white, borderBottom: `1px solid ${COLORS.grayLight}`, padding: "40px 24px" }}>
+      <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 24 }}>
+        {stats.map((s, i) => (
+          <div key={i} className="stat-card" style={{ display: "flex", alignItems: "center", gap: 16, padding: "16px 20px", borderRadius: 12, transition: "all 0.3s", cursor: "default" }}>
+            <s.icon size={24} color={COLORS.sunset} />
+            <div>
+              <div style={{ fontFamily: "'Syne', sans-serif", fontSize: 28, fontWeight: 800, color: COLORS.dark }}>{s.value}</div>
+              <div style={{ fontSize: 14, color: COLORS.gray }}>{s.label}</div>
             </div>
-          </motion.div>
+          </div>
         ))}
       </div>
-    </SectionWrapper>
+    </div>
   );
 }
 
-/* ──────────────────────────────────────
-   5. DIFERENCIADORES
-   ────────────────────────────────────── */
-function DifferentiatorsSection() {
-  const rows = [
-    { feature: 'Aula experimental grátis', us: true, them: false },
-    { feature: 'Professores certificados', us: true, them: false },
-    { feature: 'Turmas por nível', us: true, them: false },
-    { feature: 'Quadras profissionais', us: true, them: false },
-    { feature: 'Horários flexíveis', us: true, them: false },
-    { feature: 'Método progressivo', us: true, them: false },
-    { feature: 'Comunidade ativa', us: true, them: false },
-  ];
-
+function AboutSection() {
   return (
-    <SectionWrapper className="bg-muted/30" id="diferenciais">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Compare e escolha</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">Por Que a FutVôlei Arena?</h2>
-      </motion.div>
-      <motion.div variants={fadeUp} custom={1} className="mx-auto max-w-2xl">
-        <Card className="overflow-hidden border-border/50">
-          <CardContent className="p-0">
-            <div className="grid grid-cols-3 border-b border-border bg-primary/5 px-6 py-4 text-sm font-bold text-foreground">
-              <span>Característica</span>
-              <span className="text-center text-primary">FutVôlei Arena</span>
-              <span className="text-center text-muted-foreground">Outros</span>
-            </div>
-            {rows.map((row, i) => (
-              <div key={row.feature} className={`grid grid-cols-3 items-center px-6 py-3 text-sm ${i % 2 === 0 ? 'bg-card' : 'bg-muted/20'}`}>
-                <span className="text-foreground">{row.feature}</span>
-                <span className="text-center">
-                  <CheckCircle className="mx-auto h-5 w-5 text-primary" />
-                </span>
-                <span className="text-center text-muted-foreground">—</span>
+    <Section id="sobre" style={{ padding: "80px 24px", background: COLORS.white }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 48, alignItems: "center" }}>
+        <div style={{ borderRadius: 20, overflow: "hidden", aspectRatio: "4/3" }}>
+          <img src="https://images.unsplash.com/photo-1593786459953-62f5e5e23c16?w=800&q=80" alt="Arena de futevôlei" style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+        </div>
+        <div>
+          <SectionLabel>Sobre nós</SectionLabel>
+          <SectionTitle>Mais que uma quadra. <span style={{ color: COLORS.sunset }}>Uma comunidade.</span></SectionTitle>
+          <p style={{ fontSize: 16, color: COLORS.gray, lineHeight: 1.7, marginBottom: 24 }}>
+            Nascemos da paixão pelo futevôlei e do desejo de criar um espaço onde qualquer pessoa — do iniciante ao competidor — pudesse evoluir de verdade. Com estrutura profissional, professores certificados e um método que funciona, já transformamos a rotina de mais de 500 alunos.
+          </p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {["Quadras com areia de qualidade profissional", "Turmas separadas por nível de habilidade", "Método progressivo com feedback constante", "Horários flexíveis de manhã à noite"].map((item, idx) => (
+              <div key={idx} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 15, color: COLORS.dark }}>
+                <CheckCircle size={18} color={COLORS.sunset} />
+                {item}
               </div>
             ))}
-          </CardContent>
-        </Card>
-      </motion.div>
-    </SectionWrapper>
+          </div>
+        </div>
+      </div>
+    </Section>
   );
 }
 
-/* ──────────────────────────────────────
-   6. COMO FUNCIONA
-   ────────────────────────────────────── */
+function GallerySection() {
+  const images = [
+    { src: "https://images.unsplash.com/photo-1593786459953-62f5e5e23c16?w=600&q=80", span: 2, label: "Aulas em grupo" },
+    { src: "https://images.unsplash.com/photo-1591343395082-e120087004b4?w=600&q=80", span: 1, label: "Técnica individual" },
+    { src: "https://images.unsplash.com/photo-1507034589631-9433cc6bc453?w=600&q=80", span: 1, label: "Competições" },
+    { src: "https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=600&q=80", span: 2, label: "Nossa comunidade" },
+  ];
+  return (
+    <Section style={{ padding: "80px 24px", background: COLORS.sandLight }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Galeria</SectionLabel>
+        <SectionTitle>Veja Nossa Estrutura em Ação</SectionTitle>
+      </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+        {images.map((img, i) => (
+          <div key={i} style={{ gridColumn: `span ${img.span}`, borderRadius: 16, overflow: "hidden", position: "relative", aspectRatio: img.span === 2 ? "2/1" : "1/1" }}>
+            <img src={img.src} alt={img.label} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
+            <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "24px 16px 12px", background: "linear-gradient(transparent, rgba(0,0,0,0.6))", color: COLORS.white, fontSize: 14, fontWeight: 600 }}>
+              {img.label}
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function BenefitsSection() {
+  const benefits = [
+    { icon: Heart, title: "Saúde & Condicionamento", desc: "Queime até 600 calorias por aula treinando na areia com diversão.", color: "#EF4444" },
+    { icon: Users, title: "Comunidade Vibrante", desc: "Faça amigos, participe de eventos e encontre motivação no grupo.", color: "#3B82F6" },
+    { icon: Target, title: "Evolução Técnica Real", desc: "Método progressivo do básico ao avançado, com feedback constante.", color: "#10B981" },
+    { icon: Sun, title: "Bem-Estar Mental", desc: "Treinar ao ar livre reduz estresse e melhora o humor.", color: "#F59E0B" },
+    { icon: Trophy, title: "Competições Internas", desc: "Teste suas habilidades em campeonatos entre alunos.", color: "#8B5CF6" },
+    { icon: Dumbbell, title: "Preparo Completo", desc: "Trabalhe pernas, core, agilidade e reflexo em cada sessão.", color: COLORS.sunset },
+  ];
+  return (
+    <Section id="beneficios" style={{ padding: "80px 24px", background: COLORS.white }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Benefícios</SectionLabel>
+        <SectionTitle>O Que Você Ganha <span style={{ color: COLORS.sunset }}>Treinando Com a Gente</span></SectionTitle>
+      </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
+        {benefits.map((b, i) => (
+          <div key={i} style={{ display: "flex", gap: 16, padding: 24, borderRadius: 16, background: COLORS.white, border: `1px solid ${COLORS.grayLight}`, transition: "all 0.3s", cursor: "default" }}
+            onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 12px 32px rgba(0,0,0,0.08)"; }}
+            onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(0)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "none"; }}>
+            <div style={{ width: 48, height: 48, borderRadius: 12, background: `${b.color}15`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <b.icon size={22} color={b.color} />
+            </div>
+            <div>
+              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 17, fontWeight: 700, color: COLORS.dark, marginBottom: 4 }}>{b.title}</h3>
+              <p style={{ fontSize: 14, color: COLORS.gray, lineHeight: 1.5 }}>{b.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
 function HowItWorksSection() {
   const steps = [
-    { num: '1', title: 'Escolha seu horário', desc: 'Veja os horários disponíveis e reserve o que melhor se encaixa na sua rotina.' },
-    { num: '2', title: 'Venha para sua aula', desc: 'Chegue na quadra, conheça seu professor e aproveite sua primeira experiência.' },
-    { num: '3', title: 'Decida se quer continuar', desc: 'Sem pressão. Se gostar, escolha o plano ideal para você. Simples assim.' },
+    { num: "01", title: "Escolha seu horário", desc: "Veja as turmas disponíveis, filtre por nível e reserve o horário que cabe na sua rotina.", img: "https://images.unsplash.com/photo-1434596922112-19c563067271?w=400&q=80" },
+    { num: "02", title: "Venha para sua aula", desc: "Chegue na quadra, conheça seu professor e viva sua primeira experiência no futevôlei.", img: "https://images.unsplash.com/photo-1580477667995-2b94f01c9516?w=400&q=80" },
+    { num: "03", title: "Escolha seu plano", desc: "Sem pressão. Se curtir, escolha o plano ideal — 2x, 3x por semana ou livre. Simples assim.", img: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=400&q=80" },
   ];
-
   return (
-    <SectionWrapper className="bg-background" id="como-funciona">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-secondary/10 text-secondary-foreground border-secondary/20">Simples e rápido</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">Três Passos Para Começar</h2>
-      </motion.div>
-      <div className="grid gap-8 md:grid-cols-3">
+    <Section id="como-funciona" style={{ padding: "80px 24px", background: COLORS.sandLight }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Como funciona</SectionLabel>
+        <SectionTitle>Três Passos Para Começar</SectionTitle>
+      </div>
+      <div style={{ maxWidth: 900, margin: "0 auto", display: "flex", flexDirection: "column", gap: 32 }}>
         {steps.map((s, i) => (
-          <motion.div key={s.num} variants={fadeUp} custom={i} className="text-center">
-            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-extrabold text-primary-foreground shadow-lg">
-              {s.num}
+          <div key={i} style={{ display: "flex", gap: 24, alignItems: "center", flexDirection: i % 2 === 1 ? "row-reverse" : "row", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 200px", borderRadius: 16, overflow: "hidden", aspectRatio: "16/10" }}>
+              <img src={s.img} alt={s.title} style={{ objectFit: "cover", width: "100%", height: "100%" }} />
             </div>
-            <h3 className="mb-2 text-xl font-bold text-foreground">{s.title}</h3>
-            <p className="text-sm text-muted-foreground">{s.desc}</p>
-          </motion.div>
+            <div style={{ flex: "1 1 300px" }}>
+              <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 48, color: `${COLORS.sunset}30`, lineHeight: 1 }}>{s.num}</span>
+              <h3 style={{ fontFamily: "'Syne', sans-serif", fontSize: 22, fontWeight: 700, color: COLORS.dark, marginBottom: 8 }}>{s.title}</h3>
+              <p style={{ fontSize: 15, color: COLORS.gray, lineHeight: 1.6 }}>{s.desc}</p>
+            </div>
+          </div>
         ))}
       </div>
-      <motion.div variants={fadeUp} custom={3} className="mt-12 text-center">
-        <CTAButton />
-      </motion.div>
-    </SectionWrapper>
+      <div style={{ textAlign: "center", marginTop: 48 }}><CTAButton /></div>
+    </Section>
   );
 }
 
-/* ──────────────────────────────────────
-   7. OFERTA
-   ────────────────────────────────────── */
-function OfferSection() {
+function TestimonialsSection() {
+  const reviews = [
+    { name: "Lucas M.", role: "Aluno há 8 meses", text: "Nunca tinha jogado futevôlei e em 2 meses já estava jogando com amigos. Os professores são incríveis!", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" },
+    { name: "Camila R.", role: "Aluna há 1 ano", text: "A melhor decisão que tomei! Emagreci, fiz amigos e aprendi um esporte que amo. Super recomendo!", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" },
+    { name: "Rafael S.", role: "Aluno há 6 meses", text: "Estrutura de primeira. Quadras profissionais, horários que cabem na minha rotina e aulas muito divertidas.", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&q=80" },
+    { name: "Ana P.", role: "Mãe de aluno", text: "Meu filho de 14 anos adora! Além de exercício, ele desenvolveu disciplina e trabalho em equipe.", avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80" },
+  ];
   return (
-    <SectionWrapper className="bg-gradient-to-br from-primary to-primary/80" id="oferta">
-      <motion.div variants={fadeUp} className="mx-auto max-w-3xl text-center text-primary-foreground">
-        <h2 className="text-3xl font-extrabold md:text-4xl">
-          Sua Aula Experimental <span className="text-secondary">100% Gratuita</span>
-        </h2>
-        <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm">
-          {[
-            'Aula com professor dedicado',
-            'Equipamento incluso',
-            'Turma para seu nível',
-            'Sem cartão de crédito',
-            'Sem compromisso futuro',
-          ].map((item) => (
-            <div key={item} className="flex items-center gap-2 rounded-full bg-primary-foreground/10 px-4 py-2 backdrop-blur-sm">
-              <CheckCircle className="h-4 w-4 text-secondary" />
-              <span>{item}</span>
+    <Section style={{ padding: "80px 24px", background: COLORS.white }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Depoimentos</SectionLabel>
+        <SectionTitle>O Que Nossos Alunos Dizem</SectionTitle>
+      </div>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 20 }}>
+        {reviews.map((r, i) => (
+          <div key={i} style={{ padding: 24, borderRadius: 16, border: `1px solid ${COLORS.grayLight}`, background: COLORS.white }}>
+            <div style={{ display: "flex", gap: 2, marginBottom: 12 }}>
+              {[...Array(5)].map((_, j) => <Star key={j} size={16} fill={COLORS.sunset} color={COLORS.sunset} />)}
             </div>
-          ))}
-        </div>
-        <div className="mt-10">
-          <CTAButton large text="Quero Minha Aula Grátis" />
-        </div>
-        <p className="mt-4 text-sm text-primary-foreground/60">
-          Vagas limitadas por turma · Garantia de satisfação
-        </p>
-      </motion.div>
-    </SectionWrapper>
-  );
-}
-
-/* ──────────────────────────────────────
-   8. EQUIPE
-   ────────────────────────────────────── */
-function TeamSection() {
-  return (
-    <SectionWrapper className="bg-background" id="equipe">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Quem te ensina</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">Professores Que Vivem o Esporte</h2>
-        <p className="mt-4 text-muted-foreground max-w-2xl mx-auto">
-          Nossa equipe é formada por atletas e treinadores certificados que competem em alto nível e dedicam suas carreiras a ensinar futevôlei com paixão e método.
-        </p>
-      </motion.div>
-      <motion.div variants={fadeUp} custom={1} className="grid gap-6 sm:grid-cols-3">
-        {[
-          { name: 'Professor Dedicado', trait: 'Técnica individual', desc: 'Foco em fundamentos e evolução passo a passo.' },
-          { name: 'Treino Estruturado', trait: 'Metodologia comprovada', desc: 'Planos de aula baseados em progressão real.' },
-          { name: 'Suporte Contínuo', trait: 'Acompanhamento', desc: 'Feedback constante dentro e fora da quadra.' },
-        ].map((t, i) => (
-          <Card key={t.name} className="border-border/50 hover:shadow-md transition-shadow">
-            <CardContent className="p-8 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-                <Shield className="h-8 w-8 text-primary" />
+            <p style={{ fontSize: 15, color: COLORS.dark, lineHeight: 1.6, marginBottom: 16, fontStyle: "italic" }}>"{r.text}"</p>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <img src={r.avatar} alt={r.name} style={{ width: 40, height: 40, borderRadius: "50%", objectFit: "cover" }} />
+              <div>
+                <p style={{ fontSize: 14, fontWeight: 700, color: COLORS.dark }}>{r.name}</p>
+                <p style={{ fontSize: 13, color: COLORS.gray }}>{r.role}</p>
               </div>
-              <h3 className="font-bold text-foreground">{t.name}</h3>
-              <Badge variant="secondary" className="my-2">{t.trait}</Badge>
-              <p className="text-sm text-muted-foreground">{t.desc}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </motion.div>
-    </SectionWrapper>
-  );
-}
-
-/* ──────────────────────────────────────
-   9. PROVA SOCIAL COM ARQUÉTIPOS
-   ────────────────────────────────────── */
-function ArchetypesSection() {
-  const archetypes = [
-    {
-      icon: Smile,
-      label: 'Iniciante Completo',
-      quote: 'Nunca toquei numa bola de futevôlei e hoje jogo 3x por semana. Viciei!',
-      name: 'Juliana, 28 anos',
-    },
-    {
-      icon: Trophy,
-      label: 'Ex-Atleta voltando à ativa',
-      quote: 'Joguei vôlei na faculdade e encontrei no futevôlei a motivação que faltava.',
-      name: 'Marcos, 35 anos',
-    },
-    {
-      icon: Heart,
-      label: 'Buscando saúde e bem-estar',
-      quote: 'Perdi 8kg em 4 meses e ganhei um grupo de amigos incrível.',
-      name: 'Fernanda, 42 anos',
-    },
-  ];
-
-  return (
-    <SectionWrapper className="bg-muted/30" id="perfis">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-primary/10 text-primary border-primary/20">Para todos os perfis</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">Quem Treina na FutVôlei Arena</h2>
-      </motion.div>
-      <div className="grid gap-6 md:grid-cols-3">
-        {archetypes.map((a, i) => (
-          <motion.div key={a.label} variants={fadeUp} custom={i}>
-            <Card className="h-full border-border/50 hover:shadow-md transition-shadow">
-              <CardContent className="p-8">
-                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-secondary/10">
-                  <a.icon className="h-6 w-6 text-secondary" />
-                </div>
-                <Badge variant="outline" className="mb-3">{a.label}</Badge>
-                <p className="mb-4 text-sm text-muted-foreground italic">"{a.quote}"</p>
-                <p className="text-sm font-semibold text-foreground">— {a.name}</p>
-              </CardContent>
-            </Card>
-          </motion.div>
+            </div>
+          </div>
         ))}
       </div>
-    </SectionWrapper>
+    </Section>
   );
 }
 
-/* ──────────────────────────────────────
-   10. FAQ
-   ────────────────────────────────────── */
-function FAQSection() {
-  const faqs = [
-    { q: 'Preciso ter experiência para começar?', a: 'Não! Temos turmas especiais para iniciantes. Nossos professores vão te guiar do zero, sem pressão.' },
-    { q: 'Quanto custa a aula experimental?', a: 'A primeira aula é 100% gratuita e sem compromisso. Você só investe se decidir continuar.' },
-    { q: 'O que preciso levar?', a: 'Apenas roupa confortável e vontade de se divertir. Nós fornecemos todo o equipamento necessário.' },
-    { q: 'Posso cancelar a qualquer momento?', a: 'Sim! Nossos planos são flexíveis e sem fidelidade. Cancele quando quiser, sem burocracia.' },
-    { q: 'Qual a duração de cada aula?', a: 'As aulas têm em média 1 hora, com aquecimento, treino técnico e jogo.' },
-    { q: 'Vocês têm estacionamento?', a: 'Sim, temos estacionamento gratuito para alunos em todas as nossas unidades.' },
+function PlansSection() {
+  const plans = [
+    { name: "2x por semana", price: "149", period: "/mês", features: ["2 aulas semanais", "Turma do seu nível", "Acesso ao app", "Aula experimental grátis"], popular: false },
+    { name: "3x por semana", price: "199", period: "/mês", features: ["3 aulas semanais", "Turma do seu nível", "Acesso ao app", "Aula experimental grátis", "Prioridade de horário"], popular: true },
+    { name: "Livre", price: "279", period: "/mês", features: ["Aulas ilimitadas", "Qualquer turma e horário", "Acesso ao app", "Aula experimental grátis", "Prioridade de horário", "Eventos exclusivos"], popular: false },
   ];
-
   return (
-    <SectionWrapper className="bg-background" id="faq">
-      <motion.div variants={fadeUp} className="text-center mb-12">
-        <Badge className="mb-4 bg-secondary/10 text-secondary-foreground border-secondary/20">Tire suas dúvidas</Badge>
-        <h2 className="text-3xl font-extrabold text-foreground md:text-4xl">Perguntas Frequentes</h2>
-      </motion.div>
-      <motion.div variants={fadeUp} custom={1} className="mx-auto max-w-3xl">
-        <Accordion type="single" collapsible className="space-y-2">
-          {faqs.map((faq, i) => (
-            <AccordionItem key={i} value={`faq-${i}`} className="rounded-lg border border-border/50 bg-card px-6">
-              <AccordionTrigger className="text-left font-semibold text-foreground hover:no-underline">
-                {faq.q}
-              </AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {faq.a}
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-      </motion.div>
-    </SectionWrapper>
+    <Section id="planos" style={{ padding: "80px 24px", background: COLORS.sandLight }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Planos</SectionLabel>
+        <SectionTitle>Escolha o Plano <span style={{ color: COLORS.sunset }}>Ideal Para Você</span></SectionTitle>
+        <p style={{ fontSize: 16, color: COLORS.gray, maxWidth: 500, margin: "0 auto" }}>Todos os planos incluem aula experimental gratuita. Sem fidelidade, cancele quando quiser.</p>
+      </div>
+      <div style={{ maxWidth: 1000, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
+        {plans.map((p, i) => (
+          <div key={i} style={{ padding: 32, borderRadius: 20, background: p.popular ? COLORS.dark : COLORS.white, border: p.popular ? "none" : `1px solid ${COLORS.grayLight}`, position: "relative", color: p.popular ? COLORS.white : COLORS.dark, transition: "transform 0.3s" }}>
+            {p.popular && <span style={{ position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)", background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, color: COLORS.white, padding: "4px 16px", borderRadius: 100, fontSize: 13, fontWeight: 700 }}>Popular</span>}
+            <p style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>{p.name}</p>
+            <div style={{ display: "flex", alignItems: "baseline", gap: 4, marginBottom: 24 }}>
+              <span style={{ fontSize: 14, fontWeight: 500 }}>R$</span>
+              <span style={{ fontFamily: "'Syne', sans-serif", fontSize: 48, fontWeight: 800 }}>{p.price}</span>
+              <span style={{ fontSize: 14, color: p.popular ? "rgba(255,255,255,0.6)" : COLORS.gray }}>{p.period}</span>
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 28 }}>
+              {p.features.map((f, fi) => (
+                <div key={fi} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14 }}>
+                  <CheckCircle size={16} color={p.popular ? COLORS.sunsetLight : COLORS.sunset} />
+                  {f}
+                </div>
+              ))}
+            </div>
+            <CTAButton text="Começar Agora" dark={!p.popular} style={{ width: "100%", justifyContent: "center" }} />
+          </div>
+        ))}
+      </div>
+    </Section>
   );
 }
 
-/* ──────────────────────────────────────
-   11. PONTO FINAL
-   ────────────────────────────────────── */
-function FinalCTASection() {
+function FAQSection() {
+  const [open, setOpen] = useState<number | null>(null);
+  const faqs = [
+    { q: "Preciso ter experiência para começar?", a: "Não! Temos turmas especiais para iniciantes completos. Nossos professores vão te guiar do zero, sem pressão." },
+    { q: "Quanto custa a aula experimental?", a: "A primeira aula é 100% gratuita e sem compromisso. Você só investe se decidir continuar." },
+    { q: "O que preciso levar?", a: "Apenas roupa confortável e vontade de se divertir. Nós fornecemos todo o equipamento necessário." },
+    { q: "Posso cancelar a qualquer momento?", a: "Sim! Nossos planos são flexíveis e sem fidelidade. Cancele quando quiser, sem burocracia." },
+    { q: "Qual a duração de cada aula?", a: "As aulas têm em média 1 hora, com aquecimento, treino técnico e jogo." },
+    { q: "Vocês têm estacionamento?", a: "Sim, temos estacionamento gratuito para alunos em todas as nossas unidades." },
+  ];
   return (
-    <SectionWrapper className="bg-gradient-to-br from-primary to-primary/80">
-      <motion.div variants={fadeUp} className="mx-auto max-w-3xl text-center text-primary-foreground">
-        <h2 className="text-3xl font-extrabold md:text-4xl">
-          Pronto Para Entrar na Quadra?
+    <Section id="faq" style={{ padding: "80px 24px", background: COLORS.white }}>
+      <div style={{ maxWidth: 700, margin: "0 auto", textAlign: "center", marginBottom: 48 }}>
+        <SectionLabel>Dúvidas</SectionLabel>
+        <SectionTitle>Perguntas Frequentes</SectionTitle>
+      </div>
+      <div style={{ maxWidth: 700, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 }}>
+        {faqs.map((faq, i) => (
+          <div key={i} style={{ borderRadius: 12, border: `1px solid ${open === i ? COLORS.sunset + "40" : COLORS.grayLight}`, background: open === i ? COLORS.sandLight : COLORS.white, overflow: "hidden", transition: "all 0.3s" }}>
+            <button onClick={() => setOpen(open === i ? null : i)} style={{ width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", background: "none", border: "none", cursor: "pointer", fontSize: 16, fontWeight: 600, color: COLORS.dark, fontFamily: "'DM Sans', sans-serif", textAlign: "left" }}>
+              {faq.q}
+              <ChevronDown size={18} style={{ transform: open === i ? "rotate(180deg)" : "rotate(0)", transition: "transform 0.3s", flexShrink: 0 }} />
+            </button>
+            <div style={{ maxHeight: open === i ? 200 : 0, overflow: "hidden", transition: "max-height 0.3s ease" }}>
+              <p style={{ padding: "0 24px 18px", fontSize: 15, color: COLORS.gray, lineHeight: 1.6 }}>{faq.a}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Section>
+  );
+}
+
+function FinalCTA() {
+  return (
+    <section style={{ position: "relative", padding: "100px 24px", background: COLORS.dark, overflow: "hidden", textAlign: "center" }}>
+      <div style={{ position: "absolute", top: -100, right: -100, width: 400, height: 400, borderRadius: "50%", background: `radial-gradient(circle, ${COLORS.sunset}20, transparent 70%)` }} />
+      <div style={{ position: "absolute", bottom: -100, left: -100, width: 300, height: 300, borderRadius: "50%", background: `radial-gradient(circle, ${COLORS.oceanLight}20, transparent 70%)` }} />
+      <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.8 }} style={{ position: "relative", zIndex: 10, maxWidth: 700, margin: "0 auto" }}>
+        <SectionLabel light>Vem pra quadra</SectionLabel>
+        <h2 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: "clamp(40px, 8vw, 72px)", lineHeight: 1, color: COLORS.white, marginBottom: 20, letterSpacing: 2 }}>
+          PRONTO PARA{" "}
+          <span style={{ background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetLight})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>JOGAR?</span>
         </h2>
-        <p className="mt-4 text-lg text-primary-foreground/80">
+        <p style={{ fontSize: 18, color: "rgba(255,255,255,0.7)", lineHeight: 1.6, marginBottom: 32 }}>
           Sua jornada no futevôlei começa com uma decisão simples. Agende sua aula experimental gratuita e descubra o esporte que vai transformar sua rotina.
         </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-3 text-sm text-primary-foreground/70">
-          {['Aula grátis', 'Sem compromisso', 'Professores certificados', '+500 alunos'].map((item) => (
-            <span key={item} className="flex items-center gap-1.5">
-              <CheckCircle className="h-4 w-4 text-secondary" />
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap", marginBottom: 32 }}>
+          {["Aula grátis", "Sem compromisso", "Cancele quando quiser"].map((item, idx) => (
+            <span key={idx} style={{ display: "flex", alignItems: "center", gap: 6, color: "rgba(255,255,255,0.6)", fontSize: 14 }}>
+              <CheckCircle size={16} color={COLORS.sunset} />
               {item}
             </span>
           ))}
         </div>
-        <div className="mt-10">
-          <CTAButton large text="Agende Sua Aula Experimental Grátis" />
+        <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+          <CTAButton text="Agende Sua Aula Grátis" large />
+          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "18px 28px", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 12, color: COLORS.white, fontSize: 16, fontWeight: 600, textDecoration: "none" }}>
+            <Phone size={18} /> WhatsApp
+          </a>
         </div>
-        <p className="mt-4 text-sm text-primary-foreground/50">
-          Vagas limitadas · Aprovação em minutos · Satisfação garantida
-        </p>
       </motion.div>
-    </SectionWrapper>
+    </section>
   );
 }
 
-/* ──────────────────────────────────────
-   NAV (sticky simples)
-   ────────────────────────────────────── */
-function LandingNav() {
+function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 60);
+    window.addEventListener("scroll", onScroll);
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  const links = [
+    { label: "Sobre", href: "#sobre" },
+    { label: "Benefícios", href: "#beneficios" },
+    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Planos", href: "#planos" },
+    { label: "FAQ", href: "#faq" },
+  ];
   return (
-    <nav className="fixed top-0 z-50 w-full border-b border-primary-foreground/10 bg-primary/95 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-        <Link to="/landing" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-secondary">
-            <span className="text-sm font-extrabold text-secondary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
-          </div>
-          <span className="text-lg font-bold text-primary-foreground">FutVôlei Arena</span>
-        </Link>
-        <div className="hidden items-center gap-6 md:flex">
-          {[
-            { label: 'Benefícios', href: '#beneficios' },
-            { label: 'Como Funciona', href: '#como-funciona' },
-            { label: 'Depoimentos', href: '#depoimentos' },
-            { label: 'FAQ', href: '#faq' },
-          ].map((link) => (
-            <a key={link.href} href={link.href} className="text-sm text-primary-foreground/70 hover:text-primary-foreground transition-colors">
-              {link.label}
+    <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 50, padding: "12px 24px", background: scrolled ? "rgba(15,23,42,0.95)" : "transparent", backdropFilter: scrolled ? "blur(12px)" : "none", transition: "all 0.3s" }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <a href="#hero" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none" }}>
+          <div style={{ width: 40, height: 40, borderRadius: 10, background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, fontWeight: 700 }}>FV</div>
+          <span style={{ color: COLORS.white, fontFamily: "'Syne', sans-serif", fontSize: 18, fontWeight: 700 }}>FutVôlei Arena</span>
+        </a>
+        <div style={{ display: "flex", alignItems: "center", gap: 28 }} className="hide-mobile">
+          {links.map((l) => (
+            <a key={l.label} href={l.href} style={{ color: "rgba(255,255,255,0.7)", textDecoration: "none", fontSize: 14, fontWeight: 500, transition: "color 0.2s" }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = COLORS.white)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.7)")}>
+              {l.label}
             </a>
           ))}
+          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} />
         </div>
-        <CTAButton text="Aula Grátis" />
+        <button className="show-mobile" onClick={() => setMenuOpen(!menuOpen)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "none" }}>
+          {menuOpen ? <X size={24} color={COLORS.white} /> : <Menu size={24} color={COLORS.white} />}
+        </button>
       </div>
+      {menuOpen && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "20px 0", alignItems: "center" }}>
+          {links.map((l) => (
+            <a key={l.label} href={l.href} onClick={() => setMenuOpen(false)} style={{ color: "rgba(255,255,255,0.8)", textDecoration: "none", fontSize: 16, fontWeight: 500 }}>{l.label}</a>
+          ))}
+          <CTAButton text="Aula Grátis" style={{ padding: "10px 20px", fontSize: 14 }} />
+        </div>
+      )}
     </nav>
   );
 }
 
-/* ──────────────────────────────────────
-   FOOTER
-   ────────────────────────────────────── */
-function LandingFooter() {
+function Footer() {
   return (
-    <footer className="border-t border-border bg-card px-4 py-8">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 text-sm text-muted-foreground md:flex-row">
-        <p>© {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.</p>
-        <div className="flex gap-4">
-          <Link to="/login" className="hover:text-foreground transition-colors">Login</Link>
-          <a href="#faq" className="hover:text-foreground transition-colors">FAQ</a>
-          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 hover:text-foreground transition-colors">
-            <Phone className="h-3.5 w-3.5" /> WhatsApp
-          </a>
+    <footer style={{ background: COLORS.dark, borderTop: "1px solid rgba(255,255,255,0.08)", padding: "60px 24px 24px" }}>
+      <div style={{ maxWidth: 1100, margin: "0 auto", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 40, marginBottom: 40 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 36, height: 36, borderRadius: 8, background: `linear-gradient(135deg, ${COLORS.sunset}, ${COLORS.sunsetDark})`, display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, fontFamily: "'Bebas Neue', sans-serif", fontSize: 16 }}>FV</div>
+            <span style={{ color: COLORS.white, fontFamily: "'Syne', sans-serif", fontSize: 16, fontWeight: 700 }}>FutVôlei Arena</span>
+          </div>
+          <p style={{ color: "rgba(255,255,255,0.4)", fontSize: 14, lineHeight: 1.6 }}>A melhor arena de futevôlei da cidade. Venha fazer parte da nossa comunidade.</p>
+        </div>
+        <div>
+          <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Links</p>
+          {["Sobre", "Benefícios", "Planos", "FAQ"].map((l) => (
+            <a key={l} href={`#${l.toLowerCase().replace("í", "i")}`} style={{ display: "block", color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 10, transition: "color 0.2s" }}
+              onMouseEnter={(e) => ((e.target as HTMLElement).style.color = COLORS.white)}
+              onMouseLeave={(e) => ((e.target as HTMLElement).style.color = "rgba(255,255,255,0.5)")}>
+              {l}
+            </a>
+          ))}
+        </div>
+        <div>
+          <p style={{ color: COLORS.white, fontWeight: 600, marginBottom: 16, fontSize: 15 }}>Contato</p>
+          <a href="tel:+5511999999999" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 8, display: "block" }}>(11) 99999-9999</a>
+          <a href="mailto:contato@futvolei.com" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 14, marginBottom: 16, display: "block" }}>contato@futvolei.com</a>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[Instagram, Youtube].map((Icon, i) => (
+              <a key={i} href="#" style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: COLORS.white, transition: "all 0.3s", background: "transparent" }}
+                onMouseEnter={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = COLORS.sunset; (e.currentTarget as HTMLAnchorElement).style.borderColor = COLORS.sunset; }}
+                onMouseLeave={(e) => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.borderColor = "rgba(255,255,255,0.15)"; }}>
+                <Icon size={16} />
+              </a>
+            ))}
+          </div>
+        </div>
+      </div>
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 12 }}>
+        <p style={{ color: "rgba(255,255,255,0.3)", fontSize: 13 }}>© {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.</p>
+        <div style={{ display: "flex", gap: 20 }}>
+          <a href="#" style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "none" }}>Termos de Uso</a>
+          <a href="#" style={{ color: "rgba(255,255,255,0.3)", fontSize: 13, textDecoration: "none" }}>Privacidade</a>
         </div>
       </div>
     </footer>
   );
 }
 
-/* ──────────────────────────────────────
-   LANDING PAGE
-   ────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
-      <LandingNav />
-      <HeroSection />
-      <LeadsSection />
-      <ProofSection />
-      <BenefitsSection />
-      <DifferentiatorsSection />
-      <HowItWorksSection />
-      <OfferSection />
-      <TeamSection />
-      <ArchetypesSection />
-      <FAQSection />
-      <FinalCTASection />
-      <LandingFooter />
-    </div>
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Syne:wght@400;600;700;800&display=swap');
+        .scroll-indicator { animation: bounce 2s infinite; }
+        @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
+        .cta-pulse { animation: ctaPulse 2.5s infinite; }
+        @keyframes ctaPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(249, 115, 22, 0); } }
+        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
+        @media (max-width: 768px) { .hide-mobile { display: none !important; } .show-mobile { display: flex !important; } }
+        @media (min-width: 769px) { .show-mobile { display: none !important; } }
+      `}</style>
+      <div style={{ fontFamily: "'DM Sans', sans-serif", color: COLORS.dark, overflowX: "hidden" }}>
+        <Nav />
+        <HeroSection />
+        <StatsStrip />
+        <AboutSection />
+        <GallerySection />
+        <BenefitsSection />
+        <HowItWorksSection />
+        <TestimonialsSection />
+        <PlansSection />
+        <FAQSection />
+        <FinalCTA />
+        <Footer />
+      </div>
+    </>
   );
 }
