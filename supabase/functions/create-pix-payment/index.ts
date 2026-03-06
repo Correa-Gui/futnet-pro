@@ -77,14 +77,20 @@ Deno.serve(async (req) => {
       );
       const checkData = await checkRes.json();
       if (checkRes.ok && checkData.status === "pending" && checkData.point_of_interaction?.transaction_data) {
-        return new Response(
-          JSON.stringify({
-            qr_code: checkData.point_of_interaction.transaction_data.qr_code,
-            qr_code_base64: checkData.point_of_interaction.transaction_data.qr_code_base64,
-            payment_id: checkData.id,
-          }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        // Check if payment is not expired
+        const expirationDate = checkData.date_of_expiration ? new Date(checkData.date_of_expiration) : null;
+        if (expirationDate && expirationDate > new Date()) {
+          return new Response(
+            JSON.stringify({
+              qr_code: checkData.point_of_interaction.transaction_data.qr_code,
+              qr_code_base64: checkData.point_of_interaction.transaction_data.qr_code_base64,
+              payment_id: checkData.id,
+              expires_at: checkData.date_of_expiration,
+            }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        // Payment expired, will create a new one below
       }
     }
 
@@ -97,18 +103,20 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    // Create PIX payment via Mercado Pago
+    // Create PIX payment via Mercado Pago with 5-minute expiration
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
-        "X-Idempotency-Key": `invoice-${invoice_id}`,
+        "X-Idempotency-Key": `invoice-${invoice_id}-${Date.now()}`,
       },
       body: JSON.stringify({
         transaction_amount: finalAmount,
         description: `Fatura ${invoice.reference_month}`,
         payment_method_id: "pix",
+        date_of_expiration: expiresAt,
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
         payer: {
           email: profile?.email || "aluno@email.com",
@@ -146,6 +154,7 @@ Deno.serve(async (req) => {
         qr_code: qrCode,
         qr_code_base64: qrCodeBase64,
         payment_id: mpData.id,
+        expires_at: mpData.date_of_expiration || expiresAt,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

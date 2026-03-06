@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Receipt, Calendar, AlertCircle, QrCode, Copy, CheckCircle } from 'lucide-react';
+import { Receipt, Calendar, AlertCircle, QrCode, Copy, CheckCircle, Clock } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -21,8 +21,10 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 export default function StudentInvoices() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string } | null>(null);
+  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string; expiresAt?: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll for payment status while PIX dialog is open
   useEffect(() => {
@@ -39,13 +41,36 @@ export default function StudentInvoices() {
           toast.success('Pagamento confirmado!');
           queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
         }
-      }, 5000); // Check every 5 seconds
+      }, 5000);
 
       return () => {
         if (pollingRef.current) clearInterval(pollingRef.current);
       };
     }
   }, [pixDialog?.invoiceId, queryClient]);
+
+  // Countdown timer for QR code expiration
+  useEffect(() => {
+    if (pixDialog?.expiresAt) {
+      const updateCountdown = () => {
+        const remaining = Math.max(0, Math.floor((new Date(pixDialog.expiresAt!).getTime() - Date.now()) / 1000));
+        setTimeLeft(remaining);
+        if (remaining <= 0) {
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+          setPixDialog(null);
+          toast.info('QR Code expirado. Gere um novo para continuar.');
+          queryClient.invalidateQueries({ queryKey: ['student-invoices'] });
+        }
+      };
+      updateCountdown();
+      countdownRef.current = setInterval(updateCountdown, 1000);
+
+      return () => {
+        if (countdownRef.current) clearInterval(countdownRef.current);
+      };
+    }
+  }, [pixDialog?.expiresAt, queryClient]);
 
   const { data: studentProfile } = useQuery({
     queryKey: ['student-profile', user?.id],
@@ -89,6 +114,7 @@ export default function StudentInvoices() {
         qr_code_base64: data.qr_code_base64,
         copy_paste: data.qr_code,
         invoiceId,
+        expiresAt: data.expires_at,
       });
     },
     onError: (e: Error) => toast.error(e.message),
@@ -169,30 +195,16 @@ export default function StudentInvoices() {
                   </div>
 
                   {canPay && (
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3">
                       <Button
                         size="sm"
-                        className="flex-1"
+                        className="w-full"
                         onClick={() => generatePixMutation.mutate(inv.id)}
                         disabled={generatePixMutation.isPending}
                       >
                         <QrCode className="mr-2 h-4 w-4" />
                         {generatePixMutation.isPending ? 'Gerando...' : 'Pagar via PIX'}
                       </Button>
-                      {inv.pix_copy_paste && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setPixDialog({
-                            qr_code: inv.pix_copy_paste!,
-                            qr_code_base64: inv.pix_qr_code || '',
-                            copy_paste: inv.pix_copy_paste!,
-                            invoiceId: inv.id,
-                          })}
-                        >
-                          Ver PIX
-                        </Button>
-                      )}
                     </div>
                   )}
 
@@ -213,6 +225,7 @@ export default function StudentInvoices() {
       <Dialog open={!!pixDialog} onOpenChange={(open) => {
         if (!open) {
           if (pollingRef.current) clearInterval(pollingRef.current);
+          if (countdownRef.current) clearInterval(countdownRef.current);
           setPixDialog(null);
         }
       }}>
@@ -223,6 +236,16 @@ export default function StudentInvoices() {
           </DialogHeader>
           {pixDialog && (
             <div className="space-y-4">
+              {/* Countdown timer */}
+              {timeLeft > 0 && (
+                <div className={`flex items-center justify-center gap-2 rounded-md p-2 text-sm font-medium ${
+                  timeLeft <= 60 ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'
+                }`}>
+                  <Clock className="h-4 w-4" />
+                  <span>Expira em {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</span>
+                </div>
+              )}
+
               {pixDialog.qr_code_base64 && (
                 <div className="flex justify-center">
                   <img
@@ -232,9 +255,6 @@ export default function StudentInvoices() {
                   />
                 </div>
               )}
-              <p className="text-center text-sm text-muted-foreground">
-                Escaneie o QR Code ou copie o código abaixo
-              </p>
               <div className="rounded-md border bg-muted/50 p-3">
                 <p className="text-xs text-muted-foreground break-all select-all font-mono">
                   {pixDialog.copy_paste}
