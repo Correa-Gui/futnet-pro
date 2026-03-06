@@ -1,0 +1,418 @@
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Switch } from "@/components/ui/switch";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2 } from "lucide-react";
+
+interface LandingSettings {
+  id: string;
+  business_mode: string;
+  hero_image_url: string | null;
+  whatsapp_number: string | null;
+  instagram_url: string | null;
+  youtube_url: string | null;
+  primary_cta_text: string;
+  primary_cta_url: string;
+}
+
+interface SectionConfig {
+  id: string;
+  section_key: string;
+  is_visible: boolean;
+  title: string | null;
+  subtitle: string | null;
+  content: any;
+  image_url: string | null;
+  display_order: number;
+}
+
+const SECTION_LABELS: Record<string, string> = {
+  hero: "Hero (Topo)",
+  stats: "Estatísticas",
+  about: "Sobre Nós",
+  gallery: "Galeria",
+  benefits: "Benefícios",
+  how_it_works: "Como Funciona",
+  testimonials: "Depoimentos",
+  plans: "Planos",
+  faq: "FAQ",
+  final_cta: "CTA Final",
+};
+
+export default function LandingPageEditor() {
+  const [settings, setSettings] = useState<LandingSettings | null>(null);
+  const [sections, setSections] = useState<SectionConfig[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [editSection, setEditSection] = useState<SectionConfig | null>(null);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [uploadingFor, setUploadingFor] = useState<string | null>(null);
+  const { toast } = useToast();
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    const [settingsRes, sectionsRes] = await Promise.all([
+      supabase.from("landing_page_settings").select("*").limit(1).single(),
+      supabase.from("landing_page_config").select("*").order("display_order"),
+    ]);
+    if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
+    if (sectionsRes.data) setSections(sectionsRes.data as unknown as SectionConfig[]);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const saveSettings = async () => {
+    if (!settings) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("landing_page_settings")
+      .update({
+        business_mode: settings.business_mode,
+        hero_image_url: settings.hero_image_url,
+        whatsapp_number: settings.whatsapp_number,
+        instagram_url: settings.instagram_url,
+        youtube_url: settings.youtube_url,
+        primary_cta_text: settings.primary_cta_text,
+        primary_cta_url: settings.primary_cta_url,
+      })
+      .eq("id", settings.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Configurações salvas!" });
+    }
+  };
+
+  const toggleVisibility = async (section: SectionConfig) => {
+    const newVal = !section.is_visible;
+    setSections((prev) => prev.map((s) => (s.id === section.id ? { ...s, is_visible: newVal } : s)));
+    await supabase.from("landing_page_config").update({ is_visible: newVal }).eq("id", section.id);
+  };
+
+  const saveSection = async () => {
+    if (!editSection) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("landing_page_config")
+      .update({
+        title: editSection.title,
+        subtitle: editSection.subtitle,
+        content: editSection.content,
+      })
+      .eq("id", editSection.id);
+    setSaving(false);
+    if (error) {
+      toast({ title: "Erro ao salvar seção", description: error.message, variant: "destructive" });
+    } else {
+      setSections((prev) => prev.map((s) => (s.id === editSection.id ? editSection : s)));
+      setEditDialogOpen(false);
+      toast({ title: "Seção atualizada!" });
+    }
+  };
+
+  const uploadImage = async (file: File, target: "hero" | string) => {
+    setUploadingFor(target);
+    const ext = file.name.split(".").pop();
+    const path = `${target}/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("landing-images").upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast({ title: "Erro no upload", description: uploadError.message, variant: "destructive" });
+      setUploadingFor(null);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("landing-images").getPublicUrl(path);
+    const publicUrl = urlData.publicUrl;
+
+    if (target === "hero") {
+      setSettings((prev) => prev ? { ...prev, hero_image_url: publicUrl } : prev);
+      await supabase.from("landing_page_settings").update({ hero_image_url: publicUrl }).eq("id", settings!.id);
+    } else {
+      setSections((prev) =>
+        prev.map((s) => (s.section_key === target ? { ...s, image_url: publicUrl } : s))
+      );
+      await supabase.from("landing_page_config").update({ image_url: publicUrl }).eq("section_key", target);
+    }
+    setUploadingFor(null);
+    toast({ title: "Imagem enviada!" });
+  };
+
+  const handleFileInput = (target: string) => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) uploadImage(file, target);
+    };
+    input.click();
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Editor da Landing Page</h1>
+          <p className="text-muted-foreground text-sm">Personalize a página pública do seu negócio</p>
+        </div>
+        <Button variant="outline" size="sm" asChild>
+          <a href="/landing" target="_blank" rel="noopener noreferrer">
+            <ExternalLink className="mr-2 h-4 w-4" /> Ver Landing Page
+          </a>
+        </Button>
+      </div>
+
+      <Tabs defaultValue="geral">
+        <TabsList>
+          <TabsTrigger value="geral">Configurações Gerais</TabsTrigger>
+          <TabsTrigger value="secoes">Seções</TabsTrigger>
+        </TabsList>
+
+        {/* ── TAB: General Settings ── */}
+        <TabsContent value="geral" className="space-y-6">
+          {settings && (
+            <>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Modo de Negócio</CardTitle>
+                  <CardDescription>Escolha quais serviços aparecem na landing page</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <RadioGroup
+                    value={settings.business_mode}
+                    onValueChange={(v) => setSettings({ ...settings, business_mode: v })}
+                    className="flex flex-col gap-3"
+                  >
+                    {[
+                      { value: "classes", label: "Apenas Aulas" },
+                      { value: "rentals", label: "Apenas Aluguel de Quadras" },
+                      { value: "both", label: "Aulas + Aluguel de Quadras" },
+                    ].map((opt) => (
+                      <div key={opt.value} className="flex items-center gap-3">
+                        <RadioGroupItem value={opt.value} id={opt.value} />
+                        <Label htmlFor={opt.value} className="cursor-pointer">{opt.label}</Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Imagem do Hero</CardTitle>
+                  <CardDescription>Imagem principal no topo da landing page</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {settings.hero_image_url && (
+                    <img
+                      src={settings.hero_image_url}
+                      alt="Hero"
+                      className="rounded-lg max-h-48 object-cover w-full"
+                    />
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => handleFileInput("hero")}
+                    disabled={uploadingFor === "hero"}
+                  >
+                    {uploadingFor === "hero" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    {settings.hero_image_url ? "Trocar Imagem" : "Enviar Imagem"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Contato & Redes Sociais</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>WhatsApp (com DDD e código do país)</Label>
+                    <Input
+                      value={settings.whatsapp_number || ""}
+                      onChange={(e) => setSettings({ ...settings, whatsapp_number: e.target.value })}
+                      placeholder="5511999999999"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Instagram URL</Label>
+                    <Input
+                      value={settings.instagram_url || ""}
+                      onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })}
+                      placeholder="https://instagram.com/seu_perfil"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>YouTube URL</Label>
+                    <Input
+                      value={settings.youtube_url || ""}
+                      onChange={(e) => setSettings({ ...settings, youtube_url: e.target.value })}
+                      placeholder="https://youtube.com/@seucanal"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Botão Principal (CTA)</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Texto do botão</Label>
+                    <Input
+                      value={settings.primary_cta_text}
+                      onChange={(e) => setSettings({ ...settings, primary_cta_text: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Link do botão</Label>
+                    <Input
+                      value={settings.primary_cta_url}
+                      onChange={(e) => setSettings({ ...settings, primary_cta_url: e.target.value })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Button onClick={saveSettings} disabled={saving} className="w-full sm:w-auto">
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                Salvar Configurações
+              </Button>
+            </>
+          )}
+        </TabsContent>
+
+        {/* ── TAB: Sections ── */}
+        <TabsContent value="secoes" className="space-y-4">
+          {sections.map((section) => (
+            <Card key={section.id}>
+              <CardContent className="flex items-center justify-between gap-4 py-4">
+                <div className="flex items-center gap-4 flex-1 min-w-0">
+                  {/* Thumbnail */}
+                  <div className="w-16 h-12 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                    {section.image_url ? (
+                      <img src={section.image_url} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <ImageIcon className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-sm truncate">
+                      {SECTION_LABELS[section.section_key] || section.section_key}
+                    </p>
+                    {section.title && (
+                      <p className="text-xs text-muted-foreground truncate">{section.title}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleFileInput(section.section_key)}
+                    disabled={uploadingFor === section.section_key}
+                    title="Enviar imagem"
+                  >
+                    {uploadingFor === section.section_key ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => { setEditSection({ ...section }); setEditDialogOpen(true); }}
+                    title="Editar textos"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Switch
+                    checked={section.is_visible}
+                    onCheckedChange={() => toggleVisibility(section)}
+                  />
+                  {section.is_visible ? (
+                    <Eye className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <EyeOff className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </TabsContent>
+      </Tabs>
+
+      {/* ── Edit Section Dialog ── */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              Editar: {editSection ? SECTION_LABELS[editSection.section_key] || editSection.section_key : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {editSection && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label>Título</Label>
+                <Input
+                  value={editSection.title || ""}
+                  onChange={(e) => setEditSection({ ...editSection, title: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Subtítulo / Label</Label>
+                <Input
+                  value={editSection.subtitle || ""}
+                  onChange={(e) => setEditSection({ ...editSection, subtitle: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Conteúdo extra (JSON)</Label>
+                <Textarea
+                  rows={6}
+                  value={editSection.content ? JSON.stringify(editSection.content, null, 2) : ""}
+                  onChange={(e) => {
+                    try {
+                      const parsed = JSON.parse(e.target.value);
+                      setEditSection({ ...editSection, content: parsed });
+                    } catch {
+                      // keep raw value during typing
+                    }
+                  }}
+                  placeholder='Ex: {"items": ["item1", "item2"]}'
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveSection} disabled={saving}>
+              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
