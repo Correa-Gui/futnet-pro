@@ -187,6 +187,7 @@ export default function StudentInvoices() {
                             qr_code: inv.pix_copy_paste!,
                             qr_code_base64: inv.pix_qr_code || '',
                             copy_paste: inv.pix_copy_paste!,
+                            invoiceId: inv.id,
                           })}
                         >
                           Ver PIX
