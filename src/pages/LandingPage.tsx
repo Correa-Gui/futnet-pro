@@ -40,18 +40,23 @@ const DEFAULT_SETTINGS: LandingSettings = {
 function useLandingData() {
   const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [sections, setSections] = useState<Record<string, SectionConfig>>({});
+  const [businessHours, setBusinessHours] = useState<{ open_days: number[]; open_hour: number; close_hour: number } | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     Promise.all([
       supabase.from("landing_page_settings").select("*").limit(1).single(),
       supabase.from("landing_page_config").select("*").order("display_order"),
-    ]).then(([settingsRes, sectionsRes]) => {
+      supabase.from("system_config").select("value").eq("key", "business_hours").maybeSingle(),
+    ]).then(([settingsRes, sectionsRes, hoursRes]) => {
       if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
       if (sectionsRes.data) {
         const map: Record<string, SectionConfig> = {};
         (sectionsRes.data as unknown as SectionConfig[]).forEach((s) => { map[s.section_key] = s; });
         setSections(map);
+      }
+      if (hoursRes.data?.value) {
+        try { setBusinessHours(JSON.parse(hoursRes.data.value)); } catch {}
       }
       setLoaded(true);
     });
@@ -65,7 +70,7 @@ function useLandingData() {
     return sections[key]?.image_url || fallback;
   }, [sections]);
 
-  return { settings, sections, loaded, isVisible, getImage };
+  return { settings, sections, loaded, isVisible, getImage, businessHours };
 }
 
 // --- Utility Components ---
