@@ -71,6 +71,7 @@ const App = () => (
               <Route path="alunos" element={<Students />} />
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
+              <Route path="landing-page" element={<LandingPageEditor />} />
             </Route>
 
             {/* Student routes */}
