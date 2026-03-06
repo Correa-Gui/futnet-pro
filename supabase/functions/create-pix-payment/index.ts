@@ -103,18 +103,20 @@ Deno.serve(async (req) => {
       .eq("user_id", userId)
       .single();
 
-    // Create PIX payment via Mercado Pago
+    // Create PIX payment via Mercado Pago with 5-minute expiration
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
     const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
       method: "POST",
       headers: {
         Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
         "Content-Type": "application/json",
-        "X-Idempotency-Key": `invoice-${invoice_id}`,
+        "X-Idempotency-Key": `invoice-${invoice_id}-${Date.now()}`,
       },
       body: JSON.stringify({
         transaction_amount: finalAmount,
         description: `Fatura ${invoice.reference_month}`,
         payment_method_id: "pix",
+        date_of_expiration: expiresAt,
         notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
         payer: {
           email: profile?.email || "aluno@email.com",
