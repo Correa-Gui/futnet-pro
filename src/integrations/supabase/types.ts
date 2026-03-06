@@ -326,6 +326,78 @@ export type Database = {
           },
         ]
       }
+      landing_page_config: {
+        Row: {
+          content: Json | null
+          display_order: number
+          id: string
+          image_url: string | null
+          is_visible: boolean
+          section_key: string
+          subtitle: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          content?: Json | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_visible?: boolean
+          section_key: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: Json | null
+          display_order?: number
+          id?: string
+          image_url?: string | null
+          is_visible?: boolean
+          section_key?: string
+          subtitle?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      landing_page_settings: {
+        Row: {
+          business_mode: string
+          hero_image_url: string | null
+          id: string
+          instagram_url: string | null
+          primary_cta_text: string
+          primary_cta_url: string
+          updated_at: string
+          whatsapp_number: string | null
+          youtube_url: string | null
+        }
+        Insert: {
+          business_mode?: string
+          hero_image_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          primary_cta_text?: string
+          primary_cta_url?: string
+          updated_at?: string
+          whatsapp_number?: string | null
+          youtube_url?: string | null
+        }
+        Update: {
+          business_mode?: string
+          hero_image_url?: string | null
+          id?: string
+          instagram_url?: string | null
+          primary_cta_text?: string
+          primary_cta_url?: string
+          updated_at?: string
+          whatsapp_number?: string | null
+          youtube_url?: string | null
+        }
+        Relationships: []
+      }
       notifications: {
         Row: {
           channel: Database["public"]["Enums"]["notification_channel"]
