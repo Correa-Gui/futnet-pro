@@ -240,10 +240,10 @@ export default function Bookings() {
       {/* Weekly Calendar Grid */}
       <Card className="overflow-hidden">
         <CardContent className="p-0">
-          <div className="grid grid-cols-[auto_repeat(7,1fr)] min-w-[700px] overflow-x-auto">
+          <div className={cn("grid min-w-[700px] overflow-x-auto", `grid-cols-[auto_repeat(${filteredWeekDays.length},1fr)]`)}>
             {/* Header row */}
             <div className="sticky left-0 bg-card z-10 border-b border-r p-2" />
-            {weekDays.map((day) => (
+            {filteredWeekDays.map((day) => (
               <div
                 key={day.toISOString()}
                 className={cn(
