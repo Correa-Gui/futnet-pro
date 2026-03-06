@@ -21,8 +21,10 @@ const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondar
 export default function StudentInvoices() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string } | null>(null);
+  const [pixDialog, setPixDialog] = useState<{ qr_code: string; qr_code_base64: string; copy_paste: string; invoiceId?: string; expiresAt?: string } | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number>(0);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Poll for payment status while PIX dialog is open
   useEffect(() => {
