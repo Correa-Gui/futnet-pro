@@ -35,7 +35,9 @@ import TeacherAttendance from "./pages/teacher/Attendance";
 import AdminAttendance from "./pages/admin/Attendance";
 import AdminInvoices from "./pages/admin/Invoices";
 import LandingPageEditor from "./pages/admin/LandingPageEditor";
+import AdminBookings from "./pages/admin/Bookings";
 import StudentInvoices from "./pages/student/Invoices";
+import CourtBooking from "./pages/CourtBooking";
 
 const queryClient = new QueryClient();
 
@@ -51,6 +53,7 @@ const App = () => (
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Register />} />
             <Route path="/landing" element={<LandingPage />} />
+            <Route path="/reservar" element={<CourtBooking />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -72,6 +75,7 @@ const App = () => (
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
               <Route path="landing-page" element={<LandingPageEditor />} />
+              <Route path="agendamentos" element={<AdminBookings />} />
             </Route>
 
             {/* Student routes */}
