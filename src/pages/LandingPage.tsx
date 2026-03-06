@@ -618,7 +618,7 @@ function Footer({ settings, businessHours }: { settings: LandingSettings; busine
 // --- Main Page ---
 
 export default function LandingPage() {
-  const { settings, isVisible, getImage, loaded } = useLandingData();
+  const { settings, isVisible, getImage, loaded, businessHours } = useLandingData();
 
   if (!loaded) {
     return <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: COLORS.dark, color: COLORS.white }}>Carregando...</div>;
