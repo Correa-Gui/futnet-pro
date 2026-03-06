@@ -95,24 +95,29 @@ export default function LandingPageEditor() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const saveSettings = async () => {
+  const saveSettingsAndHours = async () => {
     if (!settings) return;
     setSaving(true);
-    const { error } = await supabase
-      .from("landing_page_settings")
-      .update({
-        business_mode: settings.business_mode,
-        hero_image_url: settings.hero_image_url,
-        whatsapp_number: settings.whatsapp_number,
-        instagram_url: settings.instagram_url,
-        youtube_url: settings.youtube_url,
-        primary_cta_text: settings.primary_cta_text,
-        primary_cta_url: settings.primary_cta_url,
-      })
-      .eq("id", settings.id);
+    const [settingsRes, hoursRes] = await Promise.all([
+      supabase
+        .from("landing_page_settings")
+        .update({
+          business_mode: settings.business_mode,
+          hero_image_url: settings.hero_image_url,
+          whatsapp_number: settings.whatsapp_number,
+          instagram_url: settings.instagram_url,
+          youtube_url: settings.youtube_url,
+          primary_cta_text: settings.primary_cta_text,
+          primary_cta_url: settings.primary_cta_url,
+        })
+        .eq("id", settings.id),
+      supabase
+        .from("system_config")
+        .upsert({ key: "business_hours", value: JSON.stringify(businessHours) }, { onConflict: "key" }),
+    ]);
     setSaving(false);
-    if (error) {
-      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    if (settingsRes.error || hoursRes.error) {
+      toast({ title: "Erro ao salvar", description: (settingsRes.error || hoursRes.error)?.message, variant: "destructive" });
     } else {
       toast({ title: "Configurações salvas!" });
     }

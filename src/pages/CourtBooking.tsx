@@ -253,7 +253,11 @@ export default function CourtBooking() {
                     mode="single"
                     selected={selectedDate}
                     onSelect={(d) => { setSelectedDate(d); setSelectedSlot(null); }}
-                    disabled={(date) => isBefore(date, today) || isBefore(maxDate, date)}
+                    disabled={(date) =>
+                      isBefore(date, today) ||
+                      isBefore(maxDate, date) ||
+                      !openDays.includes(date.getDay())
+                    }
                     locale={ptBR}
                     className={cn("p-3 pointer-events-auto")}
                   />

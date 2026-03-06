@@ -154,6 +154,10 @@ export default function Bookings() {
     paid: bookings.filter((b) => b.status === "paid").length,
   };
 
+  // Filter to only show open days
+  const filteredWeekDays = weekDays.filter((day) => openDays.includes(getDay(day)));
+  const filteredDayEvents = dayEvents.filter(({ day }) => openDays.includes(getDay(day)));
+
   const weekLabel = `${format(weekStart, "dd MMM", { locale: ptBR })} — ${format(weekEnd, "dd MMM yyyy", { locale: ptBR })}`;
 
   return (
