@@ -39,7 +39,7 @@ export default function Bookings() {
         .order("start_time", { ascending: true });
 
       if (statusFilter !== "all") {
-        query = query.eq("status", statusFilter);
+        query = query.eq("status", statusFilter as BookingStatus);
       }
       if (dateFilter) {
         query = query.eq("date", format(dateFilter, "yyyy-MM-dd"));
