@@ -1,5 +1,5 @@
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { CalendarDays, Receipt, User, Home } from 'lucide-react';
+import { CalendarDays, Receipt, User, Home, History } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import NotificationBell from '@/components/student/NotificationBell';
@@ -7,6 +7,7 @@ import NotificationBell from '@/components/student/NotificationBell';
 const navItems = [
   { title: 'Início', url: '/aluno', icon: Home },
   { title: 'Aulas', url: '/aluno/aulas', icon: CalendarDays },
+  { title: 'Histórico', url: '/aluno/historico', icon: History },
   { title: 'Faturas', url: '/aluno/faturas', icon: Receipt },
   { title: 'Perfil', url: '/aluno/perfil', icon: User },
 ];
