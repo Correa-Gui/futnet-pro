@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
-  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck
+  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -17,6 +17,7 @@ const menuGroups = [
     label: 'Gestão',
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+      { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
       { title: 'Quadras', url: '/admin/quadras', icon: MapPin },
       { title: 'Turmas', url: '/admin/turmas', icon: GraduationCap },
     ],
