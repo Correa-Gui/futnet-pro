@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { format, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,22 +12,27 @@ import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, Search, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 
-const SKILL_LABELS: Record<string, string> = {
+type SkillLevel = Database['public']['Enums']['skill_level'];
+type UserStatus = Database['public']['Enums']['user_status'];
+type EnrollmentStatus = Database['public']['Enums']['enrollment_status'];
+
+const SKILL_LABELS: Record<SkillLevel, string> = {
   beginner: 'Aprendiz',
   elementary: 'Principiante',
   intermediate: 'Intermediário',
   advanced: 'Avançado',
 };
 
-const STATUS_LABELS: Record<string, string> = {
+const STATUS_LABELS: Record<UserStatus, string> = {
   active: 'Ativo',
   inactive: 'Inativo',
   suspended: 'Suspenso',
   defaulter: 'Inadimplente',
 };
 
-const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const STATUS_VARIANTS: Record<UserStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
   active: 'default',
   inactive: 'secondary',
   suspended: 'destructive',
@@ -38,11 +42,27 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'destructive' | 
 type StudentRow = {
   id: string;
   user_id: string;
-  skill_level: string;
+  skill_level: SkillLevel;
   plan_id: string | null;
-  profile: { full_name: string; email: string | null; phone: string | null; cpf: string | null; status: string };
+  profile: { full_name: string; email: string | null; phone: string | null; cpf: string | null; status: UserStatus };
   plan: { name: string } | null;
   enrolledClassIds: string[];
+};
+
+interface StudentForm {
+  full_name: string;
+  email: string;
+  password: string;
+  phone: string;
+  cpf: string;
+  skill_level: SkillLevel;
+  plan_id: string;
+  class_ids: string[];
+}
+
+const EMPTY_FORM: StudentForm = {
+  full_name: '', email: '', password: '', phone: '', cpf: '',
+  skill_level: 'beginner', plan_id: '', class_ids: [],
 };
 
 export default function Students() {
@@ -50,10 +70,7 @@ export default function Students() {
   const [open, setOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [search, setSearch] = useState('');
-  const [form, setForm] = useState({
-    full_name: '', email: '', password: '', phone: '', cpf: '',
-    skill_level: 'beginner', plan_id: '', class_ids: [] as string[],
-  });
+  const [form, setForm] = useState<StudentForm>({ ...EMPTY_FORM });
 
   const { data: students = [], isLoading } = useQuery({
     queryKey: ['students'],
@@ -85,7 +102,7 @@ export default function Students() {
         user_id: s.user_id,
         skill_level: s.skill_level,
         plan_id: s.plan_id,
-        profile: profileMap[s.user_id] || { full_name: '—', email: null, phone: null, cpf: null, status: 'active' },
+        profile: profileMap[s.user_id] || { full_name: '—', email: null, phone: null, cpf: null, status: 'active' as UserStatus },
         plan: s.plans,
         enrolledClassIds: enrollMap[s.id] || [],
       })) as StudentRow[];
@@ -108,8 +125,9 @@ export default function Students() {
     },
   });
 
+  // Creation now delegates enrollment + invoice logic to the Edge Function
   const createMutation = useMutation({
-    mutationFn: async (data: typeof form) => {
+    mutationFn: async (data: StudentForm) => {
       const { data: result, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: data.email,
@@ -120,78 +138,11 @@ export default function Students() {
           role: 'student',
           skill_level: data.skill_level,
           plan_id: data.plan_id || undefined,
+          class_ids: data.class_ids.length > 0 ? data.class_ids : undefined,
         },
       });
       if (error) throw error;
       if (result?.error) throw new Error(result.error);
-
-      // Enroll in selected classes
-      if (data.class_ids.length > 0) {
-        const { data: sp } = await supabase
-          .from('student_profiles')
-          .select('id')
-          .eq('user_id', result.user_id)
-          .single();
-        if (sp) {
-          const enrollments = data.class_ids.map(class_id => ({
-            class_id,
-            student_id: sp.id,
-            status: 'active' as const,
-          }));
-          const { error: enrollError } = await supabase.from('enrollments').insert(enrollments);
-          if (enrollError) throw enrollError;
-
-          // Auto-generate first invoice if student has a plan
-          if (data.plan_id) {
-            const { data: planData } = await supabase
-              .from('plans')
-              .select('monthly_price, name')
-              .eq('id', data.plan_id)
-              .single();
-            if (planData) {
-              const now = new Date();
-              const dueDate = addDays(now, 30);
-              const refMonth = format(now, 'MMM/yyyy');
-              await supabase.from('invoices').insert({
-                student_id: sp.id,
-                amount: planData.monthly_price,
-                discount: 0,
-                due_date: format(dueDate, 'yyyy-MM-dd'),
-                reference_month: refMonth,
-                status: 'pending' as const,
-              });
-            }
-          }
-        }
-      } else if (data.plan_id) {
-        // No classes but has plan — still generate invoice
-        const { data: sp } = await supabase
-          .from('student_profiles')
-          .select('id')
-          .eq('user_id', result.user_id)
-          .single();
-        if (sp) {
-          const { data: planData } = await supabase
-            .from('plans')
-            .select('monthly_price, name')
-            .eq('id', data.plan_id)
-            .single();
-          if (planData) {
-            const now = new Date();
-            const dueDate = addDays(now, 30);
-            const refMonth = format(now, 'MMM/yyyy');
-            await supabase.from('invoices').insert({
-              student_id: sp.id,
-              amount: planData.monthly_price,
-              discount: 0,
-              due_date: format(dueDate, 'yyyy-MM-dd'),
-              reference_month: refMonth,
-              status: 'pending' as const,
-            });
-          }
-        }
-      }
-
       return result;
     },
     onSuccess: () => {
@@ -204,7 +155,7 @@ export default function Students() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: async ({ student, data }: { student: StudentRow; data: typeof form }) => {
+    mutationFn: async ({ student, data }: { student: StudentRow; data: StudentForm }) => {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({ full_name: data.full_name, phone: data.phone || null, cpf: data.cpf || null })
@@ -213,7 +164,7 @@ export default function Students() {
 
       const { error: studentError } = await supabase
         .from('student_profiles')
-        .update({ skill_level: data.skill_level as any, plan_id: data.plan_id || null })
+        .update({ skill_level: data.skill_level, plan_id: data.plan_id || null })
         .eq('id', student.id);
       if (studentError) throw studentError;
 
@@ -221,24 +172,22 @@ export default function Students() {
       const currentIds = new Set(student.enrolledClassIds);
       const newIds = new Set(data.class_ids);
 
-      // Add new enrollments
       const toAdd = data.class_ids.filter(id => !currentIds.has(id));
       if (toAdd.length > 0) {
         const enrollments = toAdd.map(class_id => ({
           class_id,
           student_id: student.id,
-          status: 'active' as const,
+          status: 'active' as EnrollmentStatus,
         }));
         const { error } = await supabase.from('enrollments').insert(enrollments);
         if (error) throw error;
       }
 
-      // Cancel removed enrollments
       const toRemove = student.enrolledClassIds.filter(id => !newIds.has(id));
       if (toRemove.length > 0) {
         for (const classId of toRemove) {
           await supabase.from('enrollments')
-            .update({ status: 'cancelled' as any })
+            .update({ status: 'cancelled' as EnrollmentStatus })
             .eq('student_id', student.id)
             .eq('class_id', classId)
             .eq('status', 'active');
@@ -265,7 +214,7 @@ export default function Students() {
   const handleClose = () => {
     setOpen(false);
     setEditingStudent(null);
-    setForm({ full_name: '', email: '', password: '', phone: '', cpf: '', skill_level: 'beginner', plan_id: '', class_ids: [] });
+    setForm({ ...EMPTY_FORM });
   };
 
   const handleEdit = (s: StudentRow) => {
@@ -409,10 +358,10 @@ export default function Students() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Nível</Label>
-                <Select value={form.skill_level} onValueChange={(v) => setForm({ ...form, skill_level: v })}>
+                <Select value={form.skill_level} onValueChange={(v) => setForm({ ...form, skill_level: v as SkillLevel })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(SKILL_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {(Object.entries(SKILL_LABELS) as [SkillLevel, string][]).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

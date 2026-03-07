@@ -1,10 +1,56 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createHmac } from "node:crypto";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
+
+function verifyWebhookSignature(
+  req: Request,
+  body: string,
+  webhookSecret: string
+): boolean {
+  const xSignature = req.headers.get("x-signature");
+  const xRequestId = req.headers.get("x-request-id");
+
+  if (!xSignature || !xRequestId) {
+    console.warn("Missing x-signature or x-request-id headers");
+    return false;
+  }
+
+  // Parse x-signature: "ts=...,v1=..."
+  const parts: Record<string, string> = {};
+  for (const part of xSignature.split(",")) {
+    const [key, ...rest] = part.split("=");
+    parts[key.trim()] = rest.join("=").trim();
+  }
+
+  const ts = parts["ts"];
+  const v1 = parts["v1"];
+  if (!ts || !v1) {
+    console.warn("x-signature missing ts or v1");
+    return false;
+  }
+
+  // Extract data.id from query string (MercadoPago sends it as ?data.id=xxx)
+  const url = new URL(req.url);
+  const dataId = url.searchParams.get("data.id") || "";
+
+  // Build the manifest string as documented by MercadoPago
+  const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
+
+  const hmac = createHmac("sha256", webhookSecret);
+  hmac.update(manifest);
+  const generatedHash = hmac.digest("hex");
+
+  const isValid = generatedHash === v1;
+  if (!isValid) {
+    console.warn("Signature mismatch", { expected: v1, got: generatedHash });
+  }
+  return isValid;
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -17,7 +63,25 @@ Deno.serve(async (req) => {
       throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado");
     }
 
-    const body = await req.json();
+    const MERCADOPAGO_WEBHOOK_SECRET = Deno.env.get("MERCADOPAGO_WEBHOOK_SECRET");
+
+    const rawBody = await req.text();
+
+    // Validate webhook signature if secret is configured
+    if (MERCADOPAGO_WEBHOOK_SECRET) {
+      const isValid = verifyWebhookSignature(req, rawBody, MERCADOPAGO_WEBHOOK_SECRET);
+      if (!isValid) {
+        console.error("Invalid webhook signature — possible forgery attempt");
+        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } else {
+      console.warn("MERCADOPAGO_WEBHOOK_SECRET not set — skipping signature validation. This is insecure!");
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("Webhook received:", JSON.stringify(body));
 
     // Mercado Pago sends different event types
