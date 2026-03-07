@@ -29,7 +29,6 @@ export function TrialFormSection({ settings, preselectedClassId = "" }: { settin
   useEffect(() => {
     if (preselectedClassId) setClassId(preselectedClassId);
   }, [preselectedClassId]);
-  const [selectedClassName, setSelectedClassName] = useState("");
 
   useEffect(() => {
     supabase
