@@ -1,6 +1,7 @@
 import { motion, useScroll, useTransform } from "framer-motion";
 import { Star, Users, Trophy, Phone, ChevronDown } from "lucide-react";
 import { CTAButton } from "./CTAButton";
+import { cleanPhone } from "@/lib/whatsapp";
 import type { LandingSettings } from "./types";
 
 interface HeroSectionProps {
@@ -13,7 +14,9 @@ export function HeroSection({ settings, getImage }: HeroSectionProps) {
   const y = useTransform(scrollY, [0, 600], [0, 200]);
   const opacity = useTransform(scrollY, [0, 400], [1, 0]);
   const heroImg = settings.hero_image_url || getImage("hero", "https://images.unsplash.com/photo-1612872087720-bb876e2e67d1?w=1920&q=80");
-  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
+  const cleanedPhone = settings.whatsapp_number ? cleanPhone(settings.whatsapp_number) : "";
+  const fullPhone = cleanedPhone && !cleanedPhone.startsWith("55") ? `55${cleanedPhone}` : cleanedPhone;
+  const waLink = fullPhone ? `https://wa.me/${fullPhone}` : "#";
 
   return (
     <section id="hero" className="relative min-h-screen flex items-center overflow-hidden">
