@@ -65,7 +65,7 @@ export default function Login() {
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>24/7</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">24/7</span>
               <span>Acesso</span>
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
