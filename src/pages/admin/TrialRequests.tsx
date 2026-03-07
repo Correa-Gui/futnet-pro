@@ -141,13 +141,25 @@ export default function TrialRequests() {
     return `${c.name} — ${formatDaysOfWeek(c.day_of_week)} ${c.start_time.slice(0, 5)}-${c.end_time.slice(0, 5)}`;
   };
 
+  const getNextClassDate = (daysOfWeek: number[]): string => {
+    const today = new Date();
+    for (let i = 1; i <= 7; i++) {
+      const next = new Date(today);
+      next.setDate(today.getDate() + i);
+      if (daysOfWeek.includes(next.getDay())) {
+        return next.toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
+      }
+    }
+    return "a definir";
+  };
+
   const buildApprovalMessage = (t: TrialRequest) => {
     const c = t.preferred_class_id ? classMap[t.preferred_class_id] : null;
     const courtName = c ? courtMap[c.court_id] || "Quadra" : "";
     const teacherName = c ? teacherMap[c.teacher_id] || "Professor" : "";
     const dateStr = t.preferred_date
       ? new Date(t.preferred_date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })
-      : "a definir";
+      : c ? getNextClassDate(c.day_of_week) : "a definir";
 
     return `Oi ${t.name}! 🏐 Sua aula teste tá confirmada!\n\n📋 Turma: ${c?.name || "A definir"}\n📅 Data: ${dateStr}\n🕐 Horário: ${c ? `${c.start_time.slice(0, 5)} às ${c.end_time.slice(0, 5)}` : "A definir"}\n👨‍🏫 Professor: ${teacherName}\n📍 Local: ${courtName}\n\nTraga roupa leve e venha com vontade! Nos vemos na quadra! 💪`;
   };
