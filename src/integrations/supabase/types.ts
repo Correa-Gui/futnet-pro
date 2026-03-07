@@ -636,6 +636,59 @@ export type Database = {
         }
         Relationships: []
       }
+      trial_requests: {
+        Row: {
+          admin_notes: string | null
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string
+          preferred_class_id: string | null
+          preferred_date: string | null
+          status: Database["public"]["Enums"]["trial_status"]
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone: string
+          preferred_class_id?: string | null
+          preferred_date?: string | null
+          status?: Database["public"]["Enums"]["trial_status"]
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string
+          preferred_class_id?: string | null
+          preferred_date?: string | null
+          status?: Database["public"]["Enums"]["trial_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trial_requests_preferred_class_id_fkey"
+            columns: ["preferred_class_id"]
+            isOneToOne: false
+            referencedRelation: "classes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -695,6 +748,12 @@ export type Database = {
       payment_status: "pending" | "paid"
       session_status: "scheduled" | "completed" | "cancelled"
       skill_level: "beginner" | "elementary" | "intermediate" | "advanced"
+      trial_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "completed"
+        | "no_show"
       user_status: "active" | "inactive" | "suspended" | "defaulter"
     }
     CompositeTypes: {
@@ -848,6 +907,7 @@ export const Constants = {
       payment_status: ["pending", "paid"],
       session_status: ["scheduled", "completed", "cancelled"],
       skill_level: ["beginner", "elementary", "intermediate", "advanced"],
+      trial_status: ["pending", "approved", "rejected", "completed", "no_show"],
       user_status: ["active", "inactive", "suspended", "defaulter"],
     },
   },
