@@ -26,6 +26,7 @@ import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
 import StudentClasses from "./pages/student/Classes";
 import StudentProfile from "./pages/student/Profile";
+import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
@@ -90,7 +91,7 @@ const App = () => (
             }>
               <Route index element={<StudentHome />} />
               <Route path="aulas" element={<StudentClasses />} />
-              {/* Presença removida - integrada na tela de Aulas */}
+              <Route path="historico" element={<StudentAttendanceHistory />} />
               <Route path="faturas" element={<StudentInvoices />} />
               <Route path="perfil" element={<StudentProfile />} />
             </Route>
