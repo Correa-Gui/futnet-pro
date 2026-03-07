@@ -64,7 +64,6 @@ export function PlansSection({ settings }: { settings: LandingSettings }) {
               text="Começar Agora"
               dark={!p.popular}
               className="w-full justify-center"
-              href={settings.primary_cta_url}
             />
           </div>
         ))}
