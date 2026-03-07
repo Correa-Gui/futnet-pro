@@ -81,6 +81,7 @@ const App = () => (
               <Route path="landing-page" element={<LandingPageEditor />} />
               <Route path="agendamentos" element={<AdminBookings />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="pagamentos-professores" element={<AdminTeacherPayments />} />
               <Route path="configuracoes" element={<AdminSettings />} />
             </Route>
 

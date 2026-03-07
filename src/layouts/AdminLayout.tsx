@@ -35,6 +35,7 @@ const menuGroups = [
       { title: 'Planos', url: '/admin/planos', icon: CreditCard },
       { title: 'Presença', url: '/admin/presenca', icon: ClipboardCheck },
       { title: 'Faturas', url: '/admin/faturas', icon: Receipt },
+      { title: 'Pag. Professores', url: '/admin/pagamentos-professores', icon: Receipt },
     ],
   },
   {
