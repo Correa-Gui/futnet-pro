@@ -112,7 +112,7 @@ export default function TrialRequests() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, notes }: { id: string; status: TrialStatus; notes?: string }) => {
+    mutationFn: async ({ id, status, notes, openWhatsApp }: { id: string; status: TrialStatus; notes?: string; openWhatsApp?: string }) => {
       const updates: Record<string, any> = { status };
       if (status === "approved") {
         updates.approved_at = new Date().toISOString();
@@ -120,11 +120,15 @@ export default function TrialRequests() {
       }
       if (notes !== undefined) updates.admin_notes = notes;
       await supabase.from("trial_requests" as any).update(updates).eq("id", id);
+      return { openWhatsApp };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       qc.invalidateQueries({ queryKey: ["admin-trial-requests"] });
       qc.invalidateQueries({ queryKey: ["admin-trial-pending-count"] });
       toast.success("Status atualizado!");
+      if (result?.openWhatsApp) {
+        window.open(result.openWhatsApp, "_blank");
+      }
     },
   });
 
