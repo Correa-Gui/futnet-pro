@@ -70,7 +70,7 @@ export default function Login() {
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>PIX</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">PIX</span>
               <span>Integrado</span>
             </div>
           </div>
