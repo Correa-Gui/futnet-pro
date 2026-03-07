@@ -30,8 +30,8 @@ export default function StudentLayout() {
               <p className="text-xs text-muted-foreground">Olá, {profile?.full_name?.split(' ')[0] || 'Aluno'}!</p>
             </div>
           </div>
+          <NotificationBell />
         </div>
-      </header>
 
       {/* Content */}
       <main className="flex-1 overflow-auto p-4 pb-20">
