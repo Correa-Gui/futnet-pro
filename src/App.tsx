@@ -77,6 +77,7 @@ const App = () => (
               <Route path="professores" element={<Teachers />} />
               <Route path="turmas" element={<Classes />} />
               <Route path="alunos" element={<Students />} />
+              <Route path="aulas-teste" element={<TrialRequests />} />
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
               <Route path="landing-page" element={<LandingPageEditor />} />

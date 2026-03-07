@@ -20,6 +20,7 @@ const menuGroups = [
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
       { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+      { title: 'Aulas Teste', url: '/admin/aulas-teste', icon: CalendarCheck },
       { title: 'Quadras', url: '/admin/quadras', icon: MapPin },
       { title: 'Turmas', url: '/admin/turmas', icon: GraduationCap },
     ],
