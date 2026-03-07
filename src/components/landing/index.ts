@@ -10,4 +10,7 @@ export { PlansSection } from "./PlansSection";
 export { FAQSection } from "./FAQSection";
 export { FinalCTA } from "./FinalCTA";
 export { Footer } from "./Footer";
+export { TrialFormSection } from "./TrialFormSection";
+export { ClassesSection } from "./ClassesSection";
+export { DynamicPlansSection } from "./DynamicPlansSection";
 export { useLandingData } from "./useLandingData";

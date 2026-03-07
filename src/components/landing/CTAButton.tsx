@@ -7,6 +7,7 @@ interface CTAButtonProps {
   dark?: boolean;
   className?: string;
   href?: string;
+  onClick?: () => void;
 }
 
 export function CTAButton({
@@ -14,13 +15,28 @@ export function CTAButton({
   large = false,
   dark = false,
   className = "",
-  href = "/cadastro",
+  href,
+  onClick,
 }: CTAButtonProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    if (onClick) {
+      e.preventDefault();
+      onClick();
+      return;
+    }
+    // Default: scroll to #aula-teste
+    if (!href || href === "/cadastro") {
+      e.preventDefault();
+      document.getElementById("aula-teste")?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <a
-      href={href}
+      href={href || "#aula-teste"}
+      onClick={handleClick}
       className={cn(
-        "cta-pulse inline-flex items-center gap-2.5 rounded-xl font-bold text-white no-underline transition-all font-body",
+        "cta-pulse inline-flex items-center gap-2.5 rounded-xl font-bold text-white no-underline transition-all font-body cursor-pointer",
         large ? "px-9 py-[18px] text-lg" : "px-7 py-3.5 text-base",
         dark ? "bg-foreground" : "bg-gradient-to-br from-secondary to-orange-600",
         className

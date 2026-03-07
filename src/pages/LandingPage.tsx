@@ -7,15 +7,24 @@ import {
   BenefitsSection,
   HowItWorksSection,
   TestimonialsSection,
-  PlansSection,
   FAQSection,
   FinalCTA,
   Footer,
   useLandingData,
 } from "@/components/landing";
+import { TrialFormSection } from "@/components/landing/TrialFormSection";
+import { ClassesSection } from "@/components/landing/ClassesSection";
+import { DynamicPlansSection } from "@/components/landing/DynamicPlansSection";
+import { PlansSection } from "@/components/landing/PlansSection";
+import { useState, useCallback } from "react";
 
 export default function LandingPage() {
   const { settings, isVisible, getImage, loaded, businessHours } = useLandingData();
+  const [preselectedClassId, setPreselectedClassId] = useState("");
+
+  const handleSelectClass = useCallback((id: string) => {
+    setPreselectedClassId(id);
+  }, []);
 
   if (!loaded) {
     return (
@@ -43,7 +52,10 @@ export default function LandingPage() {
         {isVisible("benefits") && <BenefitsSection settings={settings} />}
         {isVisible("how_it_works") && <HowItWorksSection settings={settings} />}
         {isVisible("testimonials") && <TestimonialsSection />}
+        <ClassesSection onSelectClass={handleSelectClass} />
+        <DynamicPlansSection settings={settings} />
         {isVisible("plans") && <PlansSection settings={settings} />}
+        <TrialFormSection settings={settings} preselectedClassId={preselectedClassId} />
         {isVisible("faq") && <FAQSection settings={settings} />}
         {isVisible("final_cta") && <FinalCTA settings={settings} />}
         <Footer settings={settings} businessHours={businessHours} />
