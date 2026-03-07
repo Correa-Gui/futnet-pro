@@ -57,6 +57,18 @@ function AdminSidebar() {
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
 
+  const { data: trialPendingCount = 0 } = useQuery({
+    queryKey: ['admin-trial-pending-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('trial_requests' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/login');
