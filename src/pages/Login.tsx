@@ -60,7 +60,7 @@ export default function Login() {
           </div>
           <div className="flex items-center justify-center gap-6 text-primary-foreground/60 text-sm">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>100%</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">100%</span>
               <span>Digital</span>
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
