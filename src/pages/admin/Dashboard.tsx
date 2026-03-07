@@ -261,7 +261,7 @@ export default function AdminDashboard() {
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
         .limit(3);
-      return { pendingCount: count || 0, recent: (recent || []) as { id: string; name: string; preferred_class_id: string | null; created_at: string }[] };
+      return { pendingCount: count || 0, recent: (recent || []) as unknown as { id: string; name: string; preferred_class_id: string | null; created_at: string }[] };
     },
   });
 
