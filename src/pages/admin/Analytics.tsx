@@ -162,7 +162,7 @@ export default function Analytics() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>Analytics</h2>
+        <h2 className="text-2xl font-bold font-brand">Analytics</h2>
         <p className="text-sm text-muted-foreground">Análises detalhadas do seu negócio</p>
       </div>
 

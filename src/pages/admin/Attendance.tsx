@@ -87,7 +87,7 @@ export default function AdminAttendance() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+          <h2 className="text-2xl font-bold font-brand">
             Presença
           </h2>
           <p className="text-sm text-muted-foreground">Gerencie sessões e acompanhe a presença</p>

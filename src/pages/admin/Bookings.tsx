@@ -164,11 +164,9 @@ export default function Bookings() {
     <div className="space-y-4">
       {/* Header */}
       <div>
-        <h2
-          className="text-2xl font-bold"
-          style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.05em" }}
-        >
+        <h2 className="text-2xl font-bold font-brand">
           Agendamentos
+        </h2>
         </h2>
         <p className="text-sm text-muted-foreground">
           Visualize reservas e horários das turmas no calendário semanal

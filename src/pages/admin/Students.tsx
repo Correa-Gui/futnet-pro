@@ -289,7 +289,7 @@ export default function Students() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>Alunos</h2>
+          <h2 className="text-2xl font-bold font-brand">Alunos</h2>
           <p className="text-sm text-muted-foreground">{students.length} alunos cadastrados</p>
         </div>
         <Button onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Aluno</Button>

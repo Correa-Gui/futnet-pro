@@ -72,7 +72,7 @@ export default function Plans() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>Planos</h2>
+          <h2 className="text-2xl font-bold font-brand">Planos</h2>
           <p className="text-sm text-muted-foreground">Gerencie os planos de mensalidade</p>
         </div>
         <Button onClick={() => handleOpen()}><Plus className="mr-2 h-4 w-4" />Novo Plano</Button>
