@@ -167,7 +167,6 @@ export default function Bookings() {
         <h2 className="text-2xl font-bold font-brand">
           Agendamentos
         </h2>
-        </h2>
         <p className="text-sm text-muted-foreground">
           Visualize reservas e horários das turmas no calendário semanal
         </p>
