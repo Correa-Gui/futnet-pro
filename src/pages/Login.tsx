@@ -51,7 +51,7 @@ export default function Login() {
             <span className="text-5xl font-bold text-primary-foreground font-brand">FV</span>
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-primary-foreground tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em' }}>
+            <h1 className="text-4xl font-bold text-primary-foreground font-brand">
               FutVôlei Arena
             </h1>
             <p className="mt-3 text-lg text-primary-foreground/80 max-w-sm mx-auto leading-relaxed">
