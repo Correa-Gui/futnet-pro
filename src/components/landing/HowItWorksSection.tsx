@@ -39,7 +39,7 @@ export function HowItWorksSection({ settings }: { settings: LandingSettings }) {
         ))}
       </div>
       <div className="text-center mt-12">
-        <CTAButton text={settings.primary_cta_text} href={settings.primary_cta_url} />
+        <CTAButton text={settings.primary_cta_text} />
       </div>
     </Section>
   );

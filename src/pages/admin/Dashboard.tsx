@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users, GraduationCap, TrendingUp, AlertTriangle, Clock,
   ChevronRight, Plus, UserPlus, Receipt, CalendarDays, AlertCircle,
-  UserCheck, MapPin,
+  UserCheck, MapPin, CalendarCheck,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -14,7 +14,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { format, isToday, isTomorrow, parseISO } from 'date-fns';
+import { format, isToday, isTomorrow, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const formatCurrency = (v: number) =>
@@ -247,6 +247,24 @@ export default function AdminDashboard() {
     },
   });
 
+  // Trial requests
+  const { data: trialData } = useQuery({
+    queryKey: ['admin-dashboard-trials'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('trial_requests' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      const { data: recent } = await supabase
+        .from('trial_requests' as any)
+        .select('id, name, preferred_class_id, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return { pendingCount: count || 0, recent: (recent || []) as unknown as { id: string; name: string; preferred_class_id: string | null; created_at: string }[] };
+    },
+  });
+
   const s = stats || { students: 0, classes: 0, courts: 0, totalRevenue: 0, totalPending: 0, overdueCount: 0, monthlyRevenue: [], statusDist: [] };
 
   const kpis = [
@@ -470,6 +488,36 @@ export default function AdminDashboard() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Trial Requests Widget */}
+      {trialData && trialData.pendingCount > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+          <Card className="border-amber-200 dark:border-amber-900/50">
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-amber-600" />
+                <CardTitle className="text-base">Aulas Teste Pendentes</CardTitle>
+              </div>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/admin/aulas-teste')}>
+                Ver todas <ChevronRight className="ml-1 h-4 w-4" />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600 mb-3">{trialData.pendingCount}</div>
+              <div className="space-y-2">
+                {trialData.recent.map((t) => (
+                  <div key={t.id} className="flex items-center justify-between text-sm">
+                    <span className="font-medium truncate">{t.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDistanceToNow(new Date(t.created_at), { addSuffix: true, locale: ptBR })}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
 
       {/* Bottom: Invoice status pie + Quick links */}
       <div className="grid gap-6 lg:grid-cols-5">

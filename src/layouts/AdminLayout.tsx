@@ -1,10 +1,12 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
-  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3
+  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3, CalendarCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
   SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
@@ -18,6 +20,7 @@ const menuGroups = [
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
       { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+      { title: 'Aulas Teste', url: '/admin/aulas-teste', icon: CalendarCheck },
       { title: 'Quadras', url: '/admin/quadras', icon: MapPin },
       { title: 'Turmas', url: '/admin/turmas', icon: GraduationCap },
     ],
@@ -53,6 +56,18 @@ function AdminSidebar() {
   const collapsed = state === 'collapsed';
   const { signOut, profile } = useAuth();
   const navigate = useNavigate();
+
+  const { data: trialPendingCount = 0 } = useQuery({
+    queryKey: ['admin-trial-pending-count'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('trial_requests' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      return count || 0;
+    },
+    refetchInterval: 30000,
+  });
 
   const handleSignOut = async () => {
     await signOut();
@@ -95,7 +110,14 @@ function AdminSidebar() {
                         activeClassName="bg-sidebar-primary/20 text-sidebar-primary font-semibold shadow-sm"
                       >
                         <item.icon className="mr-2.5 h-4 w-4" />
-                        {!collapsed && <span className="text-sm">{item.title}</span>}
+                        {!collapsed && (
+                          <span className="text-sm flex-1">{item.title}</span>
+                        )}
+                        {!collapsed && item.title === 'Aulas Teste' && trialPendingCount > 0 && (
+                          <span className="ml-auto px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none">
+                            {trialPendingCount}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

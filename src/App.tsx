@@ -21,6 +21,7 @@ import Plans from "./pages/admin/Plans";
 import Teachers from "./pages/admin/Teachers";
 import Classes from "./pages/admin/Classes";
 import Students from "./pages/admin/Students";
+import TrialRequests from "./pages/admin/TrialRequests";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="professores" element={<Teachers />} />
               <Route path="turmas" element={<Classes />} />
               <Route path="alunos" element={<Students />} />
+              <Route path="aulas-teste" element={<TrialRequests />} />
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
               <Route path="landing-page" element={<LandingPageEditor />} />

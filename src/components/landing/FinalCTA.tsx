@@ -43,7 +43,7 @@ export function FinalCTA({ settings }: { settings: LandingSettings }) {
           ))}
         </div>
         <div className="flex gap-4 justify-center flex-wrap">
-          <CTAButton text={settings.primary_cta_text} large href={settings.primary_cta_url} />
+          <CTAButton text={settings.primary_cta_text} large />
           <a
             href={waLink}
             target="_blank"
