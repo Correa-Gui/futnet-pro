@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import {
   Users, GraduationCap, TrendingUp, AlertTriangle, Clock,
   ChevronRight, Plus, UserPlus, Receipt, CalendarDays, AlertCircle,
-  UserCheck, MapPin,
+  UserCheck, MapPin, CalendarCheck,
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
