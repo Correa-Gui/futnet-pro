@@ -26,6 +26,7 @@ import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
 import StudentClasses from "./pages/student/Classes";
 import StudentProfile from "./pages/student/Profile";
+import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
