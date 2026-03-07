@@ -24,7 +24,7 @@ export default function StudentLayout() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary">
-              <span className="text-sm font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+              <span className="text-sm font-bold text-primary-foreground font-brand">FV</span>
             </div>
             <div>
               <h1 className="text-sm font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>FutVôlei Arena</h1>
