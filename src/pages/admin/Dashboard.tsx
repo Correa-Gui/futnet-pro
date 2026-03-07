@@ -247,6 +247,24 @@ export default function AdminDashboard() {
     },
   });
 
+  // Trial requests
+  const { data: trialData } = useQuery({
+    queryKey: ['admin-dashboard-trials'],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('trial_requests' as any)
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'pending');
+      const { data: recent } = await supabase
+        .from('trial_requests' as any)
+        .select('id, name, preferred_class_id, created_at')
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+        .limit(3);
+      return { pendingCount: count || 0, recent: (recent || []) as { id: string; name: string; preferred_class_id: string | null; created_at: string }[] };
+    },
+  });
+
   const s = stats || { students: 0, classes: 0, courts: 0, totalRevenue: 0, totalPending: 0, overdueCount: 0, monthlyRevenue: [], statusDist: [] };
 
   const kpis = [
