@@ -14,12 +14,12 @@ interface ClassOption {
   level: string;
 }
 
-export function TrialFormSection({ settings }: { settings: LandingSettings }) {
+export function TrialFormSection({ settings, preselectedClassId = "" }: { settings: LandingSettings; preselectedClassId?: string }) {
   const [classes, setClasses] = useState<ClassOption[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [classId, setClassId] = useState("");
+  const [classId, setClassId] = useState(preselectedClassId);
   const [preferredDate, setPreferredDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
