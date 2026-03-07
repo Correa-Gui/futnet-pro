@@ -261,15 +261,18 @@ export default function TrialRequests() {
                         <Button
                           size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700"
-                          onClick={() =>
+                          onClick={() => {
+                            const msg = buildApprovalMessage(t);
+                            const waUrl = formatWhatsAppLink(t.phone, msg);
                             updateStatus.mutate({
                               id: t.id,
                               status: "approved",
                               notes: expandedNotes[t.id],
-                            })
-                          }
+                              openWhatsApp: waUrl,
+                            });
+                          }}
                         >
-                          <Check className="mr-1 h-4 w-4" /> Aprovar
+                          <Check className="mr-1 h-4 w-4" /> Aprovar & Enviar WhatsApp
                         </Button>
                         <Button
                           size="sm"
