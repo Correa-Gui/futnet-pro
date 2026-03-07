@@ -21,6 +21,7 @@ import Plans from "./pages/admin/Plans";
 import Teachers from "./pages/admin/Teachers";
 import Classes from "./pages/admin/Classes";
 import Students from "./pages/admin/Students";
+import TrialRequests from "./pages/admin/TrialRequests";
 
 import StudentLayout from "./layouts/StudentLayout";
 import StudentHome from "./pages/student/Home";
