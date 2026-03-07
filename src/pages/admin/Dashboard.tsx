@@ -489,6 +489,37 @@ export default function AdminDashboard() {
         </motion.div>
       </div>
 
+      {/* Trial Requests Widget + Invoice status */}
+      <div className="grid gap-6 lg:grid-cols-5">
+        {trialData && trialData.pendingCount > 0 && (
+          <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+            <Card className="h-full border-amber-200 dark:border-amber-900/50">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CalendarCheck className="h-5 w-5 text-amber-600" />
+                  <CardTitle className="text-base">Aulas Teste Pendentes</CardTitle>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/admin/aulas-teste')}>
+                  Ver todas <ChevronRight className="ml-1 h-4 w-4" />
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-amber-600 mb-3">{trialData.pendingCount}</div>
+                <div className="space-y-2">
+                  {trialData.recent.map((t) => (
+                    <div key={t.id} className="flex items-center justify-between text-sm">
+                      <span className="font-medium truncate">{t.name}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(t.created_at), { addSuffix: true, locale: ptBR })}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
       {/* Bottom: Invoice status pie + Quick links */}
       <div className="grid gap-6 lg:grid-cols-5">
         <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
