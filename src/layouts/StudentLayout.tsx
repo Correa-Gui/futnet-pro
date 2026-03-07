@@ -32,6 +32,7 @@ export default function StudentLayout() {
           </div>
           <NotificationBell />
         </div>
+      </header>
 
       {/* Content */}
       <main className="flex-1 overflow-auto p-4 pb-20">
