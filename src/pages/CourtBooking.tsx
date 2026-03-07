@@ -140,7 +140,7 @@ export default function CourtBooking() {
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <h2 className="text-2xl font-bold text-foreground font-heading">
               Reserva Solicitada!
             </h2>
             <p className="text-muted-foreground">
