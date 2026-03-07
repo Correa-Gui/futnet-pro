@@ -67,7 +67,7 @@ function AdminSidebar() {
           </div>
           {!collapsed && (
             <div>
-              <h2 className="text-sm font-bold text-sidebar-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold text-sidebar-foreground font-brand">
                 FutVôlei Arena
               </h2>
               <p className="text-[11px] text-sidebar-foreground/50 font-medium tracking-wider uppercase">Painel Admin</p>
