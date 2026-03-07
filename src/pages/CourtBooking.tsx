@@ -171,7 +171,7 @@ export default function CourtBooking() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-lg font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <h1 className="text-lg font-bold font-heading">
               Reservar Quadra
             </h1>
             <p className="text-xs text-muted-foreground">Escolha quadra, data e horário</p>
