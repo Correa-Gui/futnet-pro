@@ -2,10 +2,13 @@ import { motion } from "framer-motion";
 import { CheckCircle, Phone } from "lucide-react";
 import { SectionLabel } from "./Section";
 import { CTAButton } from "./CTAButton";
+import { cleanPhone } from "@/lib/whatsapp";
 import type { LandingSettings } from "./types";
 
 export function FinalCTA({ settings }: { settings: LandingSettings }) {
-  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
+  const cleanedPhone = settings.whatsapp_number ? cleanPhone(settings.whatsapp_number) : "";
+  const fullPhone = cleanedPhone && !cleanedPhone.startsWith("55") ? `55${cleanedPhone}` : cleanedPhone;
+  const waLink = fullPhone ? `https://wa.me/${fullPhone}` : "#";
 
   return (
     <section className="relative py-24 px-6 bg-foreground overflow-hidden text-center">
