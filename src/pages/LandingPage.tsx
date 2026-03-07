@@ -41,7 +41,7 @@ export default function LandingPage() {
         {isVisible("about") && <AboutSection getImage={getImage} />}
         {isVisible("gallery") && <GallerySection getImage={getImage} />}
         {isVisible("benefits") && <BenefitsSection settings={settings} />}
-        {isVisible("how_it_works") && <HowItWorksSection settings={settings} getImage={getImage} />}
+        {isVisible("how_it_works") && <HowItWorksSection settings={settings} />}
         {isVisible("testimonials") && <TestimonialsSection />}
         {isVisible("plans") && <PlansSection settings={settings} />}
         {isVisible("faq") && <FAQSection settings={settings} />}
