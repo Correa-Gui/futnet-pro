@@ -63,7 +63,7 @@ function AdminSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-primary shadow-lg">
-            <span className="text-lg font-bold text-sidebar-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+            <span className="text-lg font-bold text-sidebar-primary-foreground font-brand">FV</span>
           </div>
           {!collapsed && (
             <div>
