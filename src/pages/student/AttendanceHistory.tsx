@@ -119,7 +119,7 @@ export default function AttendanceHistory() {
   return (
     <div className="space-y-5 pb-4">
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-        <h2 className="text-lg font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
+        <h2 className="text-lg font-bold font-brand">
           Histórico de Presença
         </h2>
       </motion.div>

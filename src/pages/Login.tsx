@@ -85,7 +85,7 @@ export default function Login() {
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
               <span className="text-2xl font-bold text-primary-foreground font-brand">FV</span>
             </div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+            <h1 className="text-2xl font-bold font-brand">
               FutVôlei Arena
             </h1>
           </div>

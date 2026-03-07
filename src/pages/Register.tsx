@@ -45,7 +45,7 @@ export default function Register() {
       <Card className="w-full max-w-md border-border shadow-lg">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary">
-            <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+            <span className="text-2xl font-bold text-primary-foreground font-brand">FV</span>
           </div>
           <CardTitle className="text-2xl font-bold">Criar Conta</CardTitle>
           <CardDescription>Preencha os dados para se cadastrar</CardDescription>

@@ -291,7 +291,7 @@ export default function AdminDashboard() {
       {/* Header with quick actions */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>Dashboard</h2>
+          <h2 className="text-2xl font-bold font-brand">Dashboard</h2>
           <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
