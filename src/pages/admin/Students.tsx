@@ -10,8 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Trash2, Search, Pencil } from 'lucide-react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Plus, Trash2, Search, Pencil, LayoutGrid, List, GraduationCap, Phone, Mail, CreditCard } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
 
 type SkillLevel = Database['public']['Enums']['skill_level'];
@@ -23,6 +25,13 @@ const SKILL_LABELS: Record<SkillLevel, string> = {
   elementary: 'Principiante',
   intermediate: 'Intermediário',
   advanced: 'Avançado',
+};
+
+const SKILL_COLORS: Record<SkillLevel, string> = {
+  beginner: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  elementary: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+  intermediate: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+  advanced: 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400',
 };
 
 const STATUS_LABELS: Record<UserStatus, string> = {
@@ -65,11 +74,17 @@ const EMPTY_FORM: StudentForm = {
   skill_level: 'beginner', plan_id: '', class_ids: [],
 };
 
+function getInitials(name: string) {
+  return name.split(' ').filter(Boolean).map(n => n[0]).slice(0, 2).join('').toUpperCase();
+}
+
 export default function Students() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<StudentRow | null>(null);
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards');
   const [form, setForm] = useState<StudentForm>({ ...EMPTY_FORM });
 
   const { data: students = [], isLoading } = useQuery({
@@ -125,7 +140,6 @@ export default function Students() {
     },
   });
 
-  // Creation now delegates enrollment + invoice logic to the Edge Function
   const createMutation = useMutation({
     mutationFn: async (data: StudentForm) => {
       const { data: result, error } = await supabase.functions.invoke('create-user', {
@@ -143,12 +157,24 @@ export default function Students() {
       });
       if (error) throw error;
       if (result?.error) throw new Error(result.error);
-      return result;
+      return { ...result, hasPlan: !!data.plan_id, classCount: data.class_ids.length };
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['students'] });
       queryClient.invalidateQueries({ queryKey: ['enrollment-counts'] });
-      toast.success('Aluno criado!');
+
+      // Rich feedback with context
+      const parts: string[] = ['Aluno criado com sucesso!'];
+      if (result.classCount > 0) parts.push(`Matriculado em ${result.classCount} turma(s).`);
+      if (result.hasPlan) parts.push('Fatura gerada automaticamente.');
+
+      toast.success(parts[0], {
+        description: parts.slice(1).join(' '),
+        action: result.hasPlan ? {
+          label: 'Ver Faturas',
+          onClick: () => navigate('/admin/faturas'),
+        } : undefined,
+      });
       handleClose();
     },
     onError: (e: Error) => toast.error('Erro ao criar aluno', { description: e.message }),
@@ -168,7 +194,6 @@ export default function Students() {
         .eq('id', student.id);
       if (studentError) throw studentError;
 
-      // Sync enrollments
       const currentIds = new Set(student.enrolledClassIds);
       const newIds = new Set(data.class_ids);
 
@@ -270,61 +295,158 @@ export default function Students() {
         <Button onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" />Novo Aluno</Button>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input className="pl-10" placeholder="Buscar por nome, e-mail ou CPF..." value={search} onChange={(e) => setSearch(e.target.value)} />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input className="pl-10" placeholder="Buscar por nome, e-mail ou CPF..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <div className="flex rounded-lg border border-border overflow-hidden">
+          <button
+            onClick={() => setViewMode('cards')}
+            className={`p-2 transition-colors ${viewMode === 'cards' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setViewMode('table')}
+            className={`p-2 transition-colors ${viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Telefone</TableHead>
-                <TableHead>Nível</TableHead>
-                <TableHead>Plano</TableHead>
-                <TableHead>Turmas</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-16">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">Nenhum aluno encontrado</TableCell></TableRow>
-              ) : filtered.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">{s.profile?.full_name}</TableCell>
-                  <TableCell>{s.profile?.email || '—'}</TableCell>
-                  <TableCell>{s.profile?.phone || '—'}</TableCell>
-                  <TableCell>{SKILL_LABELS[s.skill_level] || s.skill_level}</TableCell>
-                  <TableCell>{s.plan?.name || <span className="text-muted-foreground">Sem plano</span>}</TableCell>
-                  <TableCell>
-                    {s.enrolledClassIds.length > 0 ? (
-                      <Badge variant="secondary">{s.enrolledClassIds.length} turma(s)</Badge>
-                    ) : (
-                      <span className="text-muted-foreground text-xs">Nenhuma</span>
-                    )}
-                  </TableCell>
-                  <TableCell><Badge variant={STATUS_VARIANTS[s.profile?.status] || 'secondary'}>{STATUS_LABELS[s.profile?.status] || s.profile?.status}</Badge></TableCell>
-                  <TableCell className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      {isLoading ? (
+        <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground">Nenhum aluno encontrado</div>
+      ) : viewMode === 'cards' ? (
+        /* Card View */
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((s) => (
+            <Card key={s.id} className="group hover:shadow-lg transition-all duration-200 hover:-translate-y-0.5 overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Avatar className="h-11 w-11 shrink-0">
+                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                      {getInitials(s.profile.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold truncate">{s.profile.full_name}</p>
+                        <Badge variant={STATUS_VARIANTS[s.profile.status]} className="text-[10px] mt-0.5">
+                          {STATUS_LABELS[s.profile.status]}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(s)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
+                <div className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+                  {s.profile.email && (
+                    <div className="flex items-center gap-1.5">
+                      <Mail className="h-3 w-3" /><span className="truncate">{s.profile.email}</span>
+                    </div>
+                  )}
+                  {s.profile.phone && (
+                    <div className="flex items-center gap-1.5">
+                      <Phone className="h-3 w-3" /><span>{s.profile.phone}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${SKILL_COLORS[s.skill_level]}`}>
+                    {SKILL_LABELS[s.skill_level]}
+                  </span>
+                  {s.plan ? (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5 text-[11px] font-medium">
+                      <CreditCard className="h-3 w-3" />{s.plan.name}
+                    </span>
+                  ) : (
+                    <span className="text-[11px] text-muted-foreground italic">Sem plano</span>
+                  )}
+                  {s.enrolledClassIds.length > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      <GraduationCap className="h-3 w-3" />{s.enrolledClassIds.length} turma{s.enrolledClassIds.length > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        /* Table View */
+        <Card>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>E-mail</TableHead>
+                  <TableHead>Telefone</TableHead>
+                  <TableHead>Nível</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Turmas</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-16">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-7 w-7">
+                          <AvatarFallback className="bg-primary/10 text-primary text-[10px]">
+                            {getInitials(s.profile.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        {s.profile.full_name}
+                      </div>
+                    </TableCell>
+                    <TableCell>{s.profile.email || '—'}</TableCell>
+                    <TableCell>{s.profile.phone || '—'}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex rounded-md px-2 py-0.5 text-[11px] font-medium ${SKILL_COLORS[s.skill_level]}`}>
+                        {SKILL_LABELS[s.skill_level]}
+                      </span>
+                    </TableCell>
+                    <TableCell>{s.plan?.name || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell>
+                      {s.enrolledClassIds.length > 0 ? (
+                        <Badge variant="secondary">{s.enrolledClassIds.length}</Badge>
+                      ) : '—'}
+                    </TableCell>
+                    <TableCell><Badge variant={STATUS_VARIANTS[s.profile.status]}>{STATUS_LABELS[s.profile.status]}</Badge></TableCell>
+                    <TableCell className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Dialog stays the same */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle>{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</DialogTitle></DialogHeader>
@@ -376,7 +498,6 @@ export default function Students() {
               </div>
             </div>
 
-            {/* Turmas */}
             <div className="space-y-2">
               <Label>Turmas</Label>
               {classes.length === 0 ? (
