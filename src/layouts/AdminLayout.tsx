@@ -133,7 +133,7 @@ export default function AdminLayout() {
         <div className="flex flex-1 flex-col">
           <header className="flex h-14 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 md:px-6 sticky top-0 z-10">
             <SidebarTrigger />
-            <h1 className="text-lg font-semibold tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
+            <h1 className="text-lg font-semibold font-brand">
               Painel Administrativo
             </h1>
           </header>

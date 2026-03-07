@@ -23,7 +23,7 @@ export default function TeacherLayout() {
             <span className="text-sm font-bold text-primary-foreground font-brand">FV</span>
           </div>
           <div>
-            <h1 className="text-sm font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>FutVôlei Arena</h1>
+            <h1 className="text-sm font-bold font-brand">FutVôlei Arena</h1>
             <p className="text-xs text-muted-foreground">Prof. {profile?.full_name?.split(' ')[0] || 'Professor'}</p>
           </div>
         </div>
