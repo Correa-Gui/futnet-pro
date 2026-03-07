@@ -48,7 +48,7 @@ export default function Login() {
 
         <div className="relative z-10 text-center space-y-8">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-primary-foreground/15 backdrop-blur-sm border border-primary-foreground/20 shadow-2xl">
-            <span className="text-5xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+            <span className="text-5xl font-bold text-primary-foreground font-brand">FV</span>
           </div>
           <div>
             <h1 className="text-4xl font-bold text-primary-foreground tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em' }}>
