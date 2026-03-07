@@ -36,6 +36,7 @@ import AdminAttendance from "./pages/admin/Attendance";
 import AdminInvoices from "./pages/admin/Invoices";
 import LandingPageEditor from "./pages/admin/LandingPageEditor";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminAnalytics from "./pages/admin/Analytics";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
