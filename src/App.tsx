@@ -77,6 +77,7 @@ const App = () => (
               <Route path="faturas" element={<AdminInvoices />} />
               <Route path="landing-page" element={<LandingPageEditor />} />
               <Route path="agendamentos" element={<AdminBookings />} />
+              <Route path="analytics" element={<AdminAnalytics />} />
             </Route>
 
             {/* Student routes */}

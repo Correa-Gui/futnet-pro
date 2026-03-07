@@ -17,6 +17,7 @@ const menuGroups = [
     label: 'Gestão',
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+      { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
       { title: 'Quadras', url: '/admin/quadras', icon: MapPin },
       { title: 'Turmas', url: '/admin/turmas', icon: GraduationCap },
     ],
