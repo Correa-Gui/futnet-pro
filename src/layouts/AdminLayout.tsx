@@ -110,7 +110,14 @@ function AdminSidebar() {
                         activeClassName="bg-sidebar-primary/20 text-sidebar-primary font-semibold shadow-sm"
                       >
                         <item.icon className="mr-2.5 h-4 w-4" />
-                        {!collapsed && <span className="text-sm">{item.title}</span>}
+                        {!collapsed && (
+                          <span className="text-sm flex-1">{item.title}</span>
+                        )}
+                        {!collapsed && item.title === 'Aulas Teste' && trialPendingCount > 0 && (
+                          <span className="ml-auto px-1.5 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-none">
+                            {trialPendingCount}
+                          </span>
+                        )}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
