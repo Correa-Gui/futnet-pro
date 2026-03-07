@@ -63,11 +63,11 @@ function AdminSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-sidebar-primary to-primary shadow-lg">
-            <span className="text-lg font-bold text-sidebar-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+            <span className="text-lg font-bold text-sidebar-primary-foreground font-brand">FV</span>
           </div>
           {!collapsed && (
             <div>
-              <h2 className="text-sm font-bold text-sidebar-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
+              <h2 className="text-sm font-bold text-sidebar-foreground font-brand">
                 FutVôlei Arena
               </h2>
               <p className="text-[11px] text-sidebar-foreground/50 font-medium tracking-wider uppercase">Painel Admin</p>
@@ -133,7 +133,7 @@ export default function AdminLayout() {
         <div className="flex flex-1 flex-col">
           <header className="flex h-14 items-center gap-4 border-b border-border bg-card/80 backdrop-blur-sm px-4 md:px-6 sticky top-0 z-10">
             <SidebarTrigger />
-            <h1 className="text-lg font-semibold tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.08em' }}>
+            <h1 className="text-lg font-semibold font-brand">
               Painel Administrativo
             </h1>
           </header>

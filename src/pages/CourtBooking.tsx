@@ -140,7 +140,7 @@ export default function CourtBooking() {
             <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
               <CheckCircle className="h-8 w-8 text-primary" />
             </div>
-            <h2 className="text-2xl font-bold text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <h2 className="text-2xl font-bold text-foreground font-heading">
               Reserva Solicitada!
             </h2>
             <p className="text-muted-foreground">
@@ -171,7 +171,7 @@ export default function CourtBooking() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
-            <h1 className="text-lg font-bold" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <h1 className="text-lg font-bold font-heading">
               Reservar Quadra
             </h1>
             <p className="text-xs text-muted-foreground">Escolha quadra, data e horário</p>

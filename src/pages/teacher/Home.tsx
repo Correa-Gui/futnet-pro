@@ -62,7 +62,7 @@ export default function TeacherHome() {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
         <div className="rounded-2xl bg-gradient-to-br from-primary to-primary/80 p-5 text-primary-foreground shadow-lg">
           <p className="text-sm opacity-80">{getGreeting()} 👋</p>
-          <h2 className="text-xl font-bold mt-0.5" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.04em' }}>
+          <h2 className="text-xl font-bold mt-0.5 font-brand">
             {firstName}
           </h2>
           <div className="mt-3 flex gap-4 text-sm">

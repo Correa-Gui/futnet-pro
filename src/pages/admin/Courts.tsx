@@ -87,7 +87,7 @@ export default function Courts() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>Quadras</h2>
+          <h2 className="text-2xl font-bold font-brand">Quadras</h2>
           <p className="text-sm text-muted-foreground">Gerencie as quadras do seu estabelecimento</p>
         </div>
         <Button onClick={() => handleOpen()}><Plus className="mr-2 h-4 w-4" />Nova Quadra</Button>

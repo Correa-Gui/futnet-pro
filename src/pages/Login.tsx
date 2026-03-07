@@ -48,10 +48,10 @@ export default function Login() {
 
         <div className="relative z-10 text-center space-y-8">
           <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-3xl bg-primary-foreground/15 backdrop-blur-sm border border-primary-foreground/20 shadow-2xl">
-            <span className="text-5xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+            <span className="text-5xl font-bold text-primary-foreground font-brand">FV</span>
           </div>
           <div>
-            <h1 className="text-4xl font-bold text-primary-foreground tracking-wide" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.1em' }}>
+            <h1 className="text-4xl font-bold text-primary-foreground font-brand">
               FutVôlei Arena
             </h1>
             <p className="mt-3 text-lg text-primary-foreground/80 max-w-sm mx-auto leading-relaxed">
@@ -60,17 +60,17 @@ export default function Login() {
           </div>
           <div className="flex items-center justify-center gap-6 text-primary-foreground/60 text-sm">
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>100%</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">100%</span>
               <span>Digital</span>
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>24/7</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">24/7</span>
               <span>Acesso</span>
             </div>
             <div className="h-8 w-px bg-primary-foreground/20" />
             <div className="flex flex-col items-center gap-1">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>PIX</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">PIX</span>
               <span>Integrado</span>
             </div>
           </div>
@@ -83,9 +83,9 @@ export default function Login() {
           {/* Mobile branding */}
           <div className="lg:hidden text-center space-y-3">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-primary shadow-lg">
-              <span className="text-2xl font-bold text-primary-foreground" style={{ fontFamily: "'Bebas Neue', sans-serif" }}>FV</span>
+              <span className="text-2xl font-bold text-primary-foreground font-brand">FV</span>
             </div>
-            <h1 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+            <h1 className="text-2xl font-bold font-brand">
               FutVôlei Arena
             </h1>
           </div>

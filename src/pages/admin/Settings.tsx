@@ -12,7 +12,7 @@ export default function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold" style={{ fontFamily: "'Bebas Neue', sans-serif", letterSpacing: '0.05em' }}>
+        <h2 className="text-2xl font-bold font-brand">
           Configurações
         </h2>
         <p className="text-sm text-muted-foreground">Configurações gerais do sistema</p>

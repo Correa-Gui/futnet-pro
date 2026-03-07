@@ -3,103 +3,102 @@
 @tailwind utilities;
 
 /* FutVôlei Arena - Design System
-   Cores esportivas: verde, amarelo, areia
-   All colors MUST be HSL.
+   Paleta Ocean/Sunset unificada. All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    --background: 48 33% 97%;
-    --foreground: 150 25% 10%;
+    --background: 36 33% 97%;
+    --foreground: 213 40% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 150 25% 10%;
+    --card-foreground: 213 40% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 150 25% 10%;
+    --popover-foreground: 213 40% 10%;
 
-    --primary: 145 63% 32%;
+    --primary: 201 80% 24%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 93% 58%;
-    --secondary-foreground: 150 25% 10%;
+    --secondary: 25 95% 53%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 48 20% 93%;
-    --muted-foreground: 150 10% 45%;
+    --muted: 36 20% 93%;
+    --muted-foreground: 213 10% 45%;
 
-    --accent: 45 93% 58%;
-    --accent-foreground: 150 25% 10%;
+    --accent: 25 95% 53%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 10% 85%;
-    --input: 150 10% 85%;
-    --ring: 145 63% 32%;
+    --border: 213 15% 88%;
+    --input: 213 15% 88%;
+    --ring: 201 80% 24%;
 
     --radius: 0.75rem;
 
-    --success: 145 63% 42%;
+    --success: 152 60% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 200 80% 50%;
+    --info: 201 80% 50%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 150 20% 15%;
-    --sidebar-foreground: 48 33% 95%;
-    --sidebar-primary: 45 93% 58%;
-    --sidebar-primary-foreground: 150 25% 10%;
-    --sidebar-accent: 150 15% 22%;
-    --sidebar-accent-foreground: 48 33% 95%;
-    --sidebar-border: 150 12% 25%;
-    --sidebar-ring: 45 93% 58%;
+    --sidebar-background: 213 45% 12%;
+    --sidebar-foreground: 36 33% 95%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 30% 18%;
+    --sidebar-accent-foreground: 36 33% 95%;
+    --sidebar-border: 213 25% 20%;
+    --sidebar-ring: 25 95% 53%;
   }
 
   .dark {
-    --background: 150 20% 7%;
-    --foreground: 48 33% 95%;
+    --background: 213 40% 7%;
+    --foreground: 36 33% 95%;
 
-    --card: 150 18% 12%;
-    --card-foreground: 48 33% 95%;
+    --card: 213 35% 12%;
+    --card-foreground: 36 33% 95%;
 
-    --popover: 150 18% 12%;
-    --popover-foreground: 48 33% 95%;
+    --popover: 213 35% 12%;
+    --popover-foreground: 36 33% 95%;
 
-    --primary: 145 63% 42%;
+    --primary: 201 75% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 45 80% 50%;
-    --secondary-foreground: 150 25% 10%;
+    --secondary: 25 90% 50%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 150 15% 18%;
-    --muted-foreground: 150 10% 60%;
+    --muted: 213 25% 18%;
+    --muted-foreground: 213 15% 60%;
 
-    --accent: 45 80% 50%;
-    --accent-foreground: 150 25% 10%;
+    --accent: 25 90% 50%;
+    --accent-foreground: 0 0% 100%;
 
     --destructive: 0 62% 40%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 150 12% 22%;
-    --input: 150 12% 22%;
-    --ring: 145 63% 42%;
+    --border: 213 20% 22%;
+    --input: 213 20% 22%;
+    --ring: 201 75% 35%;
 
-    --success: 145 63% 42%;
+    --success: 152 60% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --info: 200 80% 50%;
+    --info: 201 75% 50%;
     --info-foreground: 0 0% 100%;
 
-    --sidebar-background: 150 20% 10%;
-    --sidebar-foreground: 48 33% 95%;
-    --sidebar-primary: 45 93% 58%;
-    --sidebar-primary-foreground: 150 25% 10%;
-    --sidebar-accent: 150 15% 18%;
-    --sidebar-accent-foreground: 48 33% 95%;
-    --sidebar-border: 150 12% 18%;
-    --sidebar-ring: 45 93% 58%;
+    --sidebar-background: 213 40% 8%;
+    --sidebar-foreground: 36 33% 95%;
+    --sidebar-primary: 25 95% 53%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 30% 15%;
+    --sidebar-accent-foreground: 36 33% 95%;
+    --sidebar-border: 213 25% 16%;
+    --sidebar-ring: 25 95% 53%;
   }
 }
 
@@ -110,6 +109,21 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Typography utilities */
+  .font-brand {
+    font-family: 'Bebas Neue', sans-serif;
+    letter-spacing: 0.08em;
+  }
+
+  .font-heading {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+  }
+
+  .font-body {
+    font-family: 'DM Sans', sans-serif;
   }
 }
