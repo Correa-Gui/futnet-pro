@@ -70,7 +70,15 @@ export default function AdminDashboard() {
     },
   });
 
-  const { data: todaySessions = [] } = useQuery({
+  interface TodaySession {
+    id: string;
+    date: string;
+    class_id: string;
+    status: string;
+    class?: { id: string; name: string; start_time: string; end_time: string };
+  }
+
+  const { data: todaySessions = [] } = useQuery<TodaySession[]>({
     queryKey: ['admin-today-sessions'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
