@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -52,7 +52,11 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { email, password, full_name, phone, cpf, birth_date, role, rate_per_class, skill_level, plan_id } = body;
+    const {
+      email, password, full_name, phone, cpf, birth_date,
+      role, rate_per_class, skill_level, plan_id,
+      class_ids,
+    } = body;
 
     if (!email || !password || !full_name || !role) {
       return new Response(JSON.stringify({ error: "Campos obrigatórios: email, password, full_name, role" }), {
@@ -128,6 +132,68 @@ Deno.serve(async (req) => {
           })
           .eq("user_id", userId);
       }
+
+      // Get student profile id for enrollments and invoices
+      const { data: sp } = await adminClient
+        .from("student_profiles")
+        .select("id")
+        .eq("user_id", userId)
+        .single();
+
+      if (sp) {
+        // Enroll in selected classes
+        const classIdList: string[] = Array.isArray(class_ids) ? class_ids : [];
+        if (classIdList.length > 0) {
+          const enrollments = classIdList.map((class_id: string) => ({
+            class_id,
+            student_id: sp.id,
+            status: "active",
+          }));
+          const { error: enrollError } = await adminClient.from("enrollments").insert(enrollments);
+          if (enrollError) {
+            console.error("Enrollment error:", enrollError);
+          }
+        }
+
+        // Auto-generate first invoice if student has a plan
+        if (plan_id) {
+          const { data: planData } = await adminClient
+            .from("plans")
+            .select("monthly_price, name")
+            .eq("id", plan_id)
+            .single();
+
+          if (planData) {
+            // Check for duplicate invoice (same student + month with active status)
+            const now = new Date();
+            const refMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+            const dueDate = new Date(now);
+            dueDate.setDate(dueDate.getDate() + 30);
+
+            const { data: existing } = await adminClient
+              .from("invoices")
+              .select("id")
+              .eq("student_id", sp.id)
+              .eq("reference_month", refMonth)
+              .in("status", ["pending", "paid", "overdue"])
+              .maybeSingle();
+
+            if (!existing) {
+              const { error: invoiceError } = await adminClient.from("invoices").insert({
+                student_id: sp.id,
+                amount: planData.monthly_price,
+                discount: 0,
+                due_date: dueDate.toISOString().split("T")[0],
+                reference_month: refMonth,
+                status: "pending",
+              });
+              if (invoiceError) {
+                console.error("Invoice creation error:", invoiceError);
+              }
+            }
+          }
+        }
+      }
     }
 
     return new Response(JSON.stringify({ user_id: userId, email }), {
@@ -135,7 +201,8 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
+    const message = error instanceof Error ? error.message : "Erro interno";
+    return new Response(JSON.stringify({ error: message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

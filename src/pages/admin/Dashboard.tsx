@@ -70,7 +70,15 @@ export default function AdminDashboard() {
     },
   });
 
-  const { data: todaySessions = [] } = useQuery({
+  interface TodaySession {
+    id: string;
+    date: string;
+    class_id: string;
+    status: string;
+    class?: { id: string; name: string; start_time: string; end_time: string };
+  }
+
+  const { data: todaySessions = [] } = useQuery<TodaySession[]>({
     queryKey: ['admin-today-sessions'],
     queryFn: async () => {
       const today = new Date().toISOString().split('T')[0];
@@ -206,7 +214,7 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {todaySessions.map((session: any) => (
+              {todaySessions.map((session) => (
                 <div key={session.id} className="flex items-center justify-between rounded-xl border border-border p-3 hover:bg-muted/50 transition-colors">
                   <div className="flex items-center gap-3">
                     <div className="h-2.5 w-2.5 rounded-full bg-primary animate-pulse" />

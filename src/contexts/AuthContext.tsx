@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, useCallback } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -25,42 +25,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
   const [loading, setLoading] = useState(true);
+  // Guard against double-setting loading from both getSession and onAuthStateChange
+  const initializedRef = useRef(false);
 
-  const fetchUserData = async (userId: string) => {
-    const [roleResult, profileResult] = await Promise.all([
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
-    ]);
-    if (roleResult.data) setRole(roleResult.data.role);
-    if (profileResult.data) setProfile(profileResult.data);
-  };
+  const fetchUserData = useCallback(async (userId: string) => {
+    try {
+      const [roleResult, profileResult] = await Promise.all([
+        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+        supabase.from('profiles').select('*').eq('user_id', userId).single(),
+      ]);
+
+      if (roleResult.error) {
+        console.error('Failed to fetch user role:', roleResult.error.message);
+      }
+      if (profileResult.error) {
+        console.error('Failed to fetch user profile:', profileResult.error.message);
+      }
+
+      setRole(roleResult.data?.role ?? null);
+      setProfile(profileResult.data ?? null);
+    } catch (err) {
+      console.error('Unexpected error fetching user data:', err);
+      setRole(null);
+      setProfile(null);
+    }
+  }, []);
 
   useEffect(() => {
+    // 1. Get the current session first (synchronous-ish)
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        fetchUserData(currentSession.user.id).finally(() => {
+          initializedRef.current = true;
+          setLoading(false);
+        });
+      } else {
+        initializedRef.current = true;
+        setLoading(false);
+      }
+    });
+
+    // 2. Listen to future auth changes (sign in, sign out, token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user) {
-          setTimeout(() => fetchUserData(session.user.id), 0);
+      async (_event, newSession) => {
+        setSession(newSession);
+        setUser(newSession?.user ?? null);
+
+        if (newSession?.user) {
+          // Use setTimeout(0) to avoid Supabase RLS deadlock when the auth
+          // state change fires synchronously during token refresh. The RLS
+          // policies call has_role() which queries user_roles — doing that
+          // inside the same synchronous callback can deadlock the connection.
+          setTimeout(async () => {
+            await fetchUserData(newSession.user.id);
+            if (initializedRef.current) {
+              // Only set loading if we're past initialization
+            }
+          }, 0);
         } else {
           setRole(null);
           setProfile(null);
         }
-        setLoading(false);
+
+        // Don't set loading=false here during initialization — getSession handles that
+        if (initializedRef.current) {
+          setLoading(false);
+        }
       }
     );
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-      setLoading(false);
-    });
-
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserData]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });

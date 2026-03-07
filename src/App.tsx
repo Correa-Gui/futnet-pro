@@ -37,6 +37,7 @@ import AdminInvoices from "./pages/admin/Invoices";
 import LandingPageEditor from "./pages/admin/LandingPageEditor";
 import AdminBookings from "./pages/admin/Bookings";
 import AdminAnalytics from "./pages/admin/Analytics";
+import AdminSettings from "./pages/admin/Settings";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
@@ -78,6 +79,7 @@ const App = () => (
               <Route path="landing-page" element={<LandingPageEditor />} />
               <Route path="agendamentos" element={<AdminBookings />} />
               <Route path="analytics" element={<AdminAnalytics />} />
+              <Route path="configuracoes" element={<AdminSettings />} />
             </Route>
 
             {/* Student routes */}
