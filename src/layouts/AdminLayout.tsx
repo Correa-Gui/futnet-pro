@@ -1,10 +1,12 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
-  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3
+  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3, CalendarCheck
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 import {
   Sidebar, SidebarContent, SidebarFooter, SidebarGroup,
   SidebarGroupContent, SidebarGroupLabel, SidebarHeader,
