@@ -1,0 +1,165 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_ANON_KEY")!,
+      { global: { headers: { Authorization: authHeader } } }
+    );
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const userId = claimsData.claims.sub;
+
+    // Check admin role
+    const { data: hasRole } = await supabase.rpc("has_role", {
+      _user_id: userId,
+      _role: "admin",
+    });
+    if (!hasRole) {
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
+    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+
+    if (!WHATSAPP_ACCESS_TOKEN) {
+      throw new Error("WHATSAPP_ACCESS_TOKEN is not configured");
+    }
+    if (!WHATSAPP_PHONE_NUMBER_ID) {
+      throw new Error("WHATSAPP_PHONE_NUMBER_ID is not configured");
+    }
+
+    const { recipients, message_body, template_id } = await req.json();
+
+    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      return new Response(JSON.stringify({ error: "recipients is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const results: { phone: string; success: boolean; messageId?: string; error?: string }[] = [];
+
+    const serviceClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    );
+
+    for (const recipient of recipients) {
+      const phone = recipient.phone.replace(/\D/g, "");
+      const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+
+      try {
+        const waResponse = await fetch(
+          `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messaging_product: "whatsapp",
+              to: fullPhone,
+              type: "text",
+              text: { body: message_body },
+            }),
+          }
+        );
+
+        const waData = await waResponse.json();
+
+        if (!waResponse.ok) {
+          const errMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
+          results.push({ phone: fullPhone, success: false, error: errMsg });
+
+          await serviceClient.from("whatsapp_messages").insert({
+            template_id: template_id || null,
+            recipient_phone: fullPhone,
+            recipient_name: recipient.name || null,
+            student_id: recipient.student_id || null,
+            message_body,
+            status: "failed",
+            error_message: errMsg,
+            sent_by: userId,
+            sent_at: new Date().toISOString(),
+          });
+        } else {
+          const msgId = waData?.messages?.[0]?.id || null;
+          results.push({ phone: fullPhone, success: true, messageId: msgId });
+
+          await serviceClient.from("whatsapp_messages").insert({
+            template_id: template_id || null,
+            recipient_phone: fullPhone,
+            recipient_name: recipient.name || null,
+            student_id: recipient.student_id || null,
+            message_body,
+            status: "sent",
+            whatsapp_message_id: msgId,
+            sent_by: userId,
+            sent_at: new Date().toISOString(),
+          });
+        }
+      } catch (err) {
+        const errMsg = err instanceof Error ? err.message : "Unknown error";
+        results.push({ phone: fullPhone, success: false, error: errMsg });
+
+        await serviceClient.from("whatsapp_messages").insert({
+          template_id: template_id || null,
+          recipient_phone: fullPhone,
+          recipient_name: recipient.name || null,
+          student_id: recipient.student_id || null,
+          message_body,
+          status: "failed",
+          error_message: errMsg,
+          sent_by: userId,
+          sent_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    const sent = results.filter((r) => r.success).length;
+    const failed = results.filter((r) => !r.success).length;
+
+    return new Response(
+      JSON.stringify({ sent, failed, results }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    console.error("send-whatsapp error:", message);
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
