@@ -28,7 +28,7 @@ export default function Login() {
     }
 
     toast.success('Bem-vindo!');
-    navigate('/');
+    navigate(redirectTo || '/');
   };
 
   return (
