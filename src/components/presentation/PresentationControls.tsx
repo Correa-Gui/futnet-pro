@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Maximize, Minimize, Grid3X3 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Maximize, Minimize, Grid3X3, Download, Loader2 } from 'lucide-react';
 
 interface PresentationControlsProps {
   current: number;
@@ -10,6 +10,8 @@ interface PresentationControlsProps {
   onToggleFullscreen: () => void;
   showGrid: boolean;
   onToggleGrid: () => void;
+  onExportPPT?: () => void;
+  exporting?: boolean;
 }
 
 export default function PresentationControls({
