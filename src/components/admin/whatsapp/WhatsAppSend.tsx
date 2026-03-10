@@ -163,48 +163,63 @@ export default function WhatsAppSend() {
   const handleSend = async () => {
     const selected = filteredStudents.filter((s) => selectedStudents.has(s.studentId));
     if (selected.length === 0) return toast.error("Selecione ao menos um aluno.");
-    if (!messageBody.trim()) return toast.error("Escreva a mensagem.");
+    if (sendMode === "text" && !messageBody.trim()) return toast.error("Escreva a mensagem.");
 
     setSending(true);
     try {
-      // Send each with resolved variables
-      const recipients = selected.map((s) => ({
-        phone: s.phone!,
-        name: s.fullName,
-        student_id: s.studentId,
-      }));
-
-      // Resolve the message for the first student as preview (API sends same body)
-      // For per-student variable resolution, we send individually
-      const hasVars = /\{\{\w+\}\}/.test(messageBody);
-
-      if (hasVars) {
-        // Send one by one for variable resolution
-        let sentCount = 0;
-        let failCount = 0;
-        for (const student of selected) {
-          const resolved = resolveVars(messageBody, student);
-          const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-            body: {
-              recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
-              message_body: resolved,
-              template_id: templateId || null,
-            },
-          });
-          if (error) failCount++;
-          else sentCount += data?.sent || 0;
-        }
-        toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
-      } else {
+      if (sendMode === "template") {
+        // Send Meta template to all selected
+        const recipients = selected.map((s) => ({
+          phone: s.phone!,
+          name: s.fullName,
+          student_id: s.studentId,
+        }));
         const { data, error } = await supabase.functions.invoke("send-whatsapp", {
           body: {
             recipients,
-            message_body: messageBody,
-            template_id: templateId || null,
+            message_body: `[Template: ${metaTemplateName}]`,
+            template_name: metaTemplateName,
+            template_language: metaTemplateLang,
           },
         });
         if (error) throw error;
         toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
+      } else {
+        // Text mode with variable resolution
+        const recipients = selected.map((s) => ({
+          phone: s.phone!,
+          name: s.fullName,
+          student_id: s.studentId,
+        }));
+        const hasVars = /\{\{\w+\}\}/.test(messageBody);
+
+        if (hasVars) {
+          let sentCount = 0;
+          let failCount = 0;
+          for (const student of selected) {
+            const resolved = resolveVars(messageBody, student);
+            const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+              body: {
+                recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
+                message_body: resolved,
+                template_id: templateId || null,
+              },
+            });
+            if (error) failCount++;
+            else sentCount += data?.sent || 0;
+          }
+          toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
+        } else {
+          const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+            body: {
+              recipients,
+              message_body: messageBody,
+              template_id: templateId || null,
+            },
+          });
+          if (error) throw error;
+          toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
+        }
       }
 
       setSelectedStudents(new Set());
