@@ -50,7 +50,7 @@ const menuGroups = [
       { title: 'Landing Page', url: '/admin/landing-page', icon: Settings },
       { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
       { title: 'WhatsApp', url: '/admin/whatsapp', icon: MessageCircle },
-      { title: 'Apresentação', url: '/admin/apresentacao', icon: Presentation },
+      { title: 'Apresentação', url: '/admin/apresentacao', icon: Monitor },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
     ],
   },
