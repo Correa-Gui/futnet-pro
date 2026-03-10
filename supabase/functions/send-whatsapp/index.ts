@@ -89,9 +89,20 @@ Deno.serve(async (req) => {
 
     for (const recipient of recipients) {
       const phone = recipient.phone.replace(/\D/g, "");
-      // If phone already has a valid international prefix (starts with country code), use as-is
-      // Only prepend 55 (Brazil) if the number doesn't already have an international prefix
-      const fullPhone = phone.length >= 12 ? phone : (phone.startsWith("55") ? phone : `55${phone}`);
+      // Brazilian mobile numbers (without country code) are 10-11 digits starting with region codes 11-99
+      // If phone starts with "1" followed by 10 digits, it's likely a US/Canada number (+1)
+      // If phone starts with "55", it already has Brazil's country code
+      // Otherwise, assume Brazilian and prepend 55
+      let fullPhone = phone;
+      if (phone.startsWith("55") && phone.length >= 12) {
+        fullPhone = phone; // Already has Brazil country code
+      } else if (phone.startsWith("1") && phone.length === 11) {
+        fullPhone = phone; // US/Canada number with country code 1
+      } else if (phone.length >= 12) {
+        fullPhone = phone; // Already has some international prefix
+      } else {
+        fullPhone = `55${phone}`; // Assume Brazilian, prepend 55
+      }
       console.log("send-whatsapp: sending to", fullPhone);
 
       try {
