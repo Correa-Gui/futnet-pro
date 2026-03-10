@@ -27,6 +27,9 @@ export default function WhatsAppSend() {
   const [templateId, setTemplateId] = useState<string>("");
   const [messageBody, setMessageBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendMode, setSendMode] = useState<"template" | "text">("template");
+  const [metaTemplateName, setMetaTemplateName] = useState("hello_world");
+  const [metaTemplateLang, setMetaTemplateLang] = useState("en_US");
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
