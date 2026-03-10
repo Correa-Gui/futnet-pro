@@ -1,7 +1,7 @@
 import { Outlet, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
-  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3, CalendarCheck
+  Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, BarChart3, CalendarCheck, MessageCircle
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
