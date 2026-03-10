@@ -68,9 +68,12 @@ Deno.serve(async (req) => {
       throw new Error("WHATSAPP_PHONE_NUMBER_ID is not configured");
     }
 
-    const { recipients, message_body, template_id } = await req.json();
+    const body = await req.json();
+    const { recipients, message_body, template_id } = body;
+    console.log("send-whatsapp: payload", JSON.stringify({ recipientCount: recipients?.length, message_body: message_body?.substring(0, 50), template_id }));
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      console.log("send-whatsapp: no recipients");
       return new Response(JSON.stringify({ error: "recipients is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
