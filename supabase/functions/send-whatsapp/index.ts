@@ -12,8 +12,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("send-whatsapp: request received", req.method);
+    
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      console.log("send-whatsapp: missing auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -27,27 +30,34 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      console.log("send-whatsapp: auth error", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
+    console.log("send-whatsapp: authenticated user", userId);
 
     // Check admin role
-    const { data: hasRole } = await supabase.rpc("has_role", {
+    const { data: hasRole, error: roleError } = await supabase.rpc("has_role", {
       _user_id: userId,
       _role: "admin",
     });
+    console.log("send-whatsapp: hasRole result", hasRole, "error", roleError?.message);
     if (!hasRole) {
+      console.log("send-whatsapp: user is not admin, forbidden");
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("send-whatsapp: checking secrets...");
+    console.log("send-whatsapp: WHATSAPP_ACCESS_TOKEN exists:", !!Deno.env.get("WHATSAPP_ACCESS_TOKEN"));
+    console.log("send-whatsapp: WHATSAPP_PHONE_NUMBER_ID exists:", !!Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"));
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
@@ -58,9 +68,12 @@ Deno.serve(async (req) => {
       throw new Error("WHATSAPP_PHONE_NUMBER_ID is not configured");
     }
 
-    const { recipients, message_body, template_id } = await req.json();
+    const body = await req.json();
+    const { recipients, message_body, template_id } = body;
+    console.log("send-whatsapp: payload", JSON.stringify({ recipientCount: recipients?.length, message_body: message_body?.substring(0, 50), template_id }));
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
+      console.log("send-whatsapp: no recipients");
       return new Response(JSON.stringify({ error: "recipients is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -77,8 +90,17 @@ Deno.serve(async (req) => {
     for (const recipient of recipients) {
       const phone = recipient.phone.replace(/\D/g, "");
       const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+      console.log("send-whatsapp: sending to", fullPhone);
 
       try {
+        const waPayload = {
+          messaging_product: "whatsapp",
+          to: fullPhone,
+          type: "text",
+          text: { body: message_body },
+        };
+        console.log("send-whatsapp: WA API payload", JSON.stringify(waPayload));
+
         const waResponse = await fetch(
           `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
           {
@@ -87,16 +109,12 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: fullPhone,
-              type: "text",
-              text: { body: message_body },
-            }),
+            body: JSON.stringify(waPayload),
           }
         );
 
         const waData = await waResponse.json();
+        console.log("send-whatsapp: WA API response", waResponse.status, JSON.stringify(waData));
 
         if (!waResponse.ok) {
           const errMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
