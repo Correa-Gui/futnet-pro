@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
   Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, 
-  BarChart3, CalendarCheck, MessageCircle, Search, Bell, ChevronLeft
+  BarChart3, CalendarCheck, MessageCircle, Search, Bell, ChevronLeft, Monitor
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -50,6 +50,7 @@ const menuGroups = [
       { title: 'Landing Page', url: '/admin/landing-page', icon: Settings },
       { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
       { title: 'WhatsApp', url: '/admin/whatsapp', icon: MessageCircle },
+      { title: 'Apresentação', url: '/admin/apresentacao', icon: Monitor },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
     ],
   },
