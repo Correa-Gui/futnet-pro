@@ -240,43 +240,92 @@ export default function WhatsAppSend() {
       <div className="space-y-4">
         <Card>
           <CardContent className="p-4 space-y-4">
-            <div>
-              <Label>Template (opcional)</Label>
-              <Select value={templateId} onValueChange={applyTemplate}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolher template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={sendMode === "template" ? "default" : "outline"}
+                onClick={() => setSendMode("template")}
+              >
+                Template Meta
+              </Button>
+              <Button
+                size="sm"
+                variant={sendMode === "text" ? "default" : "outline"}
+                onClick={() => setSendMode("text")}
+              >
+                Texto Livre
+              </Button>
             </div>
 
-            <div>
-              <Label>Mensagem</Label>
-              <Textarea
-                value={messageBody}
-                onChange={(e) => setMessageBody(e.target.value)}
-                placeholder="Escreva sua mensagem ou selecione um template..."
-                rows={6}
-              />
-            </div>
-
-            {messageBody && previewStudent && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
-                  {previewMessage}
+            {sendMode === "template" ? (
+              <div className="space-y-3">
+                <div>
+                  <Label>Nome do Template (Meta)</Label>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={metaTemplateName}
+                    onChange={(e) => setMetaTemplateName(e.target.value)}
+                    placeholder="hello_world"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nome exato do template aprovado no Meta Business Suite
+                  </p>
+                </div>
+                <div>
+                  <Label>Idioma</Label>
+                  <Select value={metaTemplateLang} onValueChange={setMetaTemplateLang}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt_BR">Português (BR)</SelectItem>
+                      <SelectItem value="en_US">English (US)</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+            ) : (
+              <>
+                <div>
+                  <Label>Template local (opcional)</Label>
+                  <Select value={templateId} onValueChange={applyTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolher template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={messageBody}
+                    onChange={(e) => setMessageBody(e.target.value)}
+                    placeholder="Escreva sua mensagem ou selecione um template..."
+                    rows={6}
+                  />
+                </div>
+
+                {messageBody && previewStudent && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
+                      {previewMessage}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <Button
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={handleSend}
-              disabled={sending || selectedStudents.size === 0 || !messageBody.trim()}
+              disabled={sending || selectedStudents.size === 0 || (sendMode === "text" && !messageBody.trim())}
             >
               {sending ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
