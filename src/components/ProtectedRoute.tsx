@@ -24,7 +24,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     );
   }
 
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} replace />;
 
   if (allowedRoles && role && !allowedRoles.includes(role)) {
     // Redirect based on role
