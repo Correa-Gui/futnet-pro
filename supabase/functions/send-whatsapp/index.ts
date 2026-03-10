@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipients, message_body, template_id } = body;
+    const { recipients, message_body, template_id, template_name, template_language } = body;
     console.log("send-whatsapp: payload", JSON.stringify({ recipientCount: recipients?.length, message_body: message_body?.substring(0, 50), template_id }));
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
