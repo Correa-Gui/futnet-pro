@@ -90,8 +90,17 @@ Deno.serve(async (req) => {
     for (const recipient of recipients) {
       const phone = recipient.phone.replace(/\D/g, "");
       const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+      console.log("send-whatsapp: sending to", fullPhone);
 
       try {
+        const waPayload = {
+          messaging_product: "whatsapp",
+          to: fullPhone,
+          type: "text",
+          text: { body: message_body },
+        };
+        console.log("send-whatsapp: WA API payload", JSON.stringify(waPayload));
+
         const waResponse = await fetch(
           `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
           {
@@ -100,16 +109,12 @@ Deno.serve(async (req) => {
               Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
               "Content-Type": "application/json",
             },
-            body: JSON.stringify({
-              messaging_product: "whatsapp",
-              to: fullPhone,
-              type: "text",
-              text: { body: message_body },
-            }),
+            body: JSON.stringify(waPayload),
           }
         );
 
         const waData = await waResponse.json();
+        console.log("send-whatsapp: WA API response", waResponse.status, JSON.stringify(waData));
 
         if (!waResponse.ok) {
           const errMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
