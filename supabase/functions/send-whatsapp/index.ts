@@ -12,8 +12,11 @@ Deno.serve(async (req) => {
   }
 
   try {
+    console.log("send-whatsapp: request received", req.method);
+    
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
+      console.log("send-whatsapp: missing auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -27,14 +30,16 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    if (userError || !user) {
+      console.log("send-whatsapp: auth error", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
+    console.log("send-whatsapp: authenticated user", userId);
 
     // Check admin role
     const { data: hasRole } = await supabase.rpc("has_role", {
