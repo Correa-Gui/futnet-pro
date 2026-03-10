@@ -88,6 +88,7 @@ const App = () => (
               <Route path="pagamentos-professores" element={<AdminTeacherPayments />} />
               <Route path="configuracoes" element={<AdminSettings />} />
               <Route path="whatsapp" element={<AdminWhatsApp />} />
+              <Route path="apresentacao" element={<AdminPresentation />} />
             </Route>
 
             {/* Student routes */}
