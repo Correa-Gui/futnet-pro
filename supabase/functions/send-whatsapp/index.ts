@@ -89,7 +89,9 @@ Deno.serve(async (req) => {
 
     for (const recipient of recipients) {
       const phone = recipient.phone.replace(/\D/g, "");
-      const fullPhone = phone.startsWith("55") ? phone : `55${phone}`;
+      // If phone already has a valid international prefix (starts with country code), use as-is
+      // Only prepend 55 (Brazil) if the number doesn't already have an international prefix
+      const fullPhone = phone.length >= 12 ? phone : (phone.startsWith("55") ? phone : `55${phone}`);
       console.log("send-whatsapp: sending to", fullPhone);
 
       try {
