@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PresentationControls from '@/components/presentation/PresentationControls';
+import { useExportPPT } from '@/components/presentation/useExportPPT';
 import {
   SlideCover, SlideProblem, SlideSolution, SlideDashboard,
   SlideStudents, SlideClasses, SlideAttendance, SlideFinancial,
