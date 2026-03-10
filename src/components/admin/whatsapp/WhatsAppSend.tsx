@@ -90,7 +90,7 @@ export default function WhatsAppSend() {
         .select("id, name, body, variables")
         .eq("is_active", true)
         .order("name");
-      return (data || []) as { id: string; name: string; body: string; variables: string[] }[];
+      return (data || []) as unknown as { id: string; name: string; body: string; variables: string[] }[];
     },
   });
 

@@ -46,6 +46,7 @@ const menuGroups = [
     items: [
       { title: 'Landing Page', url: '/admin/landing-page', icon: Settings },
       { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
+      { title: 'WhatsApp', url: '/admin/whatsapp', icon: MessageCircle },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
     ],
   },
