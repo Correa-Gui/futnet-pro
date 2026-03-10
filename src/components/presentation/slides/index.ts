@@ -1,0 +1,17 @@
+export { default as SlideCover } from './SlideCover';
+export { default as SlideProblem } from './SlideProblem';
+export { default as SlideSolution } from './SlideSolution';
+export { default as SlideDashboard } from './SlideDashboard';
+export { default as SlideStudents } from './SlideStudents';
+export { default as SlideClasses } from './SlideClasses';
+export { default as SlideAttendance } from './SlideAttendance';
+export { default as SlideFinancial } from './SlideFinancial';
+export { default as SlidePlans } from './SlidePlans';
+export { default as SlideTeachers } from './SlideTeachers';
+export { default as SlideBookings } from './SlideBookings';
+export { default as SlideWhatsApp } from './SlideWhatsApp';
+export { default as SlideAnalytics } from './SlideAnalytics';
+export { default as SlideLanding } from './SlideLanding';
+export { default as SlideStudentPortal } from './SlideStudentPortal';
+export { default as SlideTeacherPortal } from './SlideTeacherPortal';
+export { default as SlideCTA } from './SlideCTA';
