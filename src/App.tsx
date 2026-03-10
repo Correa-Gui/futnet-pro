@@ -41,6 +41,7 @@ import AdminBookings from "./pages/admin/Bookings";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
+import AdminWhatsApp from "./pages/admin/WhatsApp";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
