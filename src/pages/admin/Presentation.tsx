@@ -177,6 +177,8 @@ export default function Presentation() {
         onToggleFullscreen={toggleFullscreen}
         showGrid={showGrid}
         onToggleGrid={() => setShowGrid(g => !g)}
+        onExportPPT={exportToPPT}
+        exporting={exporting}
       />
     </div>
   );
