@@ -27,6 +27,9 @@ export default function WhatsAppSend() {
   const [templateId, setTemplateId] = useState<string>("");
   const [messageBody, setMessageBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [sendMode, setSendMode] = useState<"template" | "text">("template");
+  const [metaTemplateName, setMetaTemplateName] = useState("hello_world");
+  const [metaTemplateLang, setMetaTemplateLang] = useState("en_US");
 
   // Fetch classes
   const { data: classes = [] } = useQuery({
@@ -160,48 +163,63 @@ export default function WhatsAppSend() {
   const handleSend = async () => {
     const selected = filteredStudents.filter((s) => selectedStudents.has(s.studentId));
     if (selected.length === 0) return toast.error("Selecione ao menos um aluno.");
-    if (!messageBody.trim()) return toast.error("Escreva a mensagem.");
+    if (sendMode === "text" && !messageBody.trim()) return toast.error("Escreva a mensagem.");
 
     setSending(true);
     try {
-      // Send each with resolved variables
-      const recipients = selected.map((s) => ({
-        phone: s.phone!,
-        name: s.fullName,
-        student_id: s.studentId,
-      }));
-
-      // Resolve the message for the first student as preview (API sends same body)
-      // For per-student variable resolution, we send individually
-      const hasVars = /\{\{\w+\}\}/.test(messageBody);
-
-      if (hasVars) {
-        // Send one by one for variable resolution
-        let sentCount = 0;
-        let failCount = 0;
-        for (const student of selected) {
-          const resolved = resolveVars(messageBody, student);
-          const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-            body: {
-              recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
-              message_body: resolved,
-              template_id: templateId || null,
-            },
-          });
-          if (error) failCount++;
-          else sentCount += data?.sent || 0;
-        }
-        toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
-      } else {
+      if (sendMode === "template") {
+        // Send Meta template to all selected
+        const recipients = selected.map((s) => ({
+          phone: s.phone!,
+          name: s.fullName,
+          student_id: s.studentId,
+        }));
         const { data, error } = await supabase.functions.invoke("send-whatsapp", {
           body: {
             recipients,
-            message_body: messageBody,
-            template_id: templateId || null,
+            message_body: `[Template: ${metaTemplateName}]`,
+            template_name: metaTemplateName,
+            template_language: metaTemplateLang,
           },
         });
         if (error) throw error;
         toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
+      } else {
+        // Text mode with variable resolution
+        const recipients = selected.map((s) => ({
+          phone: s.phone!,
+          name: s.fullName,
+          student_id: s.studentId,
+        }));
+        const hasVars = /\{\{\w+\}\}/.test(messageBody);
+
+        if (hasVars) {
+          let sentCount = 0;
+          let failCount = 0;
+          for (const student of selected) {
+            const resolved = resolveVars(messageBody, student);
+            const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+              body: {
+                recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
+                message_body: resolved,
+                template_id: templateId || null,
+              },
+            });
+            if (error) failCount++;
+            else sentCount += data?.sent || 0;
+          }
+          toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
+        } else {
+          const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+            body: {
+              recipients,
+              message_body: messageBody,
+              template_id: templateId || null,
+            },
+          });
+          if (error) throw error;
+          toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
+        }
       }
 
       setSelectedStudents(new Set());
@@ -222,43 +240,92 @@ export default function WhatsAppSend() {
       <div className="space-y-4">
         <Card>
           <CardContent className="p-4 space-y-4">
-            <div>
-              <Label>Template (opcional)</Label>
-              <Select value={templateId} onValueChange={applyTemplate}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolher template..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {templates.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={sendMode === "template" ? "default" : "outline"}
+                onClick={() => setSendMode("template")}
+              >
+                Template Meta
+              </Button>
+              <Button
+                size="sm"
+                variant={sendMode === "text" ? "default" : "outline"}
+                onClick={() => setSendMode("text")}
+              >
+                Texto Livre
+              </Button>
             </div>
 
-            <div>
-              <Label>Mensagem</Label>
-              <Textarea
-                value={messageBody}
-                onChange={(e) => setMessageBody(e.target.value)}
-                placeholder="Escreva sua mensagem ou selecione um template..."
-                rows={6}
-              />
-            </div>
-
-            {messageBody && previewStudent && (
-              <div>
-                <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
-                <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
-                  {previewMessage}
+            {sendMode === "template" ? (
+              <div className="space-y-3">
+                <div>
+                  <Label>Nome do Template (Meta)</Label>
+                  <input
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    value={metaTemplateName}
+                    onChange={(e) => setMetaTemplateName(e.target.value)}
+                    placeholder="hello_world"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Nome exato do template aprovado no Meta Business Suite
+                  </p>
+                </div>
+                <div>
+                  <Label>Idioma</Label>
+                  <Select value={metaTemplateLang} onValueChange={setMetaTemplateLang}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pt_BR">Português (BR)</SelectItem>
+                      <SelectItem value="en_US">English (US)</SelectItem>
+                      <SelectItem value="es">Español</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
+            ) : (
+              <>
+                <div>
+                  <Label>Template local (opcional)</Label>
+                  <Select value={templateId} onValueChange={applyTemplate}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Escolher template..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {templates.map((t) => (
+                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Mensagem</Label>
+                  <Textarea
+                    value={messageBody}
+                    onChange={(e) => setMessageBody(e.target.value)}
+                    placeholder="Escreva sua mensagem ou selecione um template..."
+                    rows={6}
+                  />
+                </div>
+
+                {messageBody && previewStudent && (
+                  <div>
+                    <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
+                    <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
+                      {previewMessage}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <Button
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={handleSend}
-              disabled={sending || selectedStudents.size === 0 || !messageBody.trim()}
+              disabled={sending || selectedStudents.size === 0 || (sendMode === "text" && !messageBody.trim())}
             >
               {sending ? (
                 <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>

@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipients, message_body, template_id } = body;
+    const { recipients, message_body, template_id, template_name, template_language } = body;
     console.log("send-whatsapp: payload", JSON.stringify({ recipientCount: recipients?.length, message_body: message_body?.substring(0, 50), template_id }));
 
     if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
@@ -106,16 +106,32 @@ Deno.serve(async (req) => {
       console.log("send-whatsapp: sending to", fullPhone);
 
       try {
-        const waPayload = {
-          messaging_product: "whatsapp",
-          to: fullPhone,
-          type: "text",
-          text: { body: message_body },
-        };
+        let waPayload: any;
+        
+        if (template_name) {
+          // Send as template message (required for initiating conversations)
+          waPayload = {
+            messaging_product: "whatsapp",
+            to: fullPhone,
+            type: "template",
+            template: {
+              name: template_name,
+              language: { code: template_language || "pt_BR" },
+            },
+          };
+        } else {
+          // Send as text message (only works within 24h conversation window)
+          waPayload = {
+            messaging_product: "whatsapp",
+            to: fullPhone,
+            type: "text",
+            text: { body: message_body },
+          };
+        }
         console.log("send-whatsapp: WA API payload", JSON.stringify(waPayload));
 
         const waResponse = await fetch(
-          `https://graph.facebook.com/v21.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+          `https://graph.facebook.com/v22.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
           {
             method: "POST",
             headers: {
