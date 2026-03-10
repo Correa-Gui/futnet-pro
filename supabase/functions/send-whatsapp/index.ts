@@ -42,17 +42,22 @@ Deno.serve(async (req) => {
     console.log("send-whatsapp: authenticated user", userId);
 
     // Check admin role
-    const { data: hasRole } = await supabase.rpc("has_role", {
+    const { data: hasRole, error: roleError } = await supabase.rpc("has_role", {
       _user_id: userId,
       _role: "admin",
     });
+    console.log("send-whatsapp: hasRole result", hasRole, "error", roleError?.message);
     if (!hasRole) {
+      console.log("send-whatsapp: user is not admin, forbidden");
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("send-whatsapp: checking secrets...");
+    console.log("send-whatsapp: WHATSAPP_ACCESS_TOKEN exists:", !!Deno.env.get("WHATSAPP_ACCESS_TOKEN"));
+    console.log("send-whatsapp: WHATSAPP_PHONE_NUMBER_ID exists:", !!Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"));
     const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
     const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
 
