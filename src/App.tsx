@@ -41,6 +41,7 @@ import AdminBookings from "./pages/admin/Bookings";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
+import AdminWhatsApp from "./pages/admin/WhatsApp";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
@@ -85,6 +86,7 @@ const App = () => (
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="pagamentos-professores" element={<AdminTeacherPayments />} />
               <Route path="configuracoes" element={<AdminSettings />} />
+              <Route path="whatsapp" element={<AdminWhatsApp />} />
             </Route>
 
             {/* Student routes */}
