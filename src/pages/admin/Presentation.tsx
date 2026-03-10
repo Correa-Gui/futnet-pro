@@ -35,6 +35,7 @@ export default function Presentation() {
   const [showGrid, setShowGrid] = useState(false);
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { exportToPPT, exporting } = useExportPPT(slides);
 
   const updateScale = useCallback(() => {
     if (!containerRef.current) return;
