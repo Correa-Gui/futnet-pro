@@ -1,3 +1,4 @@
+// @ts-ignore - dynamic import
 import { useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
