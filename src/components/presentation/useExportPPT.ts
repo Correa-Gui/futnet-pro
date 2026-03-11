@@ -10,6 +10,7 @@ export function useExportPPT(slides: { component: React.ComponentType; title: st
     setExporting(true);
     try {
       const [{ default: pptxgen }, { default: html2canvas }] = await Promise.all([
+        // @ts-ignore
         import('pptxgenjs'),
         import('html2canvas'),
       ]);
