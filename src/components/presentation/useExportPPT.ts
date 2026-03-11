@@ -1,3 +1,4 @@
+// @ts-ignore - dynamic import
 import { useCallback, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createElement } from 'react';
@@ -9,6 +10,7 @@ export function useExportPPT(slides: { component: React.ComponentType; title: st
     setExporting(true);
     try {
       const [{ default: pptxgen }, { default: html2canvas }] = await Promise.all([
+        // @ts-ignore
         import('pptxgenjs'),
         import('html2canvas'),
       ]);
@@ -17,22 +19,40 @@ export function useExportPPT(slides: { component: React.ComponentType; title: st
       pptx.defineLayout({ name: 'FULL_HD', width: 13.333, height: 7.5 });
       pptx.layout = 'FULL_HD';
 
-      // Create offscreen container
+      // Create offscreen container — visible but behind viewport so CSS renders correctly
       const container = document.createElement('div');
-      container.style.cssText = 'position:fixed;left:-9999px;top:0;width:1920px;height:1080px;overflow:hidden;z-index:-1;';
+      container.style.cssText =
+        'position:fixed;left:0;top:0;width:1920px;height:1080px;overflow:hidden;z-index:99999;opacity:0;pointer-events:none;';
       document.body.appendChild(container);
+
+      // Copy stylesheets into container context
+      const styleSheets = Array.from(document.styleSheets);
+      const styleEl = document.createElement('style');
+      let cssText = '';
+      for (const sheet of styleSheets) {
+        try {
+          for (const rule of Array.from(sheet.cssRules)) {
+            cssText += rule.cssText + '\n';
+          }
+        } catch (_) {
+          // cross-origin sheets — skip
+        }
+      }
+      container.appendChild(styleEl);
+      styleEl.textContent = cssText;
 
       for (let i = 0; i < slides.length; i++) {
         const slideDiv = document.createElement('div');
-        slideDiv.style.cssText = 'width:1920px;height:1080px;';
+        slideDiv.style.cssText = 'width:1920px;height:1080px;position:relative;';
         container.innerHTML = '';
+        container.appendChild(styleEl);
         container.appendChild(slideDiv);
 
         const root = createRoot(slideDiv);
         root.render(createElement(slides[i].component));
 
-        // Wait for render
-        await new Promise(r => setTimeout(r, 300));
+        // Wait longer for fonts + flex layout to settle
+        await new Promise(r => setTimeout(r, 600));
 
         const canvas = await html2canvas(slideDiv, {
           width: 1920,
@@ -40,6 +60,16 @@ export function useExportPPT(slides: { component: React.ComponentType; title: st
           scale: 1,
           useCORS: true,
           backgroundColor: '#0d1b2a',
+          logging: false,
+          onclone: (clonedDoc) => {
+            const clonedEl = clonedDoc.querySelector('[style*="1920px"]') as HTMLElement;
+            if (clonedEl) {
+              clonedEl.style.width = '1920px';
+              clonedEl.style.height = '1080px';
+              clonedEl.style.position = 'relative';
+              clonedEl.style.overflow = 'hidden';
+            }
+          },
         });
 
         root.unmount();
