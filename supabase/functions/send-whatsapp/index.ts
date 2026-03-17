@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildEvolutionTextEndpoint,
+  normalizeRecipientPhone,
+  parseSendWhatsAppPayload,
+  resolveMessageBody,
+} from "./evolution.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,11 +18,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    console.log("send-whatsapp: request received", req.method);
-    
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      console.log("send-whatsapp: missing auth header");
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -30,51 +33,49 @@ Deno.serve(async (req) => {
     );
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: userError } = await supabase.auth.getUser(token);
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(token);
+
     if (userError || !user) {
-      console.log("send-whatsapp: auth error", userError?.message);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = user.id;
-    console.log("send-whatsapp: authenticated user", userId);
 
-    // Check admin role
-    const { data: hasRole, error: roleError } = await supabase.rpc("has_role", {
-      _user_id: userId,
+    const { data: hasRole } = await supabase.rpc("has_role", {
+      _user_id: user.id,
       _role: "admin",
     });
-    console.log("send-whatsapp: hasRole result", hasRole, "error", roleError?.message);
+
     if (!hasRole) {
-      console.log("send-whatsapp: user is not admin, forbidden");
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("send-whatsapp: checking secrets...");
-    console.log("send-whatsapp: WHATSAPP_ACCESS_TOKEN exists:", !!Deno.env.get("WHATSAPP_ACCESS_TOKEN"));
-    console.log("send-whatsapp: WHATSAPP_PHONE_NUMBER_ID exists:", !!Deno.env.get("WHATSAPP_PHONE_NUMBER_ID"));
-    const WHATSAPP_ACCESS_TOKEN = Deno.env.get("WHATSAPP_ACCESS_TOKEN");
-    const WHATSAPP_PHONE_NUMBER_ID = Deno.env.get("WHATSAPP_PHONE_NUMBER_ID");
+    const evolutionApiUrl = Deno.env.get("EVOLUTION_API_URL");
+    const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY");
+    const evolutionInstance = Deno.env.get("EVOLUTION_INSTANCE_NAME") || Deno.env.get("EVOLUTION_INSTANCE");
 
-    if (!WHATSAPP_ACCESS_TOKEN) {
-      throw new Error("WHATSAPP_ACCESS_TOKEN is not configured");
+    if (!evolutionApiUrl) {
+      throw new Error("EVOLUTION_API_URL is not configured");
     }
-    if (!WHATSAPP_PHONE_NUMBER_ID) {
-      throw new Error("WHATSAPP_PHONE_NUMBER_ID is not configured");
+    if (!evolutionApiKey) {
+      throw new Error("EVOLUTION_API_KEY is not configured");
+    }
+    if (!evolutionInstance) {
+      throw new Error("EVOLUTION_INSTANCE_NAME is not configured");
     }
 
-    const body = await req.json();
-    const { recipients, message_body, template_id, template_name, template_language } = body;
-    console.log("send-whatsapp: payload", JSON.stringify({ recipientCount: recipients?.length, message_body: message_body?.substring(0, 50), template_id }));
+    const requestPayload = parseSendWhatsAppPayload(await req.json());
+    const finalMessage = resolveMessageBody(requestPayload);
 
-    if (!recipients || !Array.isArray(recipients) || recipients.length === 0) {
-      console.log("send-whatsapp: no recipients");
-      return new Response(JSON.stringify({ error: "recipients is required" }), {
+    if (!finalMessage) {
+      return new Response(JSON.stringify({ error: "message_body is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -87,126 +88,94 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    for (const recipient of recipients) {
-      const phone = recipient.phone.replace(/\D/g, "");
-      // Brazilian mobile numbers (without country code) are 10-11 digits starting with region codes 11-99
-      // If phone starts with "1" followed by 10 digits, it's likely a US/Canada number (+1)
-      // If phone starts with "55", it already has Brazil's country code
-      // Otherwise, assume Brazilian and prepend 55
-      let fullPhone = phone;
-      if (phone.startsWith("55") && phone.length >= 12) {
-        fullPhone = phone; // Already has Brazil country code
-      } else if (phone.startsWith("1") && phone.length === 11) {
-        fullPhone = phone; // US/Canada number with country code 1
-      } else if (phone.length >= 12) {
-        fullPhone = phone; // Already has some international prefix
-      } else {
-        fullPhone = `55${phone}`; // Assume Brazilian, prepend 55
+    for (const recipient of requestPayload.recipients) {
+      const fullPhone = normalizeRecipientPhone(recipient.phone);
+      if (!fullPhone) {
+        results.push({ phone: recipient.phone, success: false, error: "Invalid recipient phone" });
+        continue;
       }
-      console.log("send-whatsapp: sending to", fullPhone);
 
       try {
-        let waPayload: any;
-        
-        if (template_name) {
-          // Send as template message (required for initiating conversations)
-          waPayload = {
-            messaging_product: "whatsapp",
-            to: fullPhone,
-            type: "template",
-            template: {
-              name: template_name,
-              language: { code: template_language || "pt_BR" },
-            },
-          };
-        } else {
-          // Send as text message (only works within 24h conversation window)
-          waPayload = {
-            messaging_product: "whatsapp",
-            to: fullPhone,
-            type: "text",
-            text: { body: message_body },
-          };
-        }
-        console.log("send-whatsapp: WA API payload", JSON.stringify(waPayload));
-
-        const waResponse = await fetch(
-          `https://graph.facebook.com/v22.0/${WHATSAPP_PHONE_NUMBER_ID}/messages`,
+        const response = await fetch(
+          buildEvolutionTextEndpoint(evolutionApiUrl, evolutionInstance),
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${WHATSAPP_ACCESS_TOKEN}`,
               "Content-Type": "application/json",
+              apikey: evolutionApiKey,
             },
-            body: JSON.stringify(waPayload),
+            body: JSON.stringify({
+              number: fullPhone,
+              text: finalMessage,
+            }),
           }
         );
 
-        const waData = await waResponse.json();
-        console.log("send-whatsapp: WA API response", waResponse.status, JSON.stringify(waData));
+        const responseJson = await response.json();
 
-        if (!waResponse.ok) {
-          const errMsg = waData?.error?.message || `HTTP ${waResponse.status}`;
-          results.push({ phone: fullPhone, success: false, error: errMsg });
+        if (!response.ok) {
+          const errorMessage = responseJson?.response?.message || responseJson?.message || `HTTP ${response.status}`;
+          results.push({ phone: fullPhone, success: false, error: errorMessage });
 
           await serviceClient.from("whatsapp_messages").insert({
-            template_id: template_id || null,
+            template_id: requestPayload.template_id || null,
             recipient_phone: fullPhone,
             recipient_name: recipient.name || null,
             student_id: recipient.student_id || null,
-            message_body,
+            message_body: finalMessage,
             status: "failed",
-            error_message: errMsg,
-            sent_by: userId,
+            error_message: errorMessage,
+            sent_by: user.id,
             sent_at: new Date().toISOString(),
           });
-        } else {
-          const msgId = waData?.messages?.[0]?.id || null;
-          results.push({ phone: fullPhone, success: true, messageId: msgId });
-
-          await serviceClient.from("whatsapp_messages").insert({
-            template_id: template_id || null,
-            recipient_phone: fullPhone,
-            recipient_name: recipient.name || null,
-            student_id: recipient.student_id || null,
-            message_body,
-            status: "sent",
-            whatsapp_message_id: msgId,
-            sent_by: userId,
-            sent_at: new Date().toISOString(),
-          });
+          continue;
         }
-      } catch (err) {
-        const errMsg = err instanceof Error ? err.message : "Unknown error";
-        results.push({ phone: fullPhone, success: false, error: errMsg });
+
+        const messageId = responseJson?.key?.id || responseJson?.id || null;
+        results.push({ phone: fullPhone, success: true, messageId });
 
         await serviceClient.from("whatsapp_messages").insert({
-          template_id: template_id || null,
+          template_id: requestPayload.template_id || null,
           recipient_phone: fullPhone,
           recipient_name: recipient.name || null,
           student_id: recipient.student_id || null,
-          message_body,
+          message_body: finalMessage,
+          status: "sent",
+          whatsapp_message_id: messageId,
+          sent_by: user.id,
+          sent_at: new Date().toISOString(),
+        });
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        results.push({ phone: fullPhone, success: false, error: errorMessage });
+
+        await serviceClient.from("whatsapp_messages").insert({
+          template_id: requestPayload.template_id || null,
+          recipient_phone: fullPhone,
+          recipient_name: recipient.name || null,
+          student_id: recipient.student_id || null,
+          message_body: finalMessage,
           status: "failed",
-          error_message: errMsg,
-          sent_by: userId,
+          error_message: errorMessage,
+          sent_by: user.id,
           sent_at: new Date().toISOString(),
         });
       }
     }
 
-    const sent = results.filter((r) => r.success).length;
-    const failed = results.filter((r) => !r.success).length;
+    const sent = results.filter((item) => item.success).length;
+    const failed = results.filter((item) => !item.success).length;
 
-    return new Response(
-      JSON.stringify({ sent, failed, results }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ sent, failed, results }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-    console.error("send-whatsapp error:", message);
-    return new Response(
-      JSON.stringify({ error: message }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+    return new Response(JSON.stringify({ error: errorMessage }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
