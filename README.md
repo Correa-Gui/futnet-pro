@@ -71,3 +71,28 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Integração com WhatsApp (Evolution API)
+
+A função `supabase/functions/send-whatsapp` utiliza a Evolution API para envio de mensagens.
+
+### Variáveis de ambiente obrigatórias
+
+- `EVOLUTION_API_URL`: URL base da sua instância da Evolution API (ex.: `https://evolution.suaempresa.com`).
+- `EVOLUTION_API_KEY`: chave de autenticação usada no header `apikey`.
+- `EVOLUTION_INSTANCE_NAME` (ou `EVOLUTION_INSTANCE`): nome da instância conectada ao WhatsApp.
+
+### Endpoint utilizado
+
+Para cada destinatário, a função chama o endpoint:
+
+`POST {EVOLUTION_API_URL}/message/sendText/{EVOLUTION_INSTANCE_NAME}`
+
+com payload:
+
+```json
+{
+  "number": "5511999999999",
+  "text": "Mensagem a ser enviada"
+}
+```

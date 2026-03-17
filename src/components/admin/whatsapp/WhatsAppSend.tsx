@@ -246,7 +246,7 @@ export default function WhatsAppSend() {
                 variant={sendMode === "template" ? "default" : "outline"}
                 onClick={() => setSendMode("template")}
               >
-                Template Meta
+                Template Evolution
               </Button>
               <Button
                 size="sm"
@@ -260,7 +260,7 @@ export default function WhatsAppSend() {
             {sendMode === "template" ? (
               <div className="space-y-3">
                 <div>
-                  <Label>Nome do Template (Meta)</Label>
+                  <Label>Identificador do template (Evolution)</Label>
                   <input
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                     value={metaTemplateName}
@@ -268,7 +268,7 @@ export default function WhatsAppSend() {
                     placeholder="hello_world"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Nome exato do template aprovado no Meta Business Suite
+                    Identificador de referência do template para rastreabilidade no histórico
                   </p>
                 </div>
                 <div>
