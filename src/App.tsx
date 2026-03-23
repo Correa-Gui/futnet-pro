@@ -43,6 +43,7 @@ import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
 import AdminWhatsApp from "./pages/admin/WhatsApp";
 import AdminPresentation from "./pages/admin/Presentation";
+import AdminApiDocs from "./pages/admin/ApiDocs";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
@@ -89,6 +90,7 @@ const App = () => (
               <Route path="configuracoes" element={<AdminSettings />} />
               <Route path="whatsapp" element={<AdminWhatsApp />} />
               <Route path="apresentacao" element={<AdminPresentation />} />
+              <Route path="api-docs" element={<AdminApiDocs />} />
             </Route>
 
             {/* Student routes */}
