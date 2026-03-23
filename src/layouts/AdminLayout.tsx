@@ -51,6 +51,7 @@ const menuGroups = [
       { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
       { title: 'WhatsApp', url: '/admin/whatsapp', icon: MessageCircle },
       { title: 'Apresentação', url: '/admin/apresentacao', icon: Monitor },
+      { title: 'API Docs', url: '/admin/api-docs', icon: BookOpen },
       { title: 'Configurações', url: '/admin/configuracoes', icon: Settings },
     ],
   },
