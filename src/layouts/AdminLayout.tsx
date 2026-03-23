@@ -2,7 +2,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
   Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck, 
-  BarChart3, CalendarCheck, MessageCircle, Search, Bell, ChevronLeft, Monitor
+  BarChart3, CalendarCheck, MessageCircle, Search, Bell, ChevronLeft, Monitor, BookOpen
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
