@@ -43,6 +43,7 @@ import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
 import AdminWhatsApp from "./pages/admin/WhatsApp";
 import AdminPresentation from "./pages/admin/Presentation";
+import AdminApiDocs from "./pages/admin/ApiDocs";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
