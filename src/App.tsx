@@ -89,6 +89,7 @@ const App = () => (
               <Route path="configuracoes" element={<AdminSettings />} />
               <Route path="whatsapp" element={<AdminWhatsApp />} />
               <Route path="apresentacao" element={<AdminPresentation />} />
+              <Route path="api-docs" element={<AdminApiDocs />} />
             </Route>
 
             {/* Student routes */}
