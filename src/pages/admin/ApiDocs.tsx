@@ -24,7 +24,6 @@ import {
   LayoutDashboard,
   FileText,
   Bot,
-  Webhook,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -36,6 +35,7 @@ interface ApiEndpoint {
   summary: string;
   description: string;
   auth?: string;
+  headers?: { name: string; value: string; description: string }[];
   params?: { name: string; type: string; required: boolean; description: string }[];
   response?: string;
 }
@@ -56,51 +56,83 @@ const methodColors: Record<HttpMethod, string> = {
   RPC: "bg-violet-500/15 text-violet-400 border-violet-500/30",
 };
 
+// Headers reutilizáveis
+const H_AUTH_ADMIN = [
+  { name: "Authorization", value: "Bearer {access_token}", description: "JWT do usuário admin autenticado" },
+  { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+  { name: "Content-Type", value: "application/json", description: "Formato do body" },
+];
+const H_AUTH_USER = [
+  { name: "Authorization", value: "Bearer {access_token}", description: "JWT do usuário autenticado" },
+  { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+  { name: "Content-Type", value: "application/json", description: "Formato do body" },
+];
+const H_ANON = [
+  { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+  { name: "Content-Type", value: "application/json", description: "Formato do body" },
+];
+
 const apiSections: ApiSection[] = [
   {
     title: "Autenticação",
     icon: <Shield className="h-5 w-5" />,
-    description: "Login, registro e gerenciamento de sessão via Supabase Auth.",
+    description: "Login, registro e gerenciamento de sessão via Supabase Auth REST API.",
     endpoints: [
       {
         method: "POST",
-        path: "supabase.auth.signUp()",
+        path: "/auth/v1/signup",
         summary: "Registrar novo usuário",
         description:
           "Cria um novo usuário com email e senha. Automaticamente cria profile, user_role (student) e student_profile via trigger handle_new_user.",
+        auth: "anon",
+        headers: [
+          { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body" },
+        ],
         params: [
           { name: "email", type: "string", required: true, description: "Email do usuário" },
           { name: "password", type: "string", required: true, description: "Senha (min 6 caracteres)" },
-          { name: "full_name", type: "string", required: true, description: "Nome completo (via metadata)" },
+          { name: "data.full_name", type: "string", required: true, description: "Nome completo (via user_metadata)" },
         ],
-        response: `{ user: { id, email }, session: { access_token } }`,
+        response: `{ user: { id, email }, session: { access_token, refresh_token } }`,
       },
       {
         method: "POST",
-        path: "supabase.auth.signInWithPassword()",
+        path: "/auth/v1/token?grant_type=password",
         summary: "Login com email/senha",
         description: "Autentica o usuário e retorna sessão com JWT. O role é verificado via RPC get_user_role para redirecionamento.",
+        auth: "anon",
+        headers: [
+          { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body" },
+        ],
         params: [
           { name: "email", type: "string", required: true, description: "Email cadastrado" },
           { name: "password", type: "string", required: true, description: "Senha do usuário" },
         ],
-        response: `{ user, session: { access_token, refresh_token } }`,
+        response: `{ access_token, refresh_token, token_type: "bearer", user: { id, email } }`,
       },
       {
         method: "POST",
-        path: "supabase.auth.resetPasswordForEmail()",
+        path: "/auth/v1/recover",
         summary: "Solicitar reset de senha",
         description: "Envia email com link de redefinição de senha.",
+        auth: "anon",
+        headers: [
+          { name: "apikey", value: "{anon_key}", description: "Chave pública do projeto Supabase" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body" },
+        ],
         params: [
           { name: "email", type: "string", required: true, description: "Email cadastrado" },
         ],
       },
       {
         method: "RPC",
-        path: "supabase.rpc('get_user_role')",
+        path: "/rest/v1/rpc/get_user_role",
         summary: "Obter role do usuário",
         description: "Retorna o role (admin, teacher, student) do usuário autenticado. Usa SECURITY DEFINER para evitar recursão RLS.",
         auth: "authenticated",
+        headers: H_AUTH_USER,
         params: [
           { name: "_user_id", type: "uuid", required: true, description: "ID do usuário (auth.uid())" },
         ],
@@ -108,13 +140,14 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "RPC",
-        path: "supabase.rpc('has_role')",
+        path: "/rest/v1/rpc/has_role",
         summary: "Verificar role específico",
-        description: "Retorna boolean se o usuário possui determinado role. Usado internamente pelas RLS policies.",
+        description: "Retorna boolean se o usuário possui determinado role. Usado internamente pelas RLS policies e edge functions.",
         auth: "authenticated",
+        headers: H_AUTH_USER,
         params: [
           { name: "_user_id", type: "uuid", required: true, description: "ID do usuário" },
-          { name: "_role", type: "app_role", required: true, description: "Role a verificar" },
+          { name: "_role", type: "app_role", required: true, description: "admin | teacher | student" },
         ],
         response: `boolean`,
       },
@@ -127,18 +160,20 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('profiles').select('*, student_profiles(*, plans(*))')",
+        path: "/rest/v1/profiles?select=*,student_profiles(*,plans(*))",
         summary: "Listar alunos com perfil e plano",
         description: "Retorna todos os perfis de alunos com dados do student_profile e plano associado. Admin only via RLS.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         response: `[{ id, full_name, email, phone, cpf, status, student_profiles: { skill_level, plan_id, plans: { name, monthly_price } } }]`,
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('create-user')",
-        summary: "Criar aluno (Edge Function)",
+        path: "/functions/v1/create-user",
+        summary: "Criar aluno",
         description: "Cria usuário via admin com email, nome, plano e turma. Gera senha automática, cria profile, student_profile, enrollment e primeira fatura.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "email", type: "string", required: true, description: "Email do aluno" },
           { name: "full_name", type: "string", required: true, description: "Nome completo" },
@@ -150,10 +185,11 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "PATCH",
-        path: "supabase.from('profiles').update()",
+        path: "/rest/v1/profiles?id=eq.{id}",
         summary: "Atualizar perfil do aluno",
         description: "Atualiza dados pessoais (nome, telefone, CPF, data de nascimento). Alunos podem editar o próprio perfil; admins podem editar qualquer um.",
         auth: "authenticated",
+        headers: [...H_AUTH_USER, { name: "Prefer", value: "return=representation", description: "Retorna o registro atualizado" }],
         params: [
           { name: "full_name", type: "string", required: false, description: "Nome completo" },
           { name: "phone", type: "string", required: false, description: "Telefone" },
@@ -164,10 +200,11 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "POST",
-        path: "supabase.from('enrollments').insert()",
+        path: "/rest/v1/enrollments",
         summary: "Matricular aluno em turma",
         description: "Cria enrollment vinculando aluno a uma turma. Verifica max_students da turma antes de criar.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "student_id", type: "uuid", required: true, description: "ID do student_profile" },
           { name: "class_id", type: "uuid", required: true, description: "ID da turma" },
@@ -183,18 +220,20 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('classes').select('*, courts(*), teacher_profiles(*, profiles(*))')",
+        path: "/rest/v1/classes?select=*,courts(*),teacher_profiles(*,profiles(*))",
         summary: "Listar turmas com detalhes",
-        description: "Retorna todas as turmas com quadra, professor e horários. Públicas (active) visíveis para anon.",
+        description: "Retorna todas as turmas com quadra, professor e horários. Turmas ativas visíveis para anon; todas visíveis para admin.",
         auth: "public (active) / admin (all)",
+        headers: H_ANON,
         response: `[{ id, name, day_of_week, start_time, end_time, level, max_students, status, courts: {...}, teacher_profiles: { profiles: { full_name } } }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('classes').insert()",
+        path: "/rest/v1/classes",
         summary: "Criar nova turma",
         description: "Cria turma com nome, professor, quadra, dias da semana e horários.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "name", type: "string", required: true, description: "Nome da turma" },
           { name: "teacher_id", type: "uuid", required: true, description: "ID do professor" },
@@ -208,10 +247,11 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('generate-sessions')",
-        summary: "Gerar sessões de aula (Edge Function)",
+        path: "/functions/v1/generate-sessions",
+        summary: "Gerar sessões de aula",
         description: "Gera class_sessions para um período futuro baseado nos day_of_week da turma. Evita duplicatas por (class_id, date).",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "class_id", type: "uuid", required: true, description: "ID da turma" },
           { name: "weeks_ahead", type: "number", required: false, description: "Semanas à frente (default: 4)" },
@@ -220,10 +260,12 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "GET",
-        path: "supabase.from('class_sessions').select('*, classes(*)')",
+        path: "/rest/v1/class_sessions?select=*,classes(*)",
         summary: "Listar sessões de aula",
-        description: "Retorna sessões filtradas por data, turma ou status. Públicas para consulta de disponibilidade.",
+        description: "Retorna sessões filtradas por data, turma ou status. Adicionar filtros via query params: ?class_id=eq.{uuid}&date=gte.{YYYY-MM-DD}&status=eq.scheduled",
         auth: "public (read) / admin (manage)",
+        headers: H_ANON,
+        response: `[{ id, class_id, date, status, classes: { name, start_time, end_time } }]`,
       },
     ],
   },
@@ -234,17 +276,20 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('attendances').select('*, student_profiles(*, profiles(*)), class_sessions(*, classes(*))')",
+        path: "/rest/v1/attendances?select=*,student_profiles(*,profiles(*)),class_sessions(*,classes(*))",
         summary: "Listar presenças de uma sessão",
-        description: "Retorna todas as presenças de uma sessão com dados do aluno. Admins veem tudo; alunos veem apenas as próprias.",
+        description: "Retorna todas as presenças com dados do aluno e sessão. Filtrar por sessão: ?session_id=eq.{uuid}. Admins veem tudo; alunos veem apenas as próprias via RLS.",
         auth: "authenticated",
+        headers: H_AUTH_USER,
+        response: `[{ id, status, confirmed_at, student_profiles: { profiles: { full_name } }, class_sessions: { date, classes: { name } } }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('attendances').insert()",
+        path: "/rest/v1/attendances",
         summary: "Registrar presença",
         description: "Cria registro de presença para um aluno em uma sessão. Status inicial: not_confirmed.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "session_id", type: "uuid", required: true, description: "ID da sessão" },
           { name: "student_id", type: "uuid", required: true, description: "ID do student_profile" },
@@ -253,13 +298,14 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "PATCH",
-        path: "supabase.from('attendances').update()",
+        path: "/rest/v1/attendances?id=eq.{id}",
         summary: "Atualizar status de presença",
         description: "Atualiza o status da presença. Alunos podem confirmar/cancelar; professores podem marcar present/absent. Trigger update_skill_level_on_attendance atualiza automaticamente o nível do aluno.",
         auth: "authenticated",
+        headers: H_AUTH_USER,
         params: [
-          { name: "status", type: "attendance_status", required: true, description: "Novo status" },
-          { name: "confirmed_at", type: "timestamp", required: false, description: "Data/hora da confirmação" },
+          { name: "status", type: "attendance_status", required: true, description: "confirmed | cancelled | not_confirmed | present | absent" },
+          { name: "confirmed_at", type: "timestamp", required: false, description: "Data/hora da confirmação (ISO 8601)" },
         ],
       },
     ],
@@ -271,34 +317,38 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('courts').select('*').eq('is_active', true)",
+        path: "/rest/v1/courts?is_active=eq.true",
         summary: "Listar quadras disponíveis",
         description: "Retorna quadras ativas com nome, localização e tipo de superfície. Pública para fluxo de reserva.",
         auth: "public",
+        headers: H_ANON,
         response: `[{ id, name, location, surface_type, is_active }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('court_bookings').insert()",
+        path: "/rest/v1/court_bookings",
         summary: "Criar solicitação de reserva",
-        description: "Cria reserva com status 'requested'. Valida conflitos via consulta prévia de bookings e class_sessions no mesmo horário. Público (não requer login).",
-        auth: "public (anon/authenticated)",
+        description: "Cria reserva com status 'requested'. Valida conflitos no frontend via consulta prévia de bookings e class_sessions no mesmo horário. Público (não requer login). Para reserva com validação automática, use a Edge Function court-availability (POST).",
+        auth: "public",
+        headers: H_ANON,
         params: [
           { name: "court_id", type: "uuid", required: true, description: "ID da quadra" },
           { name: "date", type: "date", required: true, description: "Data da reserva (YYYY-MM-DD)" },
-          { name: "start_time", type: "time", required: true, description: "Horário de início" },
-          { name: "end_time", type: "time", required: true, description: "Horário de término" },
+          { name: "start_time", type: "time", required: true, description: "Horário de início (HH:MM)" },
+          { name: "end_time", type: "time", required: true, description: "Horário de término (HH:MM)" },
           { name: "requester_name", type: "string", required: true, description: "Nome do solicitante" },
           { name: "requester_phone", type: "string", required: true, description: "Telefone WhatsApp" },
-          { name: "price", type: "number", required: true, description: "Valor da reserva" },
+          { name: "price", type: "number", required: false, description: "Valor da reserva (R$)" },
         ],
+        response: `{ id, court_id, date, start_time, end_time, status: "requested" }`,
       },
       {
         method: "PATCH",
-        path: "supabase.from('court_bookings').update()",
-        summary: "Atualizar status de reserva (Admin)",
-        description: "Admin confirma, cancela ou marca como pago. Status: requested → confirmed → paid | cancelled.",
+        path: "/rest/v1/court_bookings?id=eq.{id}",
+        summary: "Atualizar status de reserva",
+        description: "Admin confirma, cancela ou marca como pago. Fluxo: requested → confirmed → paid | cancelled.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "status", type: "booking_status", required: true, description: "requested | confirmed | paid | cancelled" },
         ],
@@ -312,33 +362,37 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('invoices').select('*, student_profiles(*, profiles(*))')",
+        path: "/rest/v1/invoices?select=*,student_profiles(*,profiles(*))",
         summary: "Listar faturas",
-        description: "Admins veem todas as faturas; alunos veem apenas as próprias. Inclui status, valor, desconto e dados PIX.",
+        description: "Admins veem todas as faturas; alunos veem apenas as próprias via RLS. Filtrar por status: ?status=eq.pending. Inclui dados PIX quando gerados.",
         auth: "authenticated",
-        response: `[{ id, amount, discount, due_date, reference_month, status, pix_qr_code, pix_copy_paste, student_profiles: { profiles: { full_name } } }]`,
+        headers: H_AUTH_USER,
+        response: `[{ id, amount, discount, due_date, reference_month, status, pix_qr_code, pix_copy_paste, student_profiles: { profiles: { full_name, phone } } }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('invoices').insert()",
+        path: "/rest/v1/invoices",
         summary: "Gerar fatura individual",
-        description: "Cria fatura para um aluno com validação anti-duplicidade (mesmo aluno + mês + status pendente/pago/vencido). Trava lógica no frontend.",
+        description: "Cria fatura para um aluno. Validação anti-duplicidade (mesmo student_id + reference_month + status pending/paid) feita no frontend antes do insert.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "student_id", type: "uuid", required: true, description: "ID do student_profile" },
-          { name: "amount", type: "number", required: true, description: "Valor da fatura" },
-          { name: "due_date", type: "date", required: true, description: "Data de vencimento" },
+          { name: "amount", type: "number", required: true, description: "Valor da fatura (R$)" },
+          { name: "due_date", type: "date", required: true, description: "Data de vencimento (YYYY-MM-DD)" },
           { name: "reference_month", type: "string", required: true, description: "Mês referência (YYYY-MM)" },
-          { name: "discount", type: "number", required: false, description: "Desconto aplicado" },
+          { name: "discount", type: "number", required: false, description: "Desconto aplicado (R$)" },
           { name: "notes", type: "string", required: false, description: "Observações" },
         ],
+        response: `{ id, amount, due_date, status: "pending" }`,
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('create-pix-payment')",
-        summary: "Gerar pagamento PIX (Edge Function)",
-        description: "Integra com Mercado Pago para gerar QR Code PIX. Expiração de 30 min. Usa chave de idempotência dinâmica (invoice_id + timestamp).",
+        path: "/functions/v1/create-pix-payment",
+        summary: "Gerar pagamento PIX",
+        description: "Integra com Mercado Pago para gerar QR Code PIX. Expira em 30 min. Salva pix_qr_code e pix_copy_paste na fatura. Usa chave de idempotência dinâmica (invoice_id + timestamp).",
         auth: "authenticated",
+        headers: H_AUTH_USER,
         params: [
           { name: "invoice_id", type: "uuid", required: true, description: "ID da fatura" },
         ],
@@ -346,10 +400,15 @@ const apiSections: ApiSection[] = [
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('mercadopago-webhook')",
-        summary: "Webhook Mercado Pago (Edge Function)",
-        description: "Recebe notificações de pagamento do Mercado Pago. Valida x-signature via HMAC SHA256. Atualiza status da fatura para 'paid' automaticamente.",
-        auth: "webhook (x-signature)",
+        path: "/functions/v1/mercadopago-webhook",
+        summary: "Webhook Mercado Pago",
+        description: "Chamado automaticamente pelo Mercado Pago ao confirmar pagamento. Valida assinatura via HMAC SHA256 (header x-signature). Atualiza invoices.status para 'paid'. NÃO chamar manualmente.",
+        auth: "webhook",
+        headers: [
+          { name: "x-signature", value: "ts={timestamp},v1={hmac}", description: "Assinatura HMAC SHA256 enviada pelo Mercado Pago" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body" },
+        ],
+        response: `{ received: true }`,
       },
     ],
   },
@@ -360,24 +419,27 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('plans').select('*')",
-        summary: "Listar planos",
-        description: "Planos ativos visíveis publicamente. Todos os planos visíveis para admin.",
-        auth: "public (active) / admin (all)",
+        path: "/rest/v1/plans?is_active=eq.true",
+        summary: "Listar planos ativos",
+        description: "Planos ativos visíveis publicamente. Admin pode listar todos removendo o filtro is_active.",
+        auth: "public",
+        headers: H_ANON,
         response: `[{ id, name, classes_per_week, monthly_price, description, is_active }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('plans').insert()",
+        path: "/rest/v1/plans",
         summary: "Criar plano",
         auth: "admin",
         description: "Cria novo plano com nome, preço mensal e quantidade de aulas por semana.",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "name", type: "string", required: true, description: "Nome do plano" },
           { name: "classes_per_week", type: "number", required: true, description: "Aulas por semana" },
           { name: "monthly_price", type: "number", required: true, description: "Preço mensal (R$)" },
           { name: "description", type: "string", required: false, description: "Descrição" },
         ],
+        response: `{ id, name, classes_per_week, monthly_price, is_active: true }`,
       },
     ],
   },
@@ -388,66 +450,71 @@ const apiSections: ApiSection[] = [
     endpoints: [
       {
         method: "POST",
-        path: "supabase.functions.invoke('send-whatsapp')",
-        summary: "Enviar mensagem WhatsApp (Edge Function)",
+        path: "/functions/v1/send-whatsapp",
+        summary: "Enviar mensagem WhatsApp",
         description: "Envia mensagem de texto para um ou mais destinatários via Evolution API. Suporta template_variables para substituição de {{variavel}} no message_body. Requer role admin.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
-          { name: "recipients", type: "array", required: true, description: "[{ phone, name?, student_id? }] — lista de destinatários" },
+          { name: "recipients", type: "array", required: true, description: "[{ phone: string, name?: string, student_id?: uuid }]" },
           { name: "message_body", type: "string", required: false, description: "Texto da mensagem. Pode conter {{variavel}} para substituição." },
           { name: "template_id", type: "uuid", required: false, description: "ID do template salvo em whatsapp_templates" },
-          { name: "template_variables", type: "object", required: false, description: "Mapa de variáveis para substituição: { nome: 'João', turma: 'Sub-11', ... }" },
+          { name: "template_variables", type: "object", required: false, description: "Mapa de substituição: { nome: 'João', turma: 'Sub-11', valor: 'R$150,00' }" },
         ],
         response: `{ sent: number, failed: number, results: [{ phone, success, messageId?, error? }] }`,
       },
       {
         method: "GET",
-        path: "supabase.from('whatsapp_messages').select('*')",
+        path: "/rest/v1/whatsapp_messages?select=*&order=sent_at.desc",
         summary: "Histórico de mensagens enviadas",
-        description: "Retorna log de todas as mensagens enviadas com status (sent/failed/pending) e detalhes de erro.",
+        description: "Retorna log de todas as mensagens enviadas. Filtrar por status: ?status=eq.failed. Filtrar por aluno: ?student_id=eq.{uuid}.",
         auth: "admin",
-        response: `[{ id, recipient_phone, recipient_name, message_body, status, sent_at, error_message, whatsapp_message_id }]`,
+        headers: H_AUTH_ADMIN,
+        response: `[{ id, recipient_phone, recipient_name, message_body, status, sent_at, error_message, whatsapp_message_id, template_id }]`,
       },
     ],
   },
   {
     title: "Templates de Mensagem",
     icon: <FileText className="h-5 w-5" />,
-    description: "Cadastro e gerenciamento de templates de mensagem WhatsApp com suporte a variáveis dinâmicas {{variavel}}.",
+    description: "Cadastro e gerenciamento de templates com variáveis dinâmicas {{variavel}}. Variáveis disponíveis: {{nome}}, {{turma}}, {{data}}, {{professor}}, {{valor}}, {{data_vencimento}}, {{pix_copy_paste}}, {{quadra}}, {{horario}}.",
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('whatsapp_templates').select('*').eq('is_active', true)",
+        path: "/rest/v1/whatsapp_templates?is_active=eq.true",
         summary: "Listar templates ativos",
-        description: "Retorna todos os templates ativos. Use .eq('is_active', true) para filtrar apenas os habilitados.",
+        description: "Retorna todos os templates ativos com nome, corpo e variáveis. Remove o filtro is_active para listar todos (admin).",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         response: `[{ id, name, body, category, variables: string[], is_active }]`,
       },
       {
         method: "POST",
-        path: "supabase.from('whatsapp_templates').insert()",
+        path: "/rest/v1/whatsapp_templates",
         summary: "Criar template",
-        description: "Cria template com corpo da mensagem e lista de variáveis disponíveis. Variáveis devem estar no formato {{nome_var}} no body.",
+        description: "Cria template com corpo e lista de variáveis. As variáveis no body devem estar no formato {{nome_var}}.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "name", type: "string", required: true, description: "Nome identificador do template" },
-          { name: "body", type: "string", required: true, description: "Corpo da mensagem com variáveis: Olá, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}." },
-          { name: "category", type: "string", required: false, description: "Categoria: cobranca | cancelamento | agendamento | boas_vindas | geral" },
-          { name: "variables", type: "string[]", required: false, description: "Lista de variáveis do template: ['nome', 'valor', 'data_vencimento']" },
+          { name: "body", type: "string", required: true, description: "Ex: Olá, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}." },
+          { name: "category", type: "string", required: false, description: "cobranca | cancelamento | agendamento | boas_vindas | geral" },
+          { name: "variables", type: "string[]", required: false, description: "['nome', 'valor', 'data_vencimento'] — lista das variáveis usadas no body" },
           { name: "is_active", type: "boolean", required: false, description: "Default: true" },
         ],
         response: `{ id, name, body, category, variables, is_active }`,
       },
       {
         method: "PATCH",
-        path: "supabase.from('whatsapp_templates').update().eq('id', id)",
+        path: "/rest/v1/whatsapp_templates?id=eq.{id}",
         summary: "Atualizar template",
-        description: "Atualiza corpo, categoria ou status do template. Alterar body pode exigir atualização de variables.",
+        description: "Atualiza corpo, categoria ou status. Ao alterar body, atualizar variables para manter consistência.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "body", type: "string", required: false, description: "Novo corpo com variáveis {{...}}" },
           { name: "variables", type: "string[]", required: false, description: "Nova lista de variáveis" },
-          { name: "is_active", type: "boolean", required: false, description: "Habilitar/desabilitar template" },
+          { name: "is_active", type: "boolean", required: false, description: "true | false" },
         ],
       },
     ],
@@ -455,126 +522,120 @@ const apiSections: ApiSection[] = [
   {
     title: "WhatsApp & IA",
     icon: <Bot className="h-5 w-5" />,
-    description: "Endpoints para automações via IA/bot no WhatsApp: webhook receptor, disponibilidade de quadra, cobranças automáticas e notificações em batch.",
+    description: "Edge Functions para automações via IA/bot: webhook receptor de mensagens, disponibilidade de quadra, cobranças automáticas e notificações em batch.",
     endpoints: [
       {
         method: "POST",
-        path: "supabase.functions.invoke('whatsapp-webhook')",
-        summary: "Webhook Evolution API (Edge Function)",
-        description: "Receptor de eventos do Evolution API. Configurar na Evolution como webhook URL. Extrai número e texto da mensagem recebida, registra no histórico e expõe ponto de integração para LLM/agente de IA. Valida x-webhook-secret se WHATSAPP_WEBHOOK_SECRET estiver configurado.",
-        auth: "webhook (x-webhook-secret)",
-        params: [
-          { name: "event", type: "string", required: true, description: "Tipo de evento Evolution API: messages.upsert" },
-          { name: "data.key.remoteJid", type: "string", required: true, description: "Número do remetente: 5511999999999@s.whatsapp.net" },
-          { name: "data.message.conversation", type: "string", required: false, description: "Texto da mensagem recebida" },
+        path: "/functions/v1/whatsapp-webhook",
+        summary: "Webhook receptor (Evolution API)",
+        description: "Receptor de eventos enviados pelo Evolution API. Configurar na Evolution como URL de webhook com evento messages.upsert. Extrai número e texto da mensagem, registra no histórico e contém o ponto de integração para o agente de IA (bloco comentado no código). Validação via header x-webhook-secret (env: WHATSAPP_WEBHOOK_SECRET).",
+        auth: "webhook",
+        headers: [
+          { name: "x-webhook-secret", value: "{WHATSAPP_WEBHOOK_SECRET}", description: "Secret configurado na env var — validação opcional mas recomendada" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body enviado pelo Evolution API" },
         ],
-        response: `{ status: "processed", phone: string, message_length: number }`,
+        params: [
+          { name: "event", type: "string", required: true, description: "messages.upsert — tipo do evento Evolution API" },
+          { name: "data.key.remoteJid", type: "string", required: true, description: "Remetente: 5511999999999@s.whatsapp.net" },
+          { name: "data.key.fromMe", type: "boolean", required: true, description: "Mensagens do próprio bot são ignoradas automaticamente" },
+          { name: "data.message.conversation", type: "string", required: false, description: "Texto da mensagem (ou data.message.extendedTextMessage.text)" },
+        ],
+        response: `{ status: "processed" | "ignored", phone?: string, message_length?: number }`,
       },
       {
         method: "GET",
-        path: "supabase.functions.invoke('court-availability')",
-        summary: "Consultar disponibilidade de quadra (Edge Function)",
-        description: "Retorna slots horários livres de uma quadra em uma data. Considera reservas confirmadas/pagas (court_bookings) e sessões de aula agendadas (class_sessions). Slots calculados com base no business_hours do system_config (padrão: 08h–22h, slots de 1h).",
-        auth: "public (anon)",
+        path: "/functions/v1/court-availability?court_id={uuid}&date={YYYY-MM-DD}",
+        summary: "Consultar slots disponíveis de quadra",
+        description: "Retorna slots horários livres em uma data. Desconta reservas confirmadas/pagas (court_bookings) e sessões de aula agendadas (class_sessions). Horários calculados a partir de business_hours no system_config (padrão: 08h–22h, slots de 1h).",
+        auth: "public",
+        headers: H_ANON,
         params: [
-          { name: "court_id", type: "uuid", required: true, description: "ID da quadra (query param)" },
-          { name: "date", type: "string", required: true, description: "Data no formato YYYY-MM-DD (query param)" },
+          { name: "court_id", type: "uuid", required: true, description: "ID da quadra (query string)" },
+          { name: "date", type: "string", required: true, description: "Data no formato YYYY-MM-DD (query string)" },
         ],
         response: `{ date, court_id, court_name, available_slots: [{ start: "HH:MM", end: "HH:MM" }] }`,
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('court-availability')",
-        summary: "Reservar quadra via bot (Edge Function)",
-        description: "Cria solicitação de reserva com status 'requested'. Valida conflito de horário contra reservas existentes (requested/confirmed/paid) e sessões de aula. Ideal para o bot do WhatsApp criar reservas após confirmação do usuário.",
-        auth: "public (anon)",
+        path: "/functions/v1/court-availability",
+        summary: "Reservar quadra via bot",
+        description: "Cria reserva com status 'requested' com validação automática de conflito contra court_bookings (requested/confirmed/paid) e class_sessions. Use este endpoint (não o REST direto) quando o agente de IA criar reservas.",
+        auth: "public",
+        headers: H_ANON,
         params: [
           { name: "court_id", type: "uuid", required: true, description: "ID da quadra" },
           { name: "date", type: "string", required: true, description: "Data (YYYY-MM-DD)" },
-          { name: "start_time", type: "string", required: true, description: "Horário de início (HH:MM)" },
-          { name: "end_time", type: "string", required: true, description: "Horário de término (HH:MM)" },
+          { name: "start_time", type: "string", required: true, description: "Início (HH:MM)" },
+          { name: "end_time", type: "string", required: true, description: "Término (HH:MM)" },
           { name: "requester_name", type: "string", required: true, description: "Nome do solicitante" },
-          { name: "requester_phone", type: "string", required: true, description: "Telefone WhatsApp" },
+          { name: "requester_phone", type: "string", required: true, description: "Telefone com DDI: 5511999999999" },
           { name: "price", type: "number", required: false, description: "Valor da reserva (R$)" },
         ],
         response: `{ booking_id, status: "requested", message: string }`,
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('send-invoice-reminders')",
-        summary: "Enviar lembretes de cobrança (Edge Function)",
-        description: "Dispara mensagens WhatsApp para alunos com faturas pendentes. Regras: apenas profiles.status='active' + invoices.status='pending' com vencimento em CURRENT_DATE + days_before_due. Usa template com variáveis {{nome}}, {{valor}}, {{data_vencimento}}, {{pix_copy_paste}}. Ideal para cron job diário.",
-        auth: "service_role (interno)",
+        path: "/functions/v1/send-invoice-reminders",
+        summary: "Disparar lembretes de cobrança",
+        description: "Envia WhatsApp para alunos com faturas pendentes. Regras: profiles.status='active' + invoices.status='pending' com due_date = CURRENT_DATE + days_before_due. Variáveis do template: {{nome}}, {{valor}}, {{data_vencimento}}, {{pix_copy_paste}}. Ideal como cron job diário (service role).",
+        auth: "service_role",
+        headers: [
+          { name: "Authorization", value: "Bearer {service_role_key}", description: "Service role key do Supabase — NÃO expor no frontend" },
+          { name: "Content-Type", value: "application/json", description: "Formato do body" },
+        ],
         params: [
           { name: "days_before_due", type: "number", required: false, description: "Dias antes do vencimento (default: 3)" },
-          { name: "template_id", type: "uuid", required: false, description: "ID do template a usar (usa padrão se omitido)" },
+          { name: "template_id", type: "uuid", required: false, description: "ID do template — usa mensagem padrão se omitido" },
         ],
         response: `{ sent: number, skipped: number, failed: number }`,
       },
       {
         method: "POST",
-        path: "supabase.functions.invoke('notify-class-cancellation')",
-        summary: "Notificar cancelamento de aula (Edge Function)",
-        description: "Notifica em batch todos os alunos com attendance confirmed|not_confirmed em uma sessão. Envia WhatsApp com template usando {{nome}}, {{turma}}, {{data}}, {{professor}}. Atualiza class_sessions.status='cancelled' APÓS o envio das notificações.",
+        path: "/functions/v1/notify-class-cancellation",
+        summary: "Notificar cancelamento de aula",
+        description: "Notifica em batch todos os alunos com attendance confirmed|not_confirmed em uma sessão. Variáveis do template: {{nome}}, {{turma}}, {{data}}, {{professor}}. Atualiza class_sessions.status='cancelled' APÓS enviar todas as notificações.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
-          { name: "session_id", type: "uuid", required: true, description: "ID da sessão de aula (class_sessions)" },
+          { name: "session_id", type: "uuid", required: true, description: "ID da sessão (class_sessions)" },
           { name: "template_id", type: "uuid", required: false, description: "ID do template de cancelamento" },
-          { name: "custom_message", type: "string", required: false, description: "Mensagem personalizada (substitui template se fornecida)" },
+          { name: "custom_message", type: "string", required: false, description: "Mensagem personalizada — sobrescreve template se fornecida" },
         ],
         response: `{ notified: number, failed: number }`,
       },
     ],
   },
   {
-    title: "Webhook Configuração",
-    icon: <Webhook className="h-5 w-5" />,
-    description: "Referência de configuração da Evolution API para receber mensagens no webhook.",
-    endpoints: [
-      {
-        method: "POST",
-        path: "Evolution API → /webhook/set/{instance}",
-        summary: "Configurar webhook na Evolution API",
-        description: "Configura o endpoint whatsapp-webhook como destino de eventos. URL: https://{SUPABASE_URL}/functions/v1/whatsapp-webhook. Adicionar header x-webhook-secret com o valor de WHATSAPP_WEBHOOK_SECRET. Habilitar evento: messages.upsert.",
-        auth: "Evolution API Key",
-        params: [
-          { name: "url", type: "string", required: true, description: "https://<projeto>.supabase.co/functions/v1/whatsapp-webhook" },
-          { name: "webhook_by_events", type: "boolean", required: false, description: "true — receber por tipo de evento" },
-          { name: "events", type: "string[]", required: true, description: "['messages.upsert'] — tipos de eventos a receber" },
-          { name: "headers", type: "object", required: false, description: "{ 'x-webhook-secret': '<seu-secret>' }" },
-        ],
-        response: `{ webhook: { url, events, enabled: true } }`,
-      },
-    ],
-  },
-  {
     title: "Aulas Teste",
     icon: <Zap className="h-5 w-5" />,
-    description: "Funil de captação via formulário de aula teste.",
+    description: "Funil de captação via formulário de aula teste na landing page.",
     endpoints: [
       {
         method: "POST",
-        path: "supabase.from('trial_requests').insert()",
+        path: "/rest/v1/trial_requests",
         summary: "Solicitar aula teste",
-        description: "Formulário público na landing page. Cria solicitação com status 'pending'.",
+        description: "Formulário público na landing page. Cria solicitação com status 'pending'. Não requer login.",
         auth: "public",
+        headers: H_ANON,
         params: [
           { name: "name", type: "string", required: true, description: "Nome do interessado" },
           { name: "phone", type: "string", required: true, description: "Telefone WhatsApp" },
           { name: "email", type: "string", required: false, description: "Email" },
-          { name: "preferred_class_id", type: "uuid", required: false, description: "Turma preferida" },
-          { name: "preferred_date", type: "date", required: false, description: "Data preferida" },
+          { name: "preferred_class_id", type: "uuid", required: false, description: "ID da turma preferida" },
+          { name: "preferred_date", type: "date", required: false, description: "Data preferida (YYYY-MM-DD)" },
         ],
+        response: `{ id, name, phone, status: "pending" }`,
       },
       {
         method: "PATCH",
-        path: "supabase.from('trial_requests').update()",
-        summary: "Atualizar status da solicitação (Admin)",
+        path: "/rest/v1/trial_requests?id=eq.{id}",
+        summary: "Atualizar status da solicitação",
         description: "Admin aprova, rejeita ou marca como concluída/no-show.",
         auth: "admin",
+        headers: H_AUTH_ADMIN,
         params: [
           { name: "status", type: "trial_status", required: true, description: "pending | approved | rejected | completed | no_show" },
-          { name: "admin_notes", type: "string", required: false, description: "Observações do admin" },
+          { name: "admin_notes", type: "string", required: false, description: "Observações internas do admin" },
         ],
       },
     ],
@@ -582,29 +643,45 @@ const apiSections: ApiSection[] = [
   {
     title: "Configurações do Sistema",
     icon: <Database className="h-5 w-5" />,
-    description: "Configurações globais: horários, landing page, notificações.",
+    description: "Configurações globais: horários de funcionamento, landing page e notificações.",
     endpoints: [
       {
         method: "GET",
-        path: "supabase.from('system_config').select('*')",
-        summary: "Obter configurações do sistema",
-        description: "Retorna key-value pairs. Ex: business_hours (JSON com open_days, open_hour, close_hour), usado pelo hook useBusinessHours.",
-        auth: "authenticated (read) / admin (write)",
-        response: `[{ key: "business_hours", value: '{"open_days":[1,2,3,4,5,6],"open_hour":6,"close_hour":22}' }]`,
+        path: "/rest/v1/system_config",
+        summary: "Listar configurações do sistema",
+        description: "Retorna key-value pairs de configuração global. Chave relevante: business_hours (usado por court-availability para calcular slots). Leitura autenticada; escrita apenas admin.",
+        auth: "authenticated",
+        headers: H_AUTH_USER,
+        response: `[{ key: "business_hours", value: '{"open_days":[1,2,3,4,5,6],"open_hour":8,"close_hour":22}' }]`,
+      },
+      {
+        method: "PATCH",
+        path: "/rest/v1/system_config?key=eq.{key}",
+        summary: "Atualizar configuração",
+        description: "Atualiza o valor de uma configuração por chave. Ex: atualizar business_hours para ajustar os slots disponíveis no agendamento de quadras.",
+        auth: "admin",
+        headers: H_AUTH_ADMIN,
+        params: [
+          { name: "value", type: "string (JSON)", required: true, description: "Novo valor serializado como JSON string" },
+        ],
       },
       {
         method: "GET",
-        path: "supabase.from('landing_page_settings').select('*')",
+        path: "/rest/v1/landing_page_settings",
         summary: "Configurações da landing page",
-        description: "Retorna business_mode, WhatsApp, Instagram, YouTube, CTA e imagem hero.",
+        description: "Retorna business_mode, número WhatsApp, Instagram, YouTube, CTA e imagem hero. Pública.",
         auth: "public",
+        headers: H_ANON,
+        response: `{ whatsapp_number, instagram_url, youtube_url, primary_cta_text, business_mode }`,
       },
       {
         method: "GET",
-        path: "supabase.from('landing_page_config').select('*')",
+        path: "/rest/v1/landing_page_config?order=display_order.asc",
         summary: "Seções da landing page",
-        description: "Retorna seções configuráveis (hero, about, benefits, etc.) com visibilidade e ordem.",
+        description: "Retorna seções configuráveis (hero, about, benefits, etc.) com visibilidade e ordem de exibição.",
         auth: "public",
+        headers: H_ANON,
+        response: `[{ section_key, title, subtitle, content, image_url, is_visible, display_order }]`,
       },
     ],
   },
@@ -633,6 +710,32 @@ function EndpointCard({ endpoint }: { endpoint: ApiEndpoint }) {
       <CollapsibleContent>
         <div className="px-3 pb-4 space-y-3">
           <p className="text-sm text-muted-foreground">{endpoint.description}</p>
+
+          {endpoint.headers && endpoint.headers.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-foreground mb-2">Headers</p>
+              <div className="rounded-md border border-border overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/50">
+                      <th className="text-left p-2 font-medium">Header</th>
+                      <th className="text-left p-2 font-medium">Valor</th>
+                      <th className="text-left p-2 font-medium">Descrição</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {endpoint.headers.map((h) => (
+                      <tr key={h.name} className="border-t border-border">
+                        <td className="p-2 font-mono text-primary">{h.name}</td>
+                        <td className="p-2 font-mono text-muted-foreground">{h.value}</td>
+                        <td className="p-2 text-muted-foreground">{h.description}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {endpoint.params && endpoint.params.length > 0 && (
             <div>
