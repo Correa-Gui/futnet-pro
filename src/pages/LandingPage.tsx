@@ -16,6 +16,8 @@ import { TrialFormSection } from "@/components/landing/TrialFormSection";
 import { ClassesSection } from "@/components/landing/ClassesSection";
 import { DynamicPlansSection } from "@/components/landing/DynamicPlansSection";
 import { PlansSection } from "@/components/landing/PlansSection";
+import { ServicesSection } from "@/components/landing/ServicesSection";
+import { CourtBookingSection } from "@/components/landing/CourtBookingSection";
 import { useState, useCallback } from "react";
 
 export default function LandingPage() {
@@ -47,6 +49,7 @@ export default function LandingPage() {
         <Nav settings={settings} />
         {isVisible("hero") && <HeroSection settings={settings} getImage={getImage} />}
         {isVisible("stats") && <StatsStrip />}
+        <ServicesSection />
         {isVisible("about") && <AboutSection getImage={getImage} />}
         {isVisible("gallery") && <GallerySection getImage={getImage} />}
         {isVisible("benefits") && <BenefitsSection settings={settings} />}
@@ -56,6 +59,7 @@ export default function LandingPage() {
         <DynamicPlansSection settings={settings} />
         {isVisible("plans") && <PlansSection settings={settings} />}
         <TrialFormSection settings={settings} preselectedClassId={preselectedClassId} />
+        <CourtBookingSection />
         {isVisible("faq") && <FAQSection settings={settings} />}
         {isVisible("final_cta") && <FinalCTA settings={settings} />}
         <Footer settings={settings} businessHours={businessHours} />

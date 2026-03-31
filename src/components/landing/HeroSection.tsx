@@ -31,27 +31,25 @@ export function HeroSection({ settings, getImage }: HeroSectionProps) {
         </span>
 
         <h1 className="font-brand text-[clamp(48px,10vw,88px)] leading-none text-white mb-5 tracking-wider">
-          SUA PRIMEIRA{" "}
-          <span className="bg-gradient-to-br from-secondary to-secondary/70 bg-clip-text text-transparent">
-            AULA É GRÁTIS
-          </span>
+          {settings.business_mode === "rentals" ? (
+            <>QUADRAS PRONTAS{" "}<span className="bg-gradient-to-br from-secondary to-secondary/70 bg-clip-text text-transparent">PARA JOGAR</span></>
+          ) : (
+            <>AULAS · QUADRAS{" "}<span className="bg-gradient-to-br from-secondary to-secondary/70 bg-clip-text text-transparent">· FUTEVÔLEI</span></>
+          )}
         </h1>
 
         <p className="text-[clamp(16px,2.5vw,20px)] text-white/80 max-w-[560px] mx-auto mb-9 leading-relaxed">
-          {settings.business_mode === "rentals"
-            ? "Quadras profissionais para você e seus amigos. Reserve online e jogue quando quiser."
-            : "Turmas para todos os níveis, professores certificados e a melhor estrutura da região. Venha descobrir o esporte que vai mudar sua rotina."}
+          Turmas para todos os níveis e quadras profissionais disponíveis para reserva. Tudo num só lugar — venha jogar.
         </p>
 
         <div className="flex gap-4 justify-center flex-wrap">
           <CTAButton text={settings.primary_cta_text} large />
           <a
-            href={waLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 px-7 py-[18px] bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white text-base font-semibold no-underline"
+            href="#reservar-quadra"
+            onClick={(e) => { e.preventDefault(); document.getElementById("reservar-quadra")?.scrollIntoView({ behavior: "smooth" }); }}
+            className="inline-flex items-center gap-2 px-7 py-[18px] bg-white/10 backdrop-blur-lg border border-white/20 rounded-xl text-white text-base font-semibold no-underline cursor-pointer"
           >
-            <Phone size={18} /> Fale no WhatsApp
+            <Phone size={18} /> Reservar uma Quadra
           </a>
         </div>
 
