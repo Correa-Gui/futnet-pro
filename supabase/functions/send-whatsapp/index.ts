@@ -5,7 +5,11 @@ import {
   parseSendWhatsAppPayload,
   resolveMessageBody,
 } from "./evolution.ts";
-import { loadWhatsAppProviderConfig, sendViaWhatsAppProvider } from "./provider.ts";
+import {
+  loadWhatsAppProviderConfig,
+  resolveWhatsAppProviderConfig,
+  sendViaWhatsAppProvider,
+} from "./provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,7 +81,9 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
-    const providerConfig = await loadWhatsAppProviderConfig(serviceClient);
+    const providerConfig =
+      resolveWhatsAppProviderConfig(requestPayload) ||
+      await loadWhatsAppProviderConfig(serviceClient);
 
     for (const recipient of requestPayload.recipients) {
       const fullPhone = normalizeRecipientPhone(recipient.phone);

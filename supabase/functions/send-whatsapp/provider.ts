@@ -3,6 +3,20 @@ export interface WhatsAppProviderConfig {
   instanceName: string;
 }
 
+export function resolveWhatsAppProviderConfig(input?: {
+  provider_base_url?: string;
+  provider_instance_name?: string;
+}): WhatsAppProviderConfig | null {
+  const baseUrl = input?.provider_base_url?.trim() || "";
+  const instanceName = input?.provider_instance_name?.trim() || "";
+
+  if (!baseUrl || !instanceName) {
+    return null;
+  }
+
+  return { baseUrl, instanceName };
+}
+
 export function buildMessagesSendEndpoint(baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, "")}/messages/send`;
 }

@@ -10,13 +10,11 @@ export interface SendWhatsAppRequestPayload {
   template_id?: string | null;
   template_name?: string;
   template_language?: string;
-  /** Variáveis globais para substituição em {{variavel}} no message_body */
+  provider_base_url?: string;
+  provider_instance_name?: string;
   template_variables?: Record<string, string>;
 }
 
-/**
- * Normaliza números de telefone para o formato internacional esperado pela Evolution API.
- */
 export function normalizeRecipientPhone(phone: string): string {
   const digitsOnly = phone.replace(/\D/g, "");
 
@@ -28,7 +26,6 @@ export function normalizeRecipientPhone(phone: string): string {
     return digitsOnly;
   }
 
-
   if (digitsOnly.length >= 12) {
     return digitsOnly;
   }
@@ -36,9 +33,6 @@ export function normalizeRecipientPhone(phone: string): string {
   return `55${digitsOnly}`;
 }
 
-/**
- * Valida payload de envio recebido na função edge e retorna um objeto tipado.
- */
 export function parseSendWhatsAppPayload(payload: unknown): SendWhatsAppRequestPayload {
   if (!payload || typeof payload !== "object") {
     throw new Error("Invalid payload");
@@ -75,6 +69,10 @@ export function parseSendWhatsAppPayload(payload: unknown): SendWhatsAppRequestP
     template_name: typeof typedPayload.template_name === "string" ? typedPayload.template_name : undefined,
     template_language:
       typeof typedPayload.template_language === "string" ? typedPayload.template_language : undefined,
+    provider_base_url:
+      typeof typedPayload.provider_base_url === "string" ? typedPayload.provider_base_url : undefined,
+    provider_instance_name:
+      typeof typedPayload.provider_instance_name === "string" ? typedPayload.provider_instance_name : undefined,
     template_variables:
       typedPayload.template_variables && typeof typedPayload.template_variables === "object"
         ? (typedPayload.template_variables as Record<string, string>)
@@ -82,16 +80,10 @@ export function parseSendWhatsAppPayload(payload: unknown): SendWhatsAppRequestP
   };
 }
 
-/**
- * Monta endpoint de envio de texto da Evolution API.
- */
 export function buildEvolutionTextEndpoint(baseUrl: string, instanceName: string): string {
   return `${baseUrl.replace(/\/$/, "")}/message/sendText/${instanceName}`;
 }
 
-/**
- * Resolve o corpo final da mensagem com base no modo de envio.
- */
 export function resolveMessageBody(input: SendWhatsAppRequestPayload): string {
   if (input.template_name) {
     return input.message_body?.trim() || `[Template: ${input.template_name}]`;
@@ -100,10 +92,6 @@ export function resolveMessageBody(input: SendWhatsAppRequestPayload): string {
   return input.message_body?.trim() || "";
 }
 
-/**
- * Substitui variáveis no formato {{variavel}} no corpo do template.
- * Variáveis não encontradas são mantidas como estão.
- */
 export function interpolateVariables(
   template: string,
   vars: Record<string, string>

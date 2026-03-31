@@ -184,6 +184,8 @@ export default function WhatsAppSend() {
               recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
               message_body: resolvedMessage,
               template_id: templateId || null,
+              provider_base_url: providerConfig.baseUrl,
+              provider_instance_name: providerConfig.instanceName,
             },
           });
 
@@ -202,6 +204,8 @@ export default function WhatsAppSend() {
             recipients,
             message_body: messageBody,
             template_id: templateId || null,
+            provider_base_url: providerConfig.baseUrl,
+            provider_instance_name: providerConfig.instanceName,
           },
         });
 
