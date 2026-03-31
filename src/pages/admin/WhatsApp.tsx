@@ -4,6 +4,7 @@ import { MessageCircle } from "lucide-react";
 import WhatsAppTemplates from "@/components/admin/whatsapp/WhatsAppTemplates";
 import WhatsAppSend from "@/components/admin/whatsapp/WhatsAppSend";
 import WhatsAppHistory from "@/components/admin/whatsapp/WhatsAppHistory";
+import WhatsAppSettings from "@/components/admin/whatsapp/WhatsAppSettings";
 
 export default function WhatsApp() {
   const [activeTab, setActiveTab] = useState("send");
@@ -16,14 +17,15 @@ export default function WhatsApp() {
           WhatsApp
         </h2>
         <p className="text-sm text-muted-foreground">
-          Gerencie templates e envie mensagens para seus alunos
+          Gerencie templates, configurações e envios para seus alunos
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-3 max-w-md">
+        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
           <TabsTrigger value="send">Enviar</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="settings">Configurações</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
 
@@ -32,6 +34,9 @@ export default function WhatsApp() {
         </TabsContent>
         <TabsContent value="templates" className="mt-6">
           <WhatsAppTemplates />
+        </TabsContent>
+        <TabsContent value="settings" className="mt-6">
+          <WhatsAppSettings />
         </TabsContent>
         <TabsContent value="history" className="mt-6">
           <WhatsAppHistory />

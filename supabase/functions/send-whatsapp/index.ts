@@ -1,11 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
-  buildEvolutionTextEndpoint,
   interpolateVariables,
   normalizeRecipientPhone,
   parseSendWhatsAppPayload,
   resolveMessageBody,
 } from "./evolution.ts";
+import { loadWhatsAppProviderConfig, sendViaWhatsAppProvider } from "./provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -58,20 +58,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    const evolutionApiUrl = Deno.env.get("EVOLUTION_API_URL");
-    const evolutionApiKey = Deno.env.get("EVOLUTION_API_KEY");
-    const evolutionInstance = Deno.env.get("EVOLUTION_INSTANCE_NAME") || Deno.env.get("EVOLUTION_INSTANCE");
-
-    if (!evolutionApiUrl) {
-      throw new Error("EVOLUTION_API_URL is not configured");
-    }
-    if (!evolutionApiKey) {
-      throw new Error("EVOLUTION_API_KEY is not configured");
-    }
-    if (!evolutionInstance) {
-      throw new Error("EVOLUTION_INSTANCE_NAME is not configured");
-    }
-
     const requestPayload = parseSendWhatsAppPayload(await req.json());
     const resolvedMessage = resolveMessageBody(requestPayload);
     const finalMessage = requestPayload.template_variables
@@ -91,6 +77,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
+    const providerConfig = await loadWhatsAppProviderConfig(serviceClient);
 
     for (const recipient of requestPayload.recipients) {
       const fullPhone = normalizeRecipientPhone(recipient.phone);
@@ -100,25 +87,17 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const response = await fetch(
-          buildEvolutionTextEndpoint(evolutionApiUrl, evolutionInstance),
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              apikey: evolutionApiKey,
-            },
-            body: JSON.stringify({
-              number: fullPhone,
-              text: finalMessage,
-            }),
-          }
-        );
-
-        const responseJson = await response.json();
+        const { response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
+          number: fullPhone,
+          text: finalMessage,
+        });
+        const typedResponse = responseJson as Record<string, unknown> | null;
 
         if (!response.ok) {
-          const errorMessage = responseJson?.response?.message || responseJson?.message || `HTTP ${response.status}`;
+          const errorMessage =
+            (typedResponse?.message as string | undefined) ||
+            (typedResponse?.error as string | undefined) ||
+            `HTTP ${response.status}`;
           results.push({ phone: fullPhone, success: false, error: errorMessage });
 
           await serviceClient.from("whatsapp_messages").insert({
@@ -135,7 +114,10 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        const messageId = responseJson?.key?.id || responseJson?.id || null;
+        const messageId =
+          (typedResponse?.message_id as string | undefined) ||
+          (typedResponse?.id as string | undefined) ||
+          null;
         results.push({ phone: fullPhone, success: true, messageId });
 
         await serviceClient.from("whatsapp_messages").insert({

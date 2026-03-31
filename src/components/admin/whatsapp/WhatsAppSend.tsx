@@ -1,5 +1,5 @@
-import { useState, useMemo } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,10 @@ import { Badge } from "@/components/ui/badge";
 import { Send, Users, User, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDaysOfWeek } from "@/lib/whatsapp";
+import { useWhatsAppProviderConfig } from "@/hooks/useWhatsAppProviderConfig";
 
 interface StudentWithProfile {
   studentId: string;
-  userId: string;
   fullName: string;
   phone: string | null;
   classIds: string[];
@@ -27,11 +27,8 @@ export default function WhatsAppSend() {
   const [templateId, setTemplateId] = useState<string>("");
   const [messageBody, setMessageBody] = useState("");
   const [sending, setSending] = useState(false);
-  const [sendMode, setSendMode] = useState<"template" | "text">("template");
-  const [metaTemplateName, setMetaTemplateName] = useState("hello_world");
-  const [metaTemplateLang, setMetaTemplateLang] = useState("en_US");
+  const { data: providerConfig } = useWhatsAppProviderConfig();
 
-  // Fetch classes
   const { data: classes = [] } = useQuery({
     queryKey: ["wa-classes"],
     queryFn: async () => {
@@ -44,7 +41,6 @@ export default function WhatsAppSend() {
     },
   });
 
-  // Fetch all students with enrollments
   const { data: students = [] } = useQuery({
     queryKey: ["wa-students"],
     queryFn: async () => {
@@ -59,32 +55,30 @@ export default function WhatsAppSend() {
 
       if (!studentProfiles) return [];
 
-      const userIds = studentProfiles.map((s) => s.user_id);
+      const userIds = studentProfiles.map((student) => student.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, phone")
         .in("user_id", userIds);
 
-      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
+      const profileMap = Object.fromEntries((profiles || []).map((profile) => [profile.user_id, profile]));
       const enrollMap: Record<string, string[]> = {};
-      (enrollments || []).forEach((e) => {
-        if (!enrollMap[e.student_id]) enrollMap[e.student_id] = [];
-        enrollMap[e.student_id].push(e.class_id);
+      (enrollments || []).forEach((enrollment) => {
+        if (!enrollMap[enrollment.student_id]) enrollMap[enrollment.student_id] = [];
+        enrollMap[enrollment.student_id].push(enrollment.class_id);
       });
 
       return studentProfiles
-        .map((sp): StudentWithProfile => ({
-          studentId: sp.id,
-          userId: sp.user_id,
-          fullName: profileMap[sp.user_id]?.full_name || "Aluno",
-          phone: profileMap[sp.user_id]?.phone || null,
-          classIds: enrollMap[sp.id] || [],
+        .map((studentProfile): StudentWithProfile => ({
+          studentId: studentProfile.id,
+          fullName: profileMap[studentProfile.user_id]?.full_name || "Aluno",
+          phone: profileMap[studentProfile.user_id]?.phone || null,
+          classIds: enrollMap[studentProfile.id] || [],
         }))
-        .filter((s) => s.phone);
+        .filter((student) => student.phone);
     },
   });
 
-  // Fetch templates
   const { data: templates = [] } = useQuery({
     queryKey: ["wa-templates"],
     queryFn: async () => {
@@ -97,19 +91,22 @@ export default function WhatsAppSend() {
     },
   });
 
-  // Fetch teacher/court maps for variable substitution
   const { data: teacherMap = {} } = useQuery({
     queryKey: ["wa-teacher-map"],
     queryFn: async () => {
       const { data: teachers } = await supabase.from("teacher_profiles").select("id, user_id");
       if (!teachers?.length) return {};
+
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name")
-        .in("user_id", teachers.map((t) => t.user_id));
-      const pm = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
+        .in("user_id", teachers.map((teacher) => teacher.user_id));
+
+      const profilesMap = Object.fromEntries((profiles || []).map((profile) => [profile.user_id, profile.full_name]));
       const map: Record<string, string> = {};
-      teachers.forEach((t) => (map[t.id] = pm[t.user_id] || "Professor"));
+      teachers.forEach((teacher) => {
+        map[teacher.id] = profilesMap[teacher.user_id] || "Professor";
+      });
       return map;
     },
   });
@@ -118,13 +115,13 @@ export default function WhatsAppSend() {
     queryKey: ["wa-court-map"],
     queryFn: async () => {
       const { data } = await supabase.from("courts").select("id, name");
-      return Object.fromEntries((data || []).map((c) => [c.id, c.name]));
+      return Object.fromEntries((data || []).map((court) => [court.id, court.name]));
     },
   });
 
   const filteredStudents = useMemo(() => {
     if (mode === "class" && selectedClassId) {
-      return students.filter((s) => s.classIds.includes(selectedClassId));
+      return students.filter((student) => student.classIds.includes(selectedClassId));
     }
     return students;
   }, [students, mode, selectedClassId]);
@@ -138,19 +135,19 @@ export default function WhatsAppSend() {
   };
 
   const selectAll = () => {
-    setSelectedStudents(new Set(filteredStudents.map((s) => s.studentId)));
+    setSelectedStudents(new Set(filteredStudents.map((student) => student.studentId)));
   };
 
   const deselectAll = () => setSelectedStudents(new Set());
 
   const applyTemplate = (tplId: string) => {
     setTemplateId(tplId);
-    const tpl = templates.find((t) => t.id === tplId);
-    if (tpl) setMessageBody(tpl.body);
+    const template = templates.find((item) => item.id === tplId);
+    if (template) setMessageBody(template.body);
   };
 
   const resolveVars = (body: string, student: StudentWithProfile): string => {
-    const classInfo = selectedClassId ? classes.find((c) => c.id === selectedClassId) : null;
+    const classInfo = selectedClassId ? classes.find((item) => item.id === selectedClassId) : null;
     return body
       .replace(/\{\{nome\}\}/g, student.fullName)
       .replace(/\{\{turma\}\}/g, classInfo?.name || "")
@@ -161,65 +158,55 @@ export default function WhatsAppSend() {
   };
 
   const handleSend = async () => {
-    const selected = filteredStudents.filter((s) => selectedStudents.has(s.studentId));
+    const selected = filteredStudents.filter((student) => selectedStudents.has(student.studentId));
     if (selected.length === 0) return toast.error("Selecione ao menos um aluno.");
-    if (sendMode === "text" && !messageBody.trim()) return toast.error("Escreva a mensagem.");
+    if (!providerConfig?.baseUrl.trim()) return toast.error("Configure a URL do serviço na aba Configurações.");
+    if (!providerConfig?.instanceName.trim()) return toast.error("Configure o nome da instância na aba Configurações.");
+    if (!messageBody.trim()) return toast.error("Escreva a mensagem.");
 
     setSending(true);
     try {
-      if (sendMode === "template") {
-        // Send Meta template to all selected
-        const recipients = selected.map((s) => ({
-          phone: s.phone!,
-          name: s.fullName,
-          student_id: s.studentId,
-        }));
-        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-          body: {
-            recipients,
-            message_body: `[Template: ${metaTemplateName}]`,
-            template_name: metaTemplateName,
-            template_language: metaTemplateLang,
-          },
-        });
-        if (error) throw error;
-        toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
-      } else {
-        // Text mode with variable resolution
-        const recipients = selected.map((s) => ({
-          phone: s.phone!,
-          name: s.fullName,
-          student_id: s.studentId,
-        }));
-        const hasVars = /\{\{\w+\}\}/.test(messageBody);
+      const recipients = selected.map((student) => ({
+        phone: student.phone!,
+        name: student.fullName,
+        student_id: student.studentId,
+      }));
+      const hasVars = /\{\{\w+\}\}/.test(messageBody);
 
-        if (hasVars) {
-          let sentCount = 0;
-          let failCount = 0;
-          for (const student of selected) {
-            const resolved = resolveVars(messageBody, student);
-            const { data, error } = await supabase.functions.invoke("send-whatsapp", {
-              body: {
-                recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
-                message_body: resolved,
-                template_id: templateId || null,
-              },
-            });
-            if (error) failCount++;
-            else sentCount += data?.sent || 0;
-          }
-          toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
-        } else {
+      if (hasVars) {
+        let sentCount = 0;
+        let failCount = 0;
+
+        for (const student of selected) {
+          const resolvedMessage = resolveVars(messageBody, student);
           const { data, error } = await supabase.functions.invoke("send-whatsapp", {
             body: {
-              recipients,
-              message_body: messageBody,
+              recipients: [{ phone: student.phone!, name: student.fullName, student_id: student.studentId }],
+              message_body: resolvedMessage,
               template_id: templateId || null,
             },
           });
-          if (error) throw error;
-          toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
+
+          if (error) {
+            failCount++;
+            continue;
+          }
+
+          sentCount += data?.sent || 0;
         }
+
+        toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
+      } else {
+        const { data, error } = await supabase.functions.invoke("send-whatsapp", {
+          body: {
+            recipients,
+            message_body: messageBody,
+            template_id: templateId || null,
+          },
+        });
+
+        if (error) throw error;
+        toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
       }
 
       setSelectedStudents(new Set());
@@ -230,178 +217,156 @@ export default function WhatsAppSend() {
     }
   };
 
-  // Preview
-  const previewStudent = filteredStudents.find((s) => selectedStudents.has(s.studentId)) || filteredStudents[0];
+  const previewStudent =
+    filteredStudents.find((student) => selectedStudents.has(student.studentId)) || filteredStudents[0];
   const previewMessage = previewStudent ? resolveVars(messageBody, previewStudent) : messageBody;
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
-      {/* Left: Compose */}
       <div className="space-y-4">
         <Card>
-          <CardContent className="p-4 space-y-4">
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={sendMode === "template" ? "default" : "outline"}
-                onClick={() => setSendMode("template")}
-              >
-                Template Evolution
-              </Button>
-              <Button
-                size="sm"
-                variant={sendMode === "text" ? "default" : "outline"}
-                onClick={() => setSendMode("text")}
-              >
-                Texto Livre
-              </Button>
+          <CardContent className="space-y-4 p-4">
+            <div>
+              <Label>Template local (opcional)</Label>
+              <Select value={templateId} onValueChange={applyTemplate}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Escolher template..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {templates.map((template) => (
+                    <SelectItem key={template.id} value={template.id}>
+                      {template.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                O painel resolve as variáveis do template e envia o texto final para o seu endpoint configurado.
+              </p>
             </div>
 
-            {sendMode === "template" ? (
-              <div className="space-y-3">
-                <div>
-                  <Label>Identificador do template (Evolution)</Label>
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                    value={metaTemplateName}
-                    onChange={(e) => setMetaTemplateName(e.target.value)}
-                    placeholder="hello_world"
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Identificador de referência do template para rastreabilidade no histórico
-                  </p>
-                </div>
-                <div>
-                  <Label>Idioma</Label>
-                  <Select value={metaTemplateLang} onValueChange={setMetaTemplateLang}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pt_BR">Português (BR)</SelectItem>
-                      <SelectItem value="en_US">English (US)</SelectItem>
-                      <SelectItem value="es">Español</SelectItem>
-                    </SelectContent>
-                  </Select>
+            <div>
+              <Label>Mensagem</Label>
+              <Textarea
+                value={messageBody}
+                onChange={(e) => setMessageBody(e.target.value)}
+                placeholder="Escreva sua mensagem ou selecione um template..."
+                rows={6}
+              />
+            </div>
+
+            {messageBody && previewStudent && (
+              <div>
+                <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm whitespace-pre-wrap dark:border-emerald-800 dark:bg-emerald-950/30">
+                  {previewMessage}
                 </div>
               </div>
-            ) : (
-              <>
-                <div>
-                  <Label>Template local (opcional)</Label>
-                  <Select value={templateId} onValueChange={applyTemplate}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Escolher template..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div>
-                  <Label>Mensagem</Label>
-                  <Textarea
-                    value={messageBody}
-                    onChange={(e) => setMessageBody(e.target.value)}
-                    placeholder="Escreva sua mensagem ou selecione um template..."
-                    rows={6}
-                  />
-                </div>
-
-                {messageBody && previewStudent && (
-                  <div>
-                    <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
-                    <div className="bg-emerald-50 dark:bg-emerald-950/30 rounded-lg p-3 text-sm whitespace-pre-wrap border border-emerald-200 dark:border-emerald-800">
-                      {previewMessage}
-                    </div>
-                  </div>
-                )}
-              </>
             )}
 
             <Button
               className="w-full bg-emerald-600 hover:bg-emerald-700"
               onClick={handleSend}
-              disabled={sending || selectedStudents.size === 0 || (sendMode === "text" && !messageBody.trim())}
+              disabled={sending || selectedStudents.size === 0 || !messageBody.trim()}
             >
               {sending ? (
-                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
+                </>
               ) : (
-                <><Send className="mr-2 h-4 w-4" /> Enviar para {selectedStudents.size} aluno(s)</>
+                <>
+                  <Send className="mr-2 h-4 w-4" /> Enviar para {selectedStudents.size} aluno(s)
+                </>
               )}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Right: Recipients */}
       <div className="space-y-4">
         <Card>
-          <CardContent className="p-4 space-y-4">
+          <CardContent className="space-y-4 p-4">
             <div className="flex gap-2">
               <Button
                 size="sm"
                 variant={mode === "class" ? "default" : "outline"}
-                onClick={() => { setMode("class"); setSelectedStudents(new Set()); }}
+                onClick={() => {
+                  setMode("class");
+                  setSelectedStudents(new Set());
+                }}
               >
                 <Users className="mr-1 h-4 w-4" /> Por Turma
               </Button>
               <Button
                 size="sm"
                 variant={mode === "individual" ? "default" : "outline"}
-                onClick={() => { setMode("individual"); setSelectedClassId(""); setSelectedStudents(new Set()); }}
+                onClick={() => {
+                  setMode("individual");
+                  setSelectedClassId("");
+                  setSelectedStudents(new Set());
+                }}
               >
                 <User className="mr-1 h-4 w-4" /> Individual
               </Button>
             </div>
 
             {mode === "class" && (
-              <Select value={selectedClassId} onValueChange={(v) => { setSelectedClassId(v); setSelectedStudents(new Set()); }}>
+              <Select
+                value={selectedClassId}
+                onValueChange={(value) => {
+                  setSelectedClassId(value);
+                  setSelectedStudents(new Set());
+                }}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar turma..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} — {formatDaysOfWeek(c.day_of_week)} {c.start_time.slice(0, 5)}
+                  {classes.map((classItem) => (
+                    <SelectItem key={classItem.id} value={classItem.id}>
+                      {classItem.name} - {formatDaysOfWeek(classItem.day_of_week)} {classItem.start_time.slice(0, 5)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             )}
 
-            <div className="flex justify-between items-center">
+            <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{filteredStudents.length} aluno(s)</span>
               <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={selectAll}>Todos</Button>
-                <Button size="sm" variant="ghost" onClick={deselectAll}>Nenhum</Button>
+                <Button size="sm" variant="ghost" onClick={selectAll}>
+                  Todos
+                </Button>
+                <Button size="sm" variant="ghost" onClick={deselectAll}>
+                  Nenhum
+                </Button>
               </div>
             </div>
 
-            <div className="max-h-80 overflow-y-auto space-y-1">
-              {filteredStudents.map((s) => (
+            <div className="max-h-80 space-y-1 overflow-y-auto">
+              {filteredStudents.map((student) => (
                 <label
-                  key={s.studentId}
-                  className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                  key={student.studentId}
+                  className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/50"
                 >
                   <Checkbox
-                    checked={selectedStudents.has(s.studentId)}
-                    onCheckedChange={() => toggleStudent(s.studentId)}
+                    checked={selectedStudents.has(student.studentId)}
+                    onCheckedChange={() => toggleStudent(student.studentId)}
                   />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{s.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{s.phone}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{student.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{student.phone}</p>
                   </div>
-                  {selectedStudents.has(s.studentId) && (
-                    <Badge variant="secondary" className="text-xs shrink-0">Selecionado</Badge>
+                  {selectedStudents.has(student.studentId) && (
+                    <Badge variant="secondary" className="shrink-0 text-xs">
+                      Selecionado
+                    </Badge>
                   )}
                 </label>
               ))}
+
               {filteredStudents.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
+                <p className="py-4 text-center text-sm text-muted-foreground">
                   {mode === "class" && !selectedClassId
                     ? "Selecione uma turma"
                     : "Nenhum aluno com telefone cadastrado"}

@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
-  buildEvolutionTextEndpoint,
   normalizeRecipientPhone,
   parseSendWhatsAppPayload,
   resolveMessageBody,
 } from "../../supabase/functions/send-whatsapp/evolution";
+import { buildMessagesSendEndpoint } from "../../supabase/functions/send-whatsapp/provider";
 
-describe("Evolution WhatsApp helpers", () => {
+describe("WhatsApp helpers", () => {
   it("normaliza telefone brasileiro sem DDI", () => {
     expect(normalizeRecipientPhone("(11) 98888-7777")).toBe("5511988887777");
   });
@@ -29,9 +29,9 @@ describe("Evolution WhatsApp helpers", () => {
     expect(() => parseSendWhatsAppPayload({ message_body: "Olá" })).toThrow("recipients is required");
   });
 
-  it("monta endpoint sem barra duplicada", () => {
-    expect(buildEvolutionTextEndpoint("https://evolution.api/", "minha-instancia")).toBe(
-      "https://evolution.api/message/sendText/minha-instancia"
+  it("monta endpoint do servico sem barra duplicada", () => {
+    expect(buildMessagesSendEndpoint("https://api.exemplo.com/")).toBe(
+      "https://api.exemplo.com/messages/send"
     );
   });
 
