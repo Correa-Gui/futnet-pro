@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   buildEvolutionTextEndpoint,
+  interpolateVariables,
   normalizeRecipientPhone,
   parseSendWhatsAppPayload,
   resolveMessageBody,
@@ -72,7 +73,10 @@ Deno.serve(async (req) => {
     }
 
     const requestPayload = parseSendWhatsAppPayload(await req.json());
-    const finalMessage = resolveMessageBody(requestPayload);
+    const resolvedMessage = resolveMessageBody(requestPayload);
+    const finalMessage = requestPayload.template_variables
+      ? interpolateVariables(resolvedMessage, requestPayload.template_variables)
+      : resolvedMessage;
 
     if (!finalMessage) {
       return new Response(JSON.stringify({ error: "message_body is required" }), {

@@ -10,6 +10,8 @@ export interface SendWhatsAppRequestPayload {
   template_id?: string | null;
   template_name?: string;
   template_language?: string;
+  /** Variáveis globais para substituição em {{variavel}} no message_body */
+  template_variables?: Record<string, string>;
 }
 
 /**
@@ -73,6 +75,10 @@ export function parseSendWhatsAppPayload(payload: unknown): SendWhatsAppRequestP
     template_name: typeof typedPayload.template_name === "string" ? typedPayload.template_name : undefined,
     template_language:
       typeof typedPayload.template_language === "string" ? typedPayload.template_language : undefined,
+    template_variables:
+      typedPayload.template_variables && typeof typedPayload.template_variables === "object"
+        ? (typedPayload.template_variables as Record<string, string>)
+        : undefined,
   };
 }
 
@@ -92,4 +98,15 @@ export function resolveMessageBody(input: SendWhatsAppRequestPayload): string {
   }
 
   return input.message_body?.trim() || "";
+}
+
+/**
+ * Substitui variáveis no formato {{variavel}} no corpo do template.
+ * Variáveis não encontradas são mantidas como estão.
+ */
+export function interpolateVariables(
+  template: string,
+  vars: Record<string, string>
+): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? `{{${key}}}`);
 }
