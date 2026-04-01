@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Send, Users, User, Loader2 } from "lucide-react";
+import { Send, Users, User, Loader2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { formatDaysOfWeek } from "@/lib/whatsapp";
 import { useWhatsAppProviderConfig } from "@/hooks/useWhatsAppProviderConfig";
@@ -23,6 +23,9 @@ interface StudentWithProfile {
 
 // Variables resolved automatically from context (no manual input needed)
 const AUTO_VARS = new Set(["nome", "turma", "horario", "dia", "professor", "quadra", "app_url"]);
+
+// Variables auto-resolved from the student's pending invoice (fallback to manual)
+const INVOICE_VARS = new Set(["valor", "mes", "data_vencimento"]);
 
 // Human-friendly labels for common manual variables
 const VAR_LABELS: Record<string, string> = {
@@ -144,11 +147,40 @@ export default function WhatsAppSend() {
     },
   });
 
+  // Pending/overdue invoices keyed by student_id — used for auto-filling financial vars
+  const { data: invoiceMap = {} } = useQuery({
+    queryKey: ["wa-invoice-map"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("invoices")
+        .select("student_id, amount, discount, reference_month, due_date")
+        .in("status", ["pending", "overdue"] as any)
+        .order("due_date", { ascending: true });
+      const map: Record<string, { amount: number; reference_month: string; due_date: string }> = {};
+      (data || []).forEach((inv: any) => {
+        if (!map[inv.student_id]) {
+          map[inv.student_id] = {
+            amount: Number(inv.amount) - Number(inv.discount || 0),
+            reference_month: inv.reference_month,
+            due_date: inv.due_date,
+          };
+        }
+      });
+      return map;
+    },
+  });
+
   // Detect variables in the message that are NOT auto-resolvable → need manual input
   const pendingVarNames = useMemo(() => {
     const matches = [...messageBody.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
     const unique = [...new Set(matches)];
-    return unique.filter((v) => !AUTO_VARS.has(v));
+    return unique.filter((v) => !AUTO_VARS.has(v) && !INVOICE_VARS.has(v));
+  }, [messageBody]);
+
+  // Invoice vars present in the current message (auto-resolved per student)
+  const invoiceVarNames = useMemo(() => {
+    const matches = [...messageBody.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+    return [...new Set(matches)].filter((v) => INVOICE_VARS.has(v));
   }, [messageBody]);
 
   const filteredStudents = useMemo(() => {
@@ -193,9 +225,28 @@ export default function WhatsAppSend() {
       .replace(/\{\{quadra\}\}/g, classInfo ? courtMap[classInfo.court_id] || "" : "")
       .replace(/\{\{app_url\}\}/g, appUrl);
 
-    // Apply manually filled variables
+    // Apply invoice variables: use the student's pending invoice, fallback to manual input
+    const invoice = invoiceMap[student.studentId];
+    const formatDueDate = (iso: string) => {
+      const parts = iso.split("-");
+      return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : iso;
+    };
+    const invoiceValues: Record<string, string> = {
+      valor: invoice
+        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(invoice.amount)
+        : manualVars["valor"] || "",
+      mes: invoice ? invoice.reference_month : manualVars["mes"] || "",
+      data_vencimento: invoice ? formatDueDate(invoice.due_date) : manualVars["data_vencimento"] || "",
+    };
+    for (const [key, value] of Object.entries(invoiceValues)) {
+      if (value) resolved = resolved.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    }
+
+    // Apply other manually filled variables (non-invoice)
     for (const [key, value] of Object.entries(manualVars)) {
-      resolved = resolved.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+      if (!INVOICE_VARS.has(key)) {
+        resolved = resolved.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+      }
     }
 
     return resolved;
@@ -208,11 +259,22 @@ export default function WhatsAppSend() {
     if (!providerConfig?.instanceName.trim()) return toast.error("Configure o nome da instância na aba Configurações.");
     if (!messageBody.trim()) return toast.error("Escreva a mensagem.");
 
-    // Warn if there are still unresolved variables with empty values
+    // Block if truly manual vars are empty
     const emptyVars = pendingVarNames.filter((v) => !manualVars[v]?.trim());
     if (emptyVars.length > 0) {
       toast.warning(`Preencha as variáveis: ${emptyVars.map((v) => `{{${v}}}`).join(", ")}`);
       return;
+    }
+
+    // Warn (non-blocking) if invoice vars have no fallback and some students lack invoices
+    if (invoiceVarNames.length > 0) {
+      const withoutInvoice = selected.filter((s) => !invoiceMap[s.studentId]);
+      const emptyFallback = invoiceVarNames.filter((v) => !manualVars[v]?.trim());
+      if (withoutInvoice.length > 0 && emptyFallback.length > 0) {
+        toast.warning(
+          `${withoutInvoice.length} aluno(s) sem fatura pendente — variáveis ${emptyFallback.map((v) => `{{${v}}}`).join(", ")} ficarão em branco para eles.`
+        );
+      }
     }
 
     setSending(true);
@@ -290,6 +352,56 @@ export default function WhatsAppSend() {
                 O painel resolve as variáveis do template e envia o texto final para o seu endpoint configurado.
               </p>
             </div>
+
+            {/* Invoice variable section — auto-filled per student, fallback input shown */}
+            {invoiceVarNames.length > 0 && (() => {
+              const selected = filteredStudents.filter((s) => selectedStudents.has(s.studentId));
+              const withInvoice = selected.filter((s) => invoiceMap[s.studentId]).length;
+              const withoutInvoice = selected.length - withInvoice;
+              return (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30 p-3 space-y-3">
+                  <div className="flex items-start gap-2">
+                    <Info className="h-4 w-4 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                        Variáveis financeiras — preenchidas automaticamente pela fatura pendente de cada aluno
+                      </p>
+                      {selected.length > 0 && (
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
+                          {withInvoice} aluno(s) com fatura detectada
+                          {withoutInvoice > 0 && ` · ${withoutInvoice} sem fatura (usarão o valor padrão abaixo)`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  {(withoutInvoice > 0 || selected.length === 0) && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-muted-foreground">
+                        Valor padrão (usado quando o aluno não tem fatura pendente):
+                      </p>
+                      {invoiceVarNames.map((varName) => (
+                        <div key={varName} className="space-y-1">
+                          <Label className="text-xs">
+                            {`{{${varName}}}`}
+                            <span className="ml-1 text-muted-foreground font-normal">
+                              — {VAR_LABELS[varName] || varName}
+                            </span>
+                          </Label>
+                          <Input
+                            value={manualVars[varName] || ""}
+                            onChange={(e) =>
+                              setManualVars((prev) => ({ ...prev, [varName]: e.target.value }))
+                            }
+                            placeholder={VAR_LABELS[varName] || `Valor de {{${varName}}}`}
+                            className="h-8 text-sm"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Manual variable inputs — shown only when there are unresolved vars */}
             {pendingVarNames.length > 0 && (
