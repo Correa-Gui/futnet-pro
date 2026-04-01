@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
-import { Users, MapPin, Clock } from "lucide-react";
+import { CalendarDays, MapPin, Users } from "lucide-react";
 import { Section, SectionLabel, SectionTitle } from "./Section";
 import { supabase } from "@/integrations/supabase/client";
 import { formatDaysOfWeek, formatLevelLabel } from "@/lib/whatsapp";
+import { cn } from "@/lib/utils";
+import { scrollToSection } from "./brand";
 
 interface ClassWithDetails {
   id: string;
@@ -18,6 +20,7 @@ interface ClassWithDetails {
 
 export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string) => void }) {
   const [classes, setClasses] = useState<ClassWithDetails[]>([]);
+  const [activeLevel, setActiveLevel] = useState("all");
 
   useEffect(() => {
     async function load() {
@@ -25,6 +28,7 @@ export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string)
         .from("classes")
         .select("id, name, level, day_of_week, start_time, end_time, max_students, court_id")
         .eq("status", "active");
+
       if (!classData || classData.length === 0) return;
 
       const courtIds = [...new Set(classData.map((c) => c.court_id))];
@@ -55,67 +59,135 @@ export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string)
         }))
       );
     }
+
     load();
   }, []);
 
   if (classes.length === 0) return null;
 
+  const levels = [
+    { value: "all", label: "Todas" },
+    ...Array.from(new Set(classes.map((c) => c.level))).map((level) => ({
+      value: level,
+      label: formatLevelLabel(level),
+    })),
+  ];
+
+  const filteredClasses = activeLevel === "all"
+    ? classes
+    : classes.filter((item) => item.level === activeLevel);
+
   const scrollToForm = (id: string) => {
     onSelectClass?.(id);
-    document.getElementById("aula-teste")?.scrollIntoView({ behavior: "smooth" });
+    scrollToSection("aula-teste");
   };
 
   return (
-    <Section id="turmas" className="py-20 px-6 bg-background">
-      <div className="max-w-[1100px] mx-auto text-center mb-12">
-        <SectionLabel>Turmas</SectionLabel>
-        <SectionTitle>
-          Nossas <span className="text-secondary">Turmas Disponíveis</span>
-        </SectionTitle>
-        <p className="text-base text-muted-foreground max-w-[500px] mx-auto">
-          Encontre a turma ideal para o seu nível e horário.
-        </p>
-      </div>
-      <div className="max-w-[1000px] mx-auto grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-5">
-        {classes.map((c) => {
-          const vagas = c.max_students - c.enrolled_count;
-          return (
-            <div
-              key={c.id}
-              className="p-6 rounded-2xl bg-card border border-border transition-all hover:-translate-y-1 hover:shadow-xl"
-            >
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="font-heading text-lg font-bold text-foreground">{c.name}</h3>
-                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-secondary/10 text-secondary">
-                  {formatLevelLabel(c.level)}
-                </span>
-              </div>
-              <div className="flex flex-col gap-2 mb-4 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Clock size={14} />
-                  {formatDaysOfWeek(c.day_of_week)} • {c.start_time.slice(0, 5)}-{c.end_time.slice(0, 5)}
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin size={14} />
-                  {c.court_name}
-                </div>
-                <div className="flex items-center gap-2">
-                  <Users size={14} />
-                  <span className={vagas <= 2 ? "text-red-500 font-semibold" : ""}>
-                    {vagas > 0 ? `${vagas} vaga${vagas > 1 ? "s" : ""} restante${vagas > 1 ? "s" : ""}` : "Turma lotada"}
+    <Section id="turmas" className="px-6 py-20 sm:py-24">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+          <div className="max-w-[34rem]">
+            <SectionLabel light>Turmas em destaque</SectionLabel>
+            <SectionTitle light className="max-w-[12ch]">
+              ESCOLHA O NÍVEL. SINTA A EVOLUÇÃO ANTES MESMO DO PRIMEIRO TREINO.
+            </SectionTitle>
+          </div>
+          <div className="landing-panel-soft p-6">
+            <p className="text-sm leading-8 text-white/66 sm:text-base">
+              O bloco de turmas deixou de ser uma grade burocrática. Agora ele funciona como vitrine
+              de oferta: filtro visível, leitura rápida de agenda e CTA direto para a aula teste.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-2">
+              {levels.map((level) => (
+                <button
+                  key={level.value}
+                  onClick={() => setActiveLevel(level.value)}
+                  className={cn(
+                    "rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] transition-all",
+                    activeLevel === level.value
+                      ? "border-secondary/30 bg-secondary text-white"
+                      : "border-white/10 bg-white/[0.03] text-white/64 hover:border-white/18 hover:bg-white/[0.06] hover:text-white"
+                  )}
+                >
+                  {level.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 grid gap-5 xl:grid-cols-3">
+          {filteredClasses.map((c) => {
+            const vagas = c.max_students - c.enrolled_count;
+            const fillPercentage = Math.max(
+              0,
+              Math.min(100, (c.enrolled_count / Math.max(1, c.max_students)) * 100)
+            );
+
+            return (
+              <article
+                key={c.id}
+                className="landing-panel flex h-full flex-col p-6 transition-all duration-300 hover:-translate-y-1 hover:border-white/14"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <span className="inline-flex rounded-full border border-secondary/25 bg-secondary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-secondary/90">
+                      {formatLevelLabel(c.level)}
+                    </span>
+                    <h3 className="mt-4 max-w-[13ch] font-heading text-[1.8rem] font-extrabold leading-[0.98] tracking-[-0.04em] text-white">
+                      {c.name}
+                    </h3>
+                  </div>
+                  <span className="font-brand text-[2.2rem] leading-none tracking-[0.14em] text-white/14">
+                    {String(c.max_students).padStart(2, "0")}
                   </span>
                 </div>
-              </div>
-              <button
-                onClick={() => scrollToForm(c.id)}
-                disabled={vagas <= 0}
-                className="w-full py-3 rounded-xl font-bold text-sm bg-gradient-to-br from-secondary to-orange-600 text-white transition-all hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Quero Experimentar
-              </button>
-            </div>
-          );
-        })}
+
+                <div className="mt-8 flex flex-col gap-3 text-sm text-white/68">
+                  <div className="flex items-center gap-3">
+                    <CalendarDays className="h-4 w-4 text-secondary" />
+                    <span>
+                      {formatDaysOfWeek(c.day_of_week)} · {c.start_time.slice(0, 5)}-{c.end_time.slice(0, 5)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <MapPin className="h-4 w-4 text-secondary" />
+                    <span>{c.court_name}</span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Users className="h-4 w-4 text-secondary" />
+                    <span>
+                      {vagas > 0
+                        ? `${vagas} vaga${vagas > 1 ? "s" : ""} restante${vagas > 1 ? "s" : ""}`
+                        : "Turma lotada"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-8">
+                  <div className="mb-3 flex items-center justify-between text-[11px] font-semibold uppercase tracking-[0.18em] text-white/46">
+                    <span>Ocupação</span>
+                    <span>{c.enrolled_count}/{c.max_students}</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-secondary to-orange-500"
+                      style={{ width: `${fillPercentage}%` }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => scrollToForm(c.id)}
+                  disabled={vagas <= 0}
+                  className="mt-8 inline-flex items-center justify-center rounded-full border border-secondary/35 bg-gradient-to-r from-secondary to-orange-600 px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(249,115,22,0.25)] disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Quero experimentar
+                </button>
+              </article>
+            );
+          })}
+        </div>
       </div>
     </Section>
   );

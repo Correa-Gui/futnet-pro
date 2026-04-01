@@ -3,10 +3,18 @@ import { Menu, X } from "lucide-react";
 import { CTAButton } from "./CTAButton";
 import { cn } from "@/lib/utils";
 import type { LandingSettings } from "./types";
+import {
+  getDefaultCtaTarget,
+  scrollToSection,
+  supportsClasses,
+  supportsRentals,
+} from "./brand";
 
 export function Nav({ settings }: { settings: LandingSettings }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const hasClasses = supportsClasses(settings.business_mode);
+  const hasRentals = supportsRentals(settings.business_mode);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
@@ -15,9 +23,9 @@ export function Nav({ settings }: { settings: LandingSettings }) {
   }, []);
 
   const links = [
-    { label: "Sobre", href: "#sobre" },
-    { label: "Benefícios", href: "#beneficios" },
-    { label: "Como Funciona", href: "#como-funciona" },
+    { label: "Experiência", href: "#beneficios" },
+    ...(hasClasses ? [{ label: "Turmas", href: "#turmas" }] : []),
+    ...(hasRentals ? [{ label: "Quadras", href: "#reservar-quadra" }] : []),
     { label: "Planos", href: "#planos" },
     { label: "FAQ", href: "#faq" },
   ];
@@ -25,55 +33,96 @@ export function Nav({ settings }: { settings: LandingSettings }) {
   return (
     <nav
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 px-6 py-3 transition-all",
-        scrolled ? "bg-foreground/95 backdrop-blur-xl" : "bg-transparent"
+        "fixed top-0 left-0 right-0 z-50 px-4 py-4 transition-all duration-300 sm:px-6",
+        scrolled ? "bg-[#060708]/85 backdrop-blur-2xl" : "bg-transparent"
       )}
     >
-      <div className="max-w-[1200px] mx-auto flex justify-between items-center">
-        <a href="#hero" className="flex items-center gap-2.5 no-underline">
-          <div className="w-10 h-10 rounded-[10px] bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white font-brand text-xl font-bold">
+      <div
+        className={cn(
+          "mx-auto flex max-w-[1320px] items-center justify-between gap-6 rounded-full border px-4 py-2.5 transition-all duration-300 sm:px-6",
+          scrolled ? "border-white/10 bg-white/[0.04]" : "border-white/10 bg-black/20 backdrop-blur-md"
+        )}
+      >
+        <a href="#hero" className="flex items-center gap-3 no-underline">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary via-orange-500 to-orange-600 text-xl font-brand text-white shadow-[0_14px_32px_rgba(249,115,22,0.28)]">
             FV
           </div>
-          <span className="text-white font-heading text-lg font-bold">FutVôlei Arena</span>
+          <div className="hidden min-[420px]:block">
+            <span className="block font-brand text-[1.4rem] leading-none tracking-[0.18em] text-white">
+              FutVôlei
+            </span>
+            <span className="block text-[10px] uppercase tracking-[0.36em] text-white/45">
+              Arena Premium
+            </span>
+          </div>
         </a>
 
-        {/* Desktop links */}
-        <div className="hidden md:flex items-center gap-7">
+        <div className="hidden items-center gap-7 lg:flex">
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
-              className="text-white/70 no-underline text-sm font-medium hover:text-white transition-colors"
+              className="text-[11px] font-semibold uppercase tracking-[0.24em] text-white/62 no-underline transition-colors hover:text-white"
             >
               {l.label}
             </a>
           ))}
-          <CTAButton text="Aula Grátis" className="!px-5 !py-2.5 !text-sm" href={settings.primary_cta_url} />
         </div>
 
-        {/* Mobile toggle */}
+        <div className="hidden items-center gap-3 lg:flex">
+          {hasRentals && hasClasses ? (
+            <a
+              href="#reservar-quadra"
+              className="rounded-full border border-white/10 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/72 no-underline transition hover:border-white/20 hover:bg-white/[0.05] hover:text-white"
+            >
+              Reservar Quadra
+            </a>
+          ) : null}
+          <CTAButton
+            text={settings.primary_cta_text || "Agendar Aula Experimental"}
+            href={`#${getDefaultCtaTarget(settings.business_mode)}`}
+            className="!px-5 !py-3"
+          />
+        </div>
+
         <button
-          className="md:hidden bg-transparent border-none cursor-pointer p-1"
+          className="rounded-full border border-white/10 bg-white/[0.04] p-2 text-white lg:hidden"
           onClick={() => setMenuOpen(!menuOpen)}
+          aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
         >
           {menuOpen ? <X size={24} className="text-white" /> : <Menu size={24} className="text-white" />}
         </button>
       </div>
 
-      {/* Mobile menu */}
       {menuOpen && (
-        <div className="flex md:hidden flex-col gap-4 py-5 items-center">
+        <div className="mx-auto mt-3 flex max-w-[1320px] flex-col gap-4 rounded-[28px] border border-white/10 bg-[#07090d]/95 px-6 py-6 backdrop-blur-2xl lg:hidden">
           {links.map((l) => (
             <a
               key={l.label}
               href={l.href}
               onClick={() => setMenuOpen(false)}
-              className="text-white/80 no-underline text-base font-medium"
+              className="text-sm font-semibold uppercase tracking-[0.2em] text-white/78 no-underline"
             >
               {l.label}
             </a>
           ))}
-          <CTAButton text="Aula Grátis" className="!px-5 !py-2.5 !text-sm" href={settings.primary_cta_url} />
+          {hasRentals && hasClasses ? (
+            <a
+              href="#reservar-quadra"
+              onClick={() => setMenuOpen(false)}
+              className="rounded-full border border-white/10 px-5 py-3 text-center text-[11px] font-semibold uppercase tracking-[0.2em] text-white/72 no-underline"
+            >
+              Reservar Quadra
+            </a>
+          ) : null}
+          <CTAButton
+            text={settings.primary_cta_text || "Agendar Aula Experimental"}
+            className="w-full"
+            onClick={() => {
+              setMenuOpen(false);
+              scrollToSection(getDefaultCtaTarget(settings.business_mode));
+            }}
+          />
         </div>
       )}
     </nav>

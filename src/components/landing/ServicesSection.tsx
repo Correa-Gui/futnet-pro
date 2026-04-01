@@ -1,174 +1,137 @@
 import { motion } from "framer-motion";
-import { ArrowRight, GraduationCap, Calendar, CheckCircle } from "lucide-react";
+import { ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { Section, SectionLabel, SectionTitle } from "./Section";
+import type { LandingSettings } from "./types";
+import { landingImages, supportsClasses, supportsRentals } from "./brand";
 
-const classPerks = [
-  "Turmas para todos os níveis",
-  "Professores certificados",
-  "Primeira aula gratuita",
-  "Acompanhamento personalizado",
-];
-
-const rentalPerks = [
-  "Duas quadras profissionais",
-  "Reserva online em minutos",
-  "Horários flexíveis",
-  "Iluminação completa à noite",
-];
-
-function TwinCourtsIcon() {
-  return (
-    <div className="grid grid-cols-2 gap-1">
-      <div className="h-6 w-8 rounded-sm border-2 border-orange-500 bg-orange-100" />
-      <div className="h-6 w-8 rounded-sm border-2 border-orange-500 bg-orange-100" />
-    </div>
-  );
-}
-
-
-function ServiceCard({
-  icon,
+function ServiceSpotlight({
+  image,
   label,
   title,
   description,
-  perks,
-  ctaText,
-  ctaTarget,
-  accent,
+  bullets,
+  href,
 }: {
-  icon: React.ReactNode;
+  image: string;
   label: string;
   title: string;
   description: string;
-  perks: string[];
-  ctaText: string;
-  ctaTarget: string;
-  accent: "primary" | "secondary";
+  bullets: string[];
+  href: string;
 }) {
-  const isPrimary = accent === "secondary";
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    document.getElementById(ctaTarget)?.scrollIntoView({ behavior: "smooth" });
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 32 }}
+    <motion.article
+      initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-60px" }}
-      transition={{ duration: 0.5 }}
-      className={`relative flex flex-col rounded-2xl border overflow-hidden transition-shadow hover:shadow-xl ${
-        isPrimary
-          ? "bg-secondary/5 border-secondary/20"
-          : "bg-primary/5 border-primary/20"
-      }`}
+      transition={{ duration: 0.45 }}
+      className="landing-panel group relative min-h-[520px] overflow-hidden"
     >
-      {/* Top accent bar */}
-      <div
-        className={`h-1.5 w-full ${
-          isPrimary ? "bg-gradient-to-r from-secondary to-orange-500" : "bg-gradient-to-r from-primary to-primary/60"
-        }`}
+      <img
+        src={image}
+        alt={title}
+        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+        loading="lazy"
       />
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,7,8,0.18)_0%,rgba(7,7,8,0.68)_58%,rgba(7,7,8,0.9)_100%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(249,115,22,0.22),transparent_20%)]" />
 
-      <div className="flex flex-col flex-1 p-8 gap-6">
-        {/* Icon + Label */}
-        <div className="flex items-center gap-3">
-          <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-              isPrimary ? "bg-secondary/15" : "bg-primary/10"
-            }`}
-          >
-            {icon}
-          </div>
-          <span
-            className={`text-xs font-bold uppercase tracking-widest ${
-              isPrimary ? "text-secondary" : "text-primary"
-            }`}
-          >
-            {label}
-          </span>
+      <div className="relative z-10 flex h-full flex-col justify-between p-7 sm:p-8">
+        <div>
+          <span className="landing-eyebrow">{label}</span>
         </div>
 
-        {/* Title + Description */}
         <div>
-          <h3 className="font-heading text-2xl font-extrabold text-foreground leading-tight mb-2">
+          <h3 className="max-w-[10ch] font-heading text-[clamp(2rem,4vw,3.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] text-white">
             {title}
           </h3>
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="mt-4 max-w-[30rem] text-sm leading-7 text-white/70 sm:text-[0.95rem]">
             {description}
           </p>
-        </div>
 
-        {/* Perks */}
-        <ul className="flex flex-col gap-2.5">
-          {perks.map((perk) => (
-            <li key={perk} className="flex items-center gap-2.5 text-sm text-foreground">
-              <CheckCircle
-                className={`h-4 w-4 shrink-0 ${isPrimary ? "text-secondary" : "text-primary"}`}
-              />
-              {perk}
-            </li>
-          ))}
-        </ul>
+          <div className="mt-6 flex flex-col gap-3">
+            {bullets.map((bullet) => (
+              <div key={bullet} className="flex items-center gap-3 text-sm text-white/72">
+                <CheckCircle2 className="h-4 w-4 text-secondary" />
+                <span>{bullet}</span>
+              </div>
+            ))}
+          </div>
 
-        {/* CTA */}
-        <div className="mt-auto pt-2">
           <a
-            href={`#${ctaTarget}`}
-            onClick={handleClick}
-            className={`inline-flex items-center gap-2 px-6 py-3.5 rounded-xl font-bold text-sm transition-all hover:shadow-md ${
-              isPrimary
-                ? "bg-gradient-to-br from-secondary to-orange-600 text-white"
-                : "bg-foreground text-background"
-            }`}
+            href={href}
+            className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/[0.05] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white no-underline transition-all duration-300 hover:-translate-y-0.5 hover:border-white/20 hover:bg-white/[0.08]"
           >
-            {ctaText}
-            <ArrowRight className="h-4 w-4" />
+            Acessar caminho
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary/18 text-secondary">
+              <ArrowUpRight className="h-4 w-4" />
+            </span>
           </a>
         </div>
       </div>
-    </motion.div>
+    </motion.article>
   );
 }
 
-export function ServicesSection() {
+export function ServicesSection({
+  settings,
+  getImage,
+}: {
+  settings: LandingSettings;
+  getImage: (k: string, f: string) => string;
+}) {
+  const hasClasses = supportsClasses(settings.business_mode);
+  const hasRentals = supportsRentals(settings.business_mode);
+
+  const cards = [
+    ...(hasClasses
+      ? [
+          {
+            image: getImage("about", landingImages.servicesClasses),
+            label: "Aulas guiadas",
+            title: "Treino com método, leitura de nível e energia de time.",
+            description:
+              "Não é só entrar na areia. É evoluir com intenção, em turmas que fazem sentido para a sua fase e com uma experiência que transmite valor.",
+            bullets: ["Aula experimental integrada ao fluxo da página", "Turmas por nível", "Percepção de marca premium"],
+            href: "#aula-teste",
+          },
+        ]
+      : []),
+    ...(hasRentals
+      ? [
+          {
+            image: getImage("gallery", landingImages.servicesRentals),
+            label: "Reserva de quadra",
+            title: "Escolha o horário e mantenha o jogo em movimento.",
+            description:
+              "O caminho para reservar foi pensado para parecer produto premium: rápido, claro e com sensação de tecnologia, não formulário improvisado.",
+            bullets: ["Passo a passo leve", "Disponibilidade clara", "Confirmação pronta para WhatsApp"],
+            href: "#reservar-quadra",
+          },
+        ]
+      : []),
+  ];
+
   return (
-    <Section id="servicos" className="py-20 px-6 bg-background">
-      <div className="max-w-5xl mx-auto">
-        <div className="text-center mb-12">
-          <SectionLabel>O que oferecemos</SectionLabel>
-          <SectionTitle>
-            Dois serviços,{" "}
-            <span className="text-secondary">uma experiência</span>
-          </SectionTitle>
-          <p className="text-muted-foreground max-w-xl mx-auto text-base">
-            Seja para aprender futevôlei com quem entende ou para reunir os
-            amigos numa quadra profissional — aqui você encontra as duas opções.
+    <Section id="servicos" className="px-6 py-20 sm:py-24">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="mb-10 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-[40rem]">
+            <SectionLabel light>Pontos de entrada</SectionLabel>
+            <SectionTitle light className="max-w-[12ch]">
+              DOIS CAMINHOS DE CONVERSÃO. A MESMA SENSAÇÃO DE MARCA.
+            </SectionTitle>
+          </div>
+          <p className="max-w-[34rem] text-sm leading-8 text-white/66 sm:text-base">
+            Cada caminho foi tratado como produto próprio, com linguagem visual consistente e CTA
+            claro para quem quer agendar aula experimental ou reservar quadra.
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <ServiceCard
-            icon={<GraduationCap className="h-6 w-6 text-secondary" />}
-            label="Aulas"
-            title="Aprenda Futevôlei"
-            description="Turmas estruturadas com professores certificados para iniciantes e avançados. Evolua no seu ritmo com acompanhamento de verdade."
-            perks={classPerks}
-            ctaText="Quero minha aula grátis"
-            ctaTarget="aula-teste"
-            accent="secondary"
-          />
-          <ServiceCard
-            icon={<TwinCourtsIcon />}
-            label="Aluguel"
-            title="Duas quadras lado a lado"
-            description="Selecione uma das quadras e reserve online em poucos passos. Horários flexíveis para treinar com os amigos."
-            perks={rentalPerks}
-            ctaText="Ver disponibilidade"
-            ctaTarget="reservar-quadra"
-            accent="primary"
-          />
+        <div className={`grid gap-5 ${cards.length > 1 ? "xl:grid-cols-2" : ""}`}>
+          {cards.map((card) => (
+            <ServiceSpotlight key={card.title} {...card} />
+          ))}
         </div>
       </div>
     </Section>

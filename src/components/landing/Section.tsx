@@ -15,7 +15,7 @@ export function Section({
   const isInView = useInView(ref, { once: true, margin: "-80px" });
 
   return (
-    <motion.section ref={ref} id={id} className={cn("relative", className)}>
+    <motion.section ref={ref} id={id} className={cn("relative z-[1]", className)}>
       <div
         className="transition-all duration-700 ease-out"
         style={{
@@ -33,8 +33,10 @@ export function SectionLabel({ children, light = false }: { children: React.Reac
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest mb-3 font-body",
-        light ? "text-secondary/70" : "text-secondary"
+        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] mb-4 font-body",
+        light
+          ? "border-white/12 bg-white/[0.04] text-white/68"
+          : "border-white/10 bg-white/[0.03] text-white/60"
       )}
     >
       {children}
@@ -54,8 +56,8 @@ export function SectionTitle({
   return (
     <h2
       className={cn(
-        "font-heading text-[clamp(28px,5vw,44px)] font-extrabold leading-[1.15] mb-5",
-        light ? "text-white" : "text-foreground",
+        "font-heading text-[clamp(2.1rem,4.8vw,4.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] mb-5",
+        light ? "text-white" : "text-white",
         className
       )}
     >

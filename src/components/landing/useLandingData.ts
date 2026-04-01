@@ -33,7 +33,11 @@ export function useLandingData() {
         setSections(map);
       }
       if (hoursRes.data?.value) {
-        try { setBusinessHours(JSON.parse(hoursRes.data.value)); } catch {}
+        try {
+          setBusinessHours(JSON.parse(hoursRes.data.value));
+        } catch {
+          setBusinessHours(null);
+        }
       }
       setLoaded(true);
     });

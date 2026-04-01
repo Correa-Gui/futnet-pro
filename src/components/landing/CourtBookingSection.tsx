@@ -6,14 +6,14 @@ import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  CheckCircle,
+  ArrowLeft,
+  CheckCircle2,
   ChevronRight,
+  Clock3,
+  Loader2,
   MapPin,
   Phone,
-  Loader2,
-  ArrowLeft,
-  Clock,
-  MessageCircle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
@@ -23,11 +23,7 @@ import { formatPhoneMask, cleanPhone } from "@/lib/whatsapp";
 import { Section, SectionLabel, SectionTitle } from "./Section";
 
 const bookingSchema = z.object({
-  requester_name: z
-    .string()
-    .trim()
-    .min(2, "Nome deve ter pelo menos 2 caracteres")
-    .max(100),
+  requester_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
   requester_phone: z.string().trim().min(10, "Telefone inválido").max(20),
 });
 
@@ -36,6 +32,19 @@ type Court = {
   name: string;
   location: string | null;
   surface_type: string | null;
+};
+
+type ExistingBooking = {
+  start_time: string | null;
+  status: string;
+};
+
+type ClassSessionRow = {
+  id: string;
+  classes: {
+    court_id: string;
+    start_time: string;
+  } | null;
 };
 
 function CourtCard({
@@ -49,77 +58,49 @@ function CourtCard({
   onClick: () => void;
   index: number;
 }) {
-  const gradients = [
-    "from-primary/20 to-primary/5",
-    "from-secondary/20 to-secondary/5",
-  ];
-  const borders = ["border-primary/30", "border-secondary/30"];
-  const rings = ["ring-primary", "ring-secondary"];
-  const icons = ["text-primary", "text-secondary"];
-
   return (
     <motion.button
-      initial={{ opacity: 0, scale: 0.96 }}
+      initial={{ opacity: 0, scale: 0.97 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: index * 0.1 }}
+      transition={{ delay: index * 0.08 }}
       onClick={onClick}
       className={cn(
-        "relative w-full text-left rounded-2xl border-2 p-6 transition-all duration-200 cursor-pointer group hover:shadow-lg",
-        `bg-gradient-to-br ${gradients[index % 2]}`,
-        borders[index % 2],
-        selected && `ring-2 ring-offset-2 ring-offset-background ${rings[index % 2]} shadow-lg`
+        "landing-panel group relative w-full overflow-hidden p-6 text-left transition-all duration-300 hover:-translate-y-1 hover:border-white/16",
+        selected && "border-secondary/35 bg-[linear-gradient(180deg,rgba(249,115,22,0.14)_0%,rgba(255,255,255,0.04)_100%)]"
       )}
     >
-      {selected && (
-        <span
-          className={cn(
-            "absolute top-3 right-3 w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold",
-            index % 2 === 0 ? "bg-primary" : "bg-secondary"
-          )}
-        >
-          ✓
-        </span>
-      )}
-      <div className="flex items-start gap-4">
-        <div
-          className={cn(
-            "w-12 h-12 rounded-xl flex items-center justify-center shrink-0",
-            index % 2 === 0 ? "bg-primary/15" : "bg-secondary/15"
-          )}
-        >
-          <MapPin className={cn("h-6 w-6", icons[index % 2])} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-heading text-xl font-extrabold text-foreground mb-1">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/42">
+            Quadra 0{index + 1}
+          </p>
+          <h3 className="mt-3 font-heading text-[1.8rem] font-extrabold leading-[0.98] tracking-[-0.04em] text-white">
             {court.name}
           </h3>
-          {court.location && (
-            <p className="text-sm text-muted-foreground truncate">
-              {court.location}
-            </p>
-          )}
-          {court.surface_type && (
-            <span
-              className={cn(
-                "inline-block mt-2 text-xs font-semibold px-2.5 py-1 rounded-full",
-                index % 2 === 0
-                  ? "bg-primary/10 text-primary"
-                  : "bg-secondary/10 text-secondary"
-              )}
-            >
-              {court.surface_type}
-            </span>
-          )}
         </div>
+        <span className="font-brand text-[2.2rem] leading-none tracking-[0.18em] text-white/16">
+          0{index + 1}
+        </span>
       </div>
-      <div
-        className={cn(
-          "mt-4 flex items-center gap-1 text-xs font-semibold",
-          icons[index % 2]
-        )}
-      >
-        Selecionar esta quadra
-        <ChevronRight className="h-3 w-3" />
+
+      <div className="mt-8 flex flex-col gap-3 text-sm leading-7 text-white/66">
+        {court.location ? (
+          <div className="flex items-center gap-3">
+            <MapPin className="h-4 w-4 text-secondary" />
+            <span>{court.location}</span>
+          </div>
+        ) : null}
+        {court.surface_type ? (
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-4 w-4 text-secondary" />
+            <span>{court.surface_type}</span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/64 transition group-hover:border-white/18 group-hover:bg-white/[0.06] group-hover:text-white">
+        Selecionar quadra
+        <ChevronRight className="h-4 w-4 text-secondary" />
       </div>
     </motion.button>
   );
@@ -148,11 +129,7 @@ export function CourtBookingSection() {
   const { data: courts = [] } = useQuery({
     queryKey: ["public-courts-landing"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("courts")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      const { data, error } = await supabase.from("courts").select("*").eq("is_active", true).order("name");
       if (error) throw error;
       return data as Court[];
     },
@@ -160,7 +137,7 @@ export function CourtBookingSection() {
 
   const dateStr = selectedDate ? format(selectedDate, "yyyy-MM-dd") : null;
 
-  const { data: existingBookings = [] } = useQuery({
+  const { data: existingBookings = [] } = useQuery<ExistingBooking[]>({
     queryKey: ["court-bookings-landing", selectedCourt?.id, dateStr],
     queryFn: async () => {
       if (!selectedCourt || !dateStr) return [];
@@ -176,7 +153,7 @@ export function CourtBookingSection() {
     enabled: !!selectedCourt && !!dateStr,
   });
 
-  const { data: classSessions = [] } = useQuery({
+  const { data: classSessions = [] } = useQuery<ClassSessionRow[]>({
     queryKey: ["class-sessions-landing", selectedCourt?.id, dateStr],
     queryFn: async () => {
       if (!selectedCourt || !dateStr) return [];
@@ -186,8 +163,8 @@ export function CourtBookingSection() {
         .eq("date", dateStr)
         .neq("status", "cancelled");
       if (error) throw error;
-      return (data || []).filter(
-        (s: any) => s.classes?.court_id === selectedCourt.id
+      return ((data || []) as ClassSessionRow[]).filter(
+        (session) => session.classes?.court_id === selectedCourt.id
       );
     },
     enabled: !!selectedCourt && !!dateStr,
@@ -199,16 +176,14 @@ export function CourtBookingSection() {
       const start = b.start_time?.slice(0, 5);
       if (start) blocked.add(start);
     });
-    classSessions.forEach((s: any) => {
-      const start = s.classes?.start_time?.slice(0, 5);
+    classSessions.forEach((session) => {
+      const start = session.classes?.start_time?.slice(0, 5);
       if (start) blocked.add(start);
     });
     return blocked;
   }, [existingBookings, classSessions]);
 
-  const availableCount = TIME_SLOTS.filter(
-    (s) => !unavailableSlots.has(s)
-  ).length;
+  const availableCount = TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).length;
 
   const createBooking = useMutation({
     mutationFn: async () => {
@@ -217,10 +192,10 @@ export function CourtBookingSection() {
         requester_name: form.requester_name,
         requester_phone: rawPhone,
       });
-      if (!validation.success)
-        throw new Error(validation.error.errors[0].message);
-      if (!selectedCourt || !dateStr || !selectedSlot)
-        throw new Error("Selecione quadra, data e horário");
+
+      if (!validation.success) throw new Error(validation.error.errors[0].message);
+      if (!selectedCourt || !dateStr || !selectedSlot) throw new Error("Selecione quadra, data e horário");
+
       const startHour = parseInt(selectedSlot.split(":")[0]);
       const endTime = `${String(startHour + 1).padStart(2, "0")}:00`;
       const { error } = await supabase.from("court_bookings").insert({
@@ -233,6 +208,7 @@ export function CourtBookingSection() {
         price: 80,
         status: "requested",
       });
+
       if (error) throw error;
     },
     onSuccess: () => setSubmitted(true),
@@ -255,115 +231,116 @@ export function CourtBookingSection() {
     setForm({ requester_name: "", requester_phone: "" });
   };
 
-  const stepLabels = ["Escolha a quadra", "Data e horário", "Confirmar"];
-
-  function TwoCourtGraphic() {
-    return (
-      <div className="mb-6 flex justify-center gap-3">
-        {[1, 2].map((i) => (
-          <div key={i} className="w-40 h-24 rounded-xl border-2 border-orange-400 bg-orange-50 p-2">
-            <div className="h-1/2 bg-white rounded-sm" />
-            <div className="h-1/2 flex items-center justify-around mt-1">
-              {[...Array(4)].map((_, j) => (
-                <div
-                  key={j}
-                  className="w-2 h-2 rounded-full bg-orange-400"
-                />
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
+  const stepLabels = ["Escolha a quadra", "Defina data e horário", "Confirme seu pedido"];
 
   return (
-    <Section id="reservar-quadra" className="py-20 px-6 bg-card">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <SectionLabel>Aluguel de Quadras</SectionLabel>
-          <SectionTitle>
-            Reserve sua <span className="text-secondary">quadra online</span>
-          </SectionTitle>
-          <TwoCourtGraphic />
-          <p className="text-muted-foreground max-w-xl mx-auto text-base">
-            Escolha a quadra, selecione a data e o horário disponível. Em
-            poucos cliques sua reserva está feita.
-          </p>
+    <Section id="reservar-quadra" className="px-6 py-20 sm:py-24">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="mb-10 grid gap-6 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
+          <div className="max-w-[34rem]">
+            <SectionLabel light>Reserva de quadra</SectionLabel>
+            <SectionTitle light className="max-w-[12ch]">
+              FLUXO MAIS TECNOLÓGICO, MAIS SIMPLES E MUITO MAIS DESEJÁVEL.
+            </SectionTitle>
+          </div>
+          <div className="landing-panel-soft p-6">
+            <p className="text-sm leading-8 text-white/66 sm:text-base">
+              A reserva foi redesenhada como experiência de produto: escolha visual da quadra,
+              agenda clara, stepper com boa leitura e confirmação sem cara de sistema antigo.
+            </p>
+          </div>
         </div>
 
         {submitted ? (
-          /* Success */
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="max-w-md mx-auto text-center bg-background rounded-2xl border border-border p-10"
-          >
-            <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
-              <CheckCircle className="h-8 w-8 text-emerald-500" />
+          <div className="landing-panel overflow-hidden">
+            <div className="grid gap-0 lg:grid-cols-[0.9fr_1.1fr]">
+              <div className="bg-[linear-gradient(180deg,rgba(249,115,22,0.18)_0%,rgba(249,115,22,0.04)_100%)] p-8 sm:p-10">
+                <div className="flex h-16 w-16 items-center justify-center rounded-[24px] border border-secondary/20 bg-secondary/15 text-secondary">
+                  <CheckCircle2 className="h-8 w-8" />
+                </div>
+                <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-secondary/80">
+                  Pedido enviado
+                </p>
+                <h3 className="mt-4 max-w-[10ch] font-heading text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.95] tracking-[-0.05em] text-white">
+                  SUA QUADRA JÁ ENTROU NO FLUXO DE CONFIRMAÇÃO.
+                </h3>
+                <p className="mt-6 max-w-[30rem] text-sm leading-8 text-white/68 sm:text-base">
+                  A solicitação foi registrada com sucesso e agora segue para confirmação via
+                  contato informado.
+                </p>
+              </div>
+
+              <div className="p-8 sm:p-10">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                  Resumo do pedido
+                </p>
+                <div className="mt-6 grid gap-4">
+                  {[
+                    { label: "Quadra", value: selectedCourt?.name || "-" },
+                    { label: "Data", value: selectedDate ? format(selectedDate, "dd/MM/yyyy") : "-" },
+                    { label: "Horário", value: selectedSlot || "-" },
+                    { label: "Valor", value: "R$ 80,00" },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[22px] border border-white/8 bg-white/[0.03] px-5 py-4">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/42">
+                        {item.label}
+                      </p>
+                      <p className="mt-2 text-base font-semibold text-white">{item.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={handleReset}
+                  className="mt-8 inline-flex items-center justify-center rounded-full border border-secondary/35 bg-gradient-to-r from-secondary to-orange-600 px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(249,115,22,0.25)]"
+                >
+                  Fazer outra reserva
+                </button>
+              </div>
             </div>
-            <h3 className="font-heading text-2xl font-extrabold text-foreground mb-2">
-              Reserva solicitada!
-            </h3>
-            <p className="text-muted-foreground text-sm mb-6">
-              <strong>{selectedCourt?.name}</strong> —{" "}
-              {selectedDate && format(selectedDate, "dd/MM/yyyy")} às{" "}
-              {selectedSlot}
-              <br />
-              Entraremos em contato para confirmar.
-            </p>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={handleReset}
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background font-bold text-sm"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Fazer outra reserva
-              </button>
-            </div>
-          </motion.div>
+          </div>
         ) : (
-          <div className="bg-background rounded-2xl border border-border overflow-hidden">
-            {/* Step indicator */}
-            <div className="flex border-b border-border">
-              {stepLabels.map((label, i) => {
-                const s = i + 1;
-                const isActive = step === s;
-                const isDone = step > s;
+          <div className="landing-panel overflow-hidden">
+            <div className="grid border-b border-white/8 md:grid-cols-3">
+              {stepLabels.map((label, index) => {
+                const currentStep = (index + 1) as 1 | 2 | 3;
+                const isActive = step === currentStep;
+                const isDone = step > currentStep;
+
                 return (
                   <button
-                    key={s}
+                    key={label}
                     onClick={() => {
-                      if (isDone) setStep(s as 1 | 2 | 3);
+                      if (isDone) setStep(currentStep);
                     }}
                     disabled={!isDone}
                     className={cn(
-                      "flex-1 py-4 flex flex-col items-center gap-1 text-xs font-semibold transition-colors",
-                      isActive && "bg-secondary/5 text-secondary border-b-2 border-secondary",
-                      isDone && "text-muted-foreground cursor-pointer hover:bg-muted/40",
-                      !isActive && !isDone && "text-muted-foreground/40 cursor-default"
+                      "flex items-center gap-4 px-6 py-5 text-left transition-all",
+                      isActive && "bg-white/[0.04]",
+                      !isActive && isDone && "cursor-pointer hover:bg-white/[0.03]",
+                      !isActive && !isDone && "cursor-default opacity-60"
                     )}
                   >
                     <span
                       className={cn(
-                        "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold",
-                        isActive && "bg-secondary text-white",
-                        isDone && "bg-muted text-foreground",
-                        !isActive && !isDone && "bg-muted/40 text-muted-foreground/40"
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold uppercase tracking-[0.18em]",
+                        isActive && "border-secondary/30 bg-secondary text-white",
+                        isDone && "border-white/10 bg-white/[0.06] text-white",
+                        !isActive && !isDone && "border-white/10 bg-white/[0.02] text-white/45"
                       )}
                     >
-                      {isDone ? "✓" : s}
+                      {isDone ? "OK" : `0${index + 1}`}
                     </span>
-                    <span className="hidden sm:block">{label}</span>
+                    <span className="max-w-[12rem] text-sm font-semibold uppercase tracking-[0.18em] text-white/72">
+                      {label}
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="p-6 md:p-8">
+            <div className="p-6 sm:p-8">
               <AnimatePresence mode="wait">
-                {/* Step 1: Choose Court */}
                 {step === 1 && (
                   <motion.div
                     key="step1"
@@ -372,22 +349,29 @@ export function CourtBookingSection() {
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.25 }}
                   >
-                    <h3 className="font-heading text-xl font-bold text-foreground mb-6">
-                      Qual quadra você prefere?
-                    </h3>
-                    {courts.length === 0 ? (
-                      <p className="text-muted-foreground text-center py-8">
-                        Nenhuma quadra disponível no momento.
+                    <div className="mb-8 max-w-[34rem]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                        Passo 01
                       </p>
+                      <p className="mt-4 text-sm leading-8 text-white/66 sm:text-base">
+                        A quadra já é a primeira decisão visual do fluxo. Mais clareza de escolha e
+                        menos sensação de lista utilitária.
+                      </p>
+                    </div>
+
+                    {courts.length === 0 ? (
+                      <div className="rounded-[24px] border border-dashed border-white/12 px-6 py-12 text-center text-sm text-white/52">
+                        Nenhuma quadra disponível no momento.
+                      </div>
                     ) : (
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        {courts.map((court, i) => (
+                      <div className="grid gap-5 lg:grid-cols-2">
+                        {courts.map((court, index) => (
                           <CourtCard
                             key={court.id}
                             court={court}
                             selected={selectedCourt?.id === court.id}
                             onClick={() => handleSelectCourt(court)}
-                            index={i}
+                            index={index}
                           />
                         ))}
                       </div>
@@ -395,7 +379,6 @@ export function CourtBookingSection() {
                   </motion.div>
                 )}
 
-                {/* Step 2: Date & Time */}
                 {step === 2 && (
                   <motion.div
                     key="step2"
@@ -403,86 +386,81 @@ export function CourtBookingSection() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.25 }}
-                    className="space-y-6"
+                    className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]"
                   >
-                    <div className="flex items-center gap-3">
-                      <button
-                        onClick={() => setStep(1)}
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <ArrowLeft className="h-4 w-4" />
-                        Voltar
-                      </button>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm font-semibold text-foreground">
+                    <div className="landing-panel-soft p-6">
+                      <div className="flex items-center justify-between gap-4">
+                        <button
+                          onClick={() => setStep(1)}
+                          className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/52 transition hover:text-white"
+                        >
+                          <ArrowLeft className="h-4 w-4" />
+                          Voltar
+                        </button>
+                        <span className="rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-white/45">
                           {selectedCourt?.name}
                         </span>
                       </div>
+
+                      <div className="mt-6 rounded-[24px] border border-white/8 bg-white p-4 text-black">
+                        <Calendar
+                          mode="single"
+                          selected={selectedDate}
+                          onSelect={(date) => {
+                            setSelectedDate(date);
+                            setSelectedSlot(null);
+                          }}
+                          disabled={(date) =>
+                            isBefore(date, today) ||
+                            isBefore(maxDate, date) ||
+                            !openDays.includes(date.getDay())
+                          }
+                          locale={ptBR}
+                          className="pointer-events-auto w-full"
+                        />
+                      </div>
                     </div>
 
-                    <div className="grid gap-6 md:grid-cols-2">
-                      {/* Calendar */}
-                      <div>
-                        <h3 className="font-heading text-base font-bold text-foreground mb-4">
-                          Selecione a data
-                        </h3>
-                        <div className="rounded-xl border border-border bg-card p-2 flex justify-center">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate}
-                            onSelect={(d) => {
-                              setSelectedDate(d);
-                              setSelectedSlot(null);
-                            }}
-                            disabled={(date) =>
-                              isBefore(date, today) ||
-                              isBefore(maxDate, date) ||
-                              !openDays.includes(date.getDay())
-                            }
-                            locale={ptBR}
-                            className="pointer-events-auto"
-                          />
+                    <div className="landing-panel-soft p-6">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                            Horários disponíveis
+                          </p>
+                          <p className="mt-3 text-sm leading-7 text-white/66">
+                            {selectedDate
+                              ? `${availableCount} faixa${availableCount !== 1 ? "s" : ""} liberada${availableCount !== 1 ? "s" : ""}`
+                              : "Escolha uma data para liberar a grade"}
+                          </p>
                         </div>
+                        {selectedDate ? (
+                          <span className="rounded-full border border-secondary/22 bg-secondary/12 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-secondary/88">
+                            {format(selectedDate, "dd MMM", { locale: ptBR })}
+                          </span>
+                        ) : null}
                       </div>
 
-                      {/* Time slots */}
-                      <div>
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="font-heading text-base font-bold text-foreground flex items-center gap-2">
-                            <Clock className="h-4 w-4" />
-                            Horários disponíveis
-                          </h3>
-                          {selectedDate && (
-                            <span className="text-xs text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                              {availableCount} disponíveis
-                            </span>
-                          )}
+                      {!selectedDate ? (
+                        <div className="mt-8 rounded-[24px] border border-dashed border-white/12 px-6 py-16 text-center text-sm text-white/52">
+                          Selecione uma data no calendário para ver os horários.
                         </div>
-
-                        {!selectedDate ? (
-                          <div className="rounded-xl border border-dashed border-border flex items-center justify-center h-48 text-sm text-muted-foreground">
-                            Selecione uma data primeiro
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-3 gap-2 max-h-64 overflow-y-auto pr-1">
+                      ) : (
+                        <div className="mt-8">
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                             {TIME_SLOTS.map((slot) => {
                               const isUnavailable = unavailableSlots.has(slot);
                               const isSelected = selectedSlot === slot;
+
                               return (
                                 <button
                                   key={slot}
                                   disabled={isUnavailable}
                                   onClick={() => setSelectedSlot(slot)}
                                   className={cn(
-                                    "px-2 py-2.5 rounded-xl text-sm font-semibold border transition-all",
-                                    isSelected &&
-                                      "bg-secondary text-white border-secondary shadow-md",
-                                    !isSelected &&
-                                      !isUnavailable &&
-                                      "bg-background border-border text-foreground hover:border-secondary hover:text-secondary",
-                                    isUnavailable &&
-                                      "bg-muted/30 border-border/30 text-muted-foreground/40 line-through cursor-not-allowed"
+                                    "rounded-2xl border px-4 py-4 text-sm font-semibold transition-all",
+                                    isSelected && "border-secondary bg-secondary text-white shadow-[0_16px_36px_rgba(249,115,22,0.24)]",
+                                    !isSelected && !isUnavailable && "border-white/10 bg-white/[0.04] text-white hover:border-white/18 hover:bg-white/[0.07]",
+                                    isUnavailable && "cursor-not-allowed border-white/8 bg-white/[0.02] text-white/28 line-through"
                                   )}
                                 >
                                   {slot}
@@ -490,25 +468,22 @@ export function CourtBookingSection() {
                               );
                             })}
                           </div>
-                        )}
 
-                        {selectedSlot && (
-                          <motion.button
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            onClick={() => setStep(3)}
-                            className="mt-4 w-full py-3.5 rounded-xl bg-gradient-to-br from-secondary to-orange-600 text-white font-bold text-sm flex items-center justify-center gap-2"
-                          >
-                            Continuar
-                            <ChevronRight className="h-4 w-4" />
-                          </motion.button>
-                        )}
-                      </div>
+                          {selectedSlot ? (
+                            <button
+                              onClick={() => setStep(3)}
+                              className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-full border border-secondary/35 bg-gradient-to-r from-secondary to-orange-600 px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(249,115,22,0.25)]"
+                            >
+                              Continuar
+                              <ChevronRight className="h-4 w-4" />
+                            </button>
+                          ) : null}
+                        </div>
+                      )}
                     </div>
                   </motion.div>
                 )}
 
-                {/* Step 3: Contact + Confirm */}
                 {step === 3 && (
                   <motion.div
                     key="step3"
@@ -516,101 +491,92 @@ export function CourtBookingSection() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -24 }}
                     transition={{ duration: 0.25 }}
-                    className="max-w-md mx-auto space-y-6"
+                    className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]"
                   >
-                    <div className="flex items-center gap-3">
+                    <div className="landing-panel-soft p-6">
                       <button
                         onClick={() => setStep(2)}
-                        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                        className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/52 transition hover:text-white"
                       >
                         <ArrowLeft className="h-4 w-4" />
                         Voltar
                       </button>
-                      <h3 className="font-heading text-xl font-bold text-foreground">
-                        Confirmar reserva
-                      </h3>
-                    </div>
 
-                    {/* Summary */}
-                    <div className="rounded-xl bg-secondary/5 border border-secondary/20 p-5 space-y-3">
-                      <p className="text-xs font-bold uppercase tracking-widest text-secondary mb-1">
-                        Resumo
-                      </p>
-                      {[
-                        { label: "Quadra", value: selectedCourt?.name },
-                        {
-                          label: "Data",
-                          value:
-                            selectedDate &&
-                            format(selectedDate, "EEEE, dd/MM/yyyy", {
-                              locale: ptBR,
-                            }),
-                        },
-                        {
-                          label: "Horário",
-                          value: selectedSlot
-                            ? `${selectedSlot} – ${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
-                            : "",
-                        },
-                        { label: "Valor", value: "R$ 80,00" },
-                      ].map(({ label, value }) => (
-                        <div
-                          key={label}
-                          className="flex justify-between items-center"
-                        >
-                          <span className="text-sm text-muted-foreground">
-                            {label}
-                          </span>
-                          <span
-                            className={cn(
-                              "text-sm font-semibold capitalize",
-                              label === "Valor" && "text-secondary font-bold"
-                            )}
-                          >
-                            {value}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Form */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1.5">
-                          Nome completo *
-                        </label>
-                        <input
-                          type="text"
-                          required
-                          value={form.requester_name}
-                          onChange={(e) =>
-                            setForm({ ...form, requester_name: e.target.value })
-                          }
-                          placeholder="Seu nome"
-                          maxLength={100}
-                          className="w-full px-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 transition"
-                        />
+                      <div className="mt-8 grid gap-4">
+                        {[
+                          { label: "Quadra", value: selectedCourt?.name || "-" },
+                          {
+                            label: "Data",
+                            value: selectedDate
+                              ? format(selectedDate, "EEEE, dd/MM/yyyy", { locale: ptBR })
+                              : "-",
+                          },
+                          {
+                            label: "Horário",
+                            value: selectedSlot
+                              ? `${selectedSlot} - ${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
+                              : "-",
+                          },
+                          { label: "Valor", value: "R$ 80,00" },
+                        ].map((item) => (
+                          <div key={item.label} className="rounded-[22px] border border-white/8 bg-white/[0.03] px-5 py-4">
+                            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/42">
+                              {item.label}
+                            </p>
+                            <p className="mt-2 text-base font-semibold capitalize text-white">
+                              {item.value}
+                            </p>
+                          </div>
+                        ))}
                       </div>
-                      <div>
-                        <label className="block text-sm font-medium text-foreground mb-1.5">
-                          WhatsApp *
-                        </label>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    </div>
+
+                    <div className="landing-panel-soft p-6">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/45">
+                        Confirmar pedido
+                      </p>
+                      <p className="mt-4 max-w-[32rem] text-sm leading-8 text-white/66 sm:text-base">
+                        O fechamento mantém a linguagem visual da página e pede apenas o essencial
+                        para concluir a solicitação.
+                      </p>
+
+                      <div className="mt-8 grid gap-5">
+                        <label className="grid gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+                            Nome completo *
+                          </span>
                           <input
-                            type="tel"
+                            type="text"
                             required
-                            value={form.requester_phone}
-                            onChange={(e) =>
-                              setForm({
-                                ...form,
-                                requester_phone: formatPhoneMask(e.target.value),
-                              })
-                            }
-                            placeholder="(11) 99999-9999"
-                            className="w-full pl-10 pr-4 py-3 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-secondary/50 transition"
+                            value={form.requester_name}
+                            onChange={(e) => setForm({ ...form, requester_name: e.target.value })}
+                            placeholder="Seu nome"
+                            maxLength={100}
+                            className="landing-input"
                           />
-                        </div>
+                        </label>
+
+                        <label className="grid gap-2">
+                          <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+                            WhatsApp *
+                          </span>
+                          <div className="relative">
+                            <Phone className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                            <input
+                              type="tel"
+                              required
+                              value={form.requester_phone}
+                              onChange={(e) =>
+                                setForm({
+                                  ...form,
+                                  requester_phone: formatPhoneMask(e.target.value),
+                                })
+                              }
+                              placeholder="(11) 99999-9999"
+                              className="landing-input pl-11"
+                            />
+                          </div>
+                        </label>
                       </div>
 
                       <button
@@ -620,20 +586,22 @@ export function CourtBookingSection() {
                           !form.requester_name.trim() ||
                           cleanPhone(form.requester_phone).length < 10
                         }
-                        className="w-full py-4 rounded-xl bg-gradient-to-br from-secondary to-orange-600 text-white font-bold text-base flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:shadow-lg"
+                        className="mt-8 inline-flex w-full items-center justify-center gap-3 rounded-full border border-secondary/35 bg-gradient-to-r from-secondary to-orange-600 px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.2em] text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(249,115,22,0.25)] disabled:cursor-not-allowed disabled:opacity-45"
                       >
                         {createBooking.isPending ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            Solicitar Reserva
-                            <ChevronRight className="h-5 w-5" />
+                            Solicitar reserva
+                            <ChevronRight className="h-4 w-4" />
                           </>
                         )}
                       </button>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Você receberá a confirmação pelo WhatsApp
-                      </p>
+
+                      <div className="mt-6 flex items-center gap-3 rounded-[22px] border border-white/8 bg-white/[0.03] px-5 py-4 text-sm text-white/62">
+                        <Clock3 className="h-4 w-4 text-secondary" />
+                        Você recebe a confirmação no número informado assim que a solicitação for validada.
+                      </div>
                     </div>
                   </motion.div>
                 )}

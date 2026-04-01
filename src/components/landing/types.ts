@@ -13,7 +13,7 @@ export interface SectionConfig {
   is_visible: boolean;
   title: string | null;
   subtitle: string | null;
-  content: any;
+  content: unknown;
   image_url: string | null;
   display_order: number;
 }

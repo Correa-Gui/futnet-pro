@@ -1,6 +1,7 @@
-import { Instagram, Youtube } from "lucide-react";
+import { ArrowUpRight, Instagram, Youtube } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { LandingSettings, BusinessHoursData } from "./types";
+import { getDefaultCtaTarget, getWhatsAppLink, supportsClasses, supportsRentals } from "./brand";
 
 export function Footer({
   settings,
@@ -9,89 +10,130 @@ export function Footer({
   settings: LandingSettings;
   businessHours: BusinessHoursData | null;
 }) {
-  const waLink = settings.whatsapp_number ? `https://wa.me/${settings.whatsapp_number}` : "#";
   const dayLabels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const hasClasses = supportsClasses(settings.business_mode);
+  const hasRentals = supportsRentals(settings.business_mode);
 
   return (
-    <footer className="bg-foreground border-t border-white/[0.08] pt-16 pb-6 px-6">
-      <div className="max-w-[1100px] mx-auto grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-10 mb-10">
-        {/* Brand */}
-        <div>
-          <div className="flex items-center gap-2.5 mb-4">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-secondary to-orange-600 flex items-center justify-center text-white font-brand text-base">
-              FV
-            </div>
-            <span className="text-white font-heading text-base font-bold">FutVôlei Arena</span>
-          </div>
-          <p className="text-white/40 text-sm leading-relaxed">A melhor arena de futevôlei da cidade.</p>
-        </div>
+    <footer className="relative z-[1] px-6 pb-8 pt-10">
+      <div className="mx-auto max-w-[1320px]">
+        <div className="landing-panel overflow-hidden p-8 sm:p-10">
+          <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr_0.8fr_0.8fr]">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-secondary via-orange-500 to-orange-600 text-xl font-brand text-white shadow-[0_14px_32px_rgba(249,115,22,0.28)]">
+                  FV
+                </div>
+                <div>
+                  <span className="block font-brand text-[1.5rem] leading-none tracking-[0.16em] text-white">
+                    FutVôlei
+                  </span>
+                  <span className="block text-[10px] uppercase tracking-[0.34em] text-white/42">
+                    Arena Premium
+                  </span>
+                </div>
+              </div>
 
-        {/* Links */}
-        <div>
-          <p className="text-white font-semibold mb-4 text-[15px]">Links</p>
-          {["Sobre", "Benefícios", "Planos", "FAQ"].map((l) => (
-            <a
-              key={l}
-              href={`#${l.toLowerCase().replace("í", "i")}`}
-              className="block text-white/50 no-underline text-sm mb-2.5 hover:text-white transition-colors"
-            >
-              {l}
-            </a>
-          ))}
-        </div>
+              <p className="mt-6 max-w-[28rem] text-sm leading-8 text-white/66 sm:text-base">
+                Uma landing reestruturada para parecer marca esportiva contemporânea: mais atitude,
+                mais clareza comercial e mais desejo de ação.
+              </p>
 
-        {/* Contact */}
-        <div>
-          <p className="text-white font-semibold mb-4 text-[15px]">Contato</p>
-          <a href={waLink} className="text-white/50 no-underline text-sm mb-4 block">WhatsApp</a>
-          <div className="flex gap-2">
-            {[
-              { Icon: Instagram, url: settings.instagram_url },
-              { Icon: Youtube, url: settings.youtube_url },
-            ].map(({ Icon, url }, i) => (
               <a
-                key={i}
-                href={url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg border border-white/15 flex items-center justify-center text-white hover:bg-secondary hover:border-secondary transition-all"
+                href={`#${getDefaultCtaTarget(settings.business_mode)}`}
+                className="mt-8 inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-white no-underline transition hover:border-white/18 hover:bg-white/[0.07]"
               >
-                <Icon size={16} />
+                {hasClasses ? "Agendar experiência" : hasRentals ? "Reservar quadra" : "Começar"}
+                <ArrowUpRight className="h-4 w-4 text-secondary" />
               </a>
-            ))}
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42">
+                Navegação
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                {[
+                  { label: "Experiência", href: "#beneficios" },
+                  ...(hasClasses ? [{ label: "Turmas", href: "#turmas" }] : []),
+                  ...(hasRentals ? [{ label: "Quadras", href: "#reservar-quadra" }] : []),
+                  { label: "Planos", href: "#planos" },
+                  { label: "FAQ", href: "#faq" },
+                ].map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    className="text-sm leading-7 text-white/64 no-underline transition hover:text-white"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42">
+                Contato
+              </p>
+              <div className="mt-5 flex flex-col gap-3">
+                <a
+                  href={getWhatsAppLink(settings.whatsapp_number)}
+                  className="text-sm leading-7 text-white/64 no-underline transition hover:text-white"
+                >
+                  WhatsApp
+                </a>
+                <div className="mt-2 flex gap-2">
+                  {[
+                    { Icon: Instagram, url: settings.instagram_url },
+                    { Icon: Youtube, url: settings.youtube_url },
+                  ].map(({ Icon, url }, index) => (
+                    <a
+                      key={index}
+                      href={url || "#"}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/74 transition hover:border-secondary/30 hover:bg-secondary/10 hover:text-white"
+                    >
+                      <Icon className="h-4 w-4" />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {businessHours ? (
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/42">
+                  Funcionamento
+                </p>
+                <p className="mt-5 text-sm leading-7 text-white/64">
+                  {String(businessHours.open_hour).padStart(2, "0")}:00 - {String(businessHours.close_hour).padStart(2, "0")}:00
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {dayLabels.map((label, index) => (
+                    <span
+                      key={label}
+                      className={cn(
+                        "rounded-full border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em]",
+                        businessHours.open_days.includes(index)
+                          ? "border-secondary/22 bg-secondary/12 text-secondary/88"
+                          : "border-white/10 bg-white/[0.03] text-white/30"
+                      )}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div className="mt-10 border-t border-white/8 pt-6">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/32">
+              © {new Date().getFullYear()} FutVôlei Arena. Design orientado a performance, exclusividade e conversão.
+            </p>
           </div>
         </div>
-
-        {/* Business hours */}
-        {businessHours && (
-          <div>
-            <p className="text-white font-semibold mb-4 text-[15px]">Funcionamento</p>
-            <p className="text-white/50 text-sm mb-2">
-              {String(businessHours.open_hour).padStart(2, "0")}:00 — {String(businessHours.close_hour).padStart(2, "0")}:00
-            </p>
-            <div className="flex gap-1 flex-wrap">
-              {dayLabels.map((label, i) => (
-                <span
-                  key={i}
-                  className={cn(
-                    "px-2 py-0.5 rounded-md text-xs font-semibold border",
-                    businessHours.open_days.includes(i)
-                      ? "bg-secondary/20 text-secondary/70 border-secondary/30"
-                      : "bg-white/5 text-white/20 border-white/[0.08]"
-                  )}
-                >
-                  {label}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      <div className="border-t border-white/[0.08] pt-6 flex justify-between items-center flex-wrap gap-3">
-        <p className="text-white/30 text-[13px]">
-          © {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.
-        </p>
       </div>
     </footer>
   );

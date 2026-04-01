@@ -2,10 +2,8 @@ import {
   Nav,
   HeroSection,
   StatsStrip,
-  AboutSection,
   GallerySection,
   BenefitsSection,
-  HowItWorksSection,
   TestimonialsSection,
   FAQSection,
   FinalCTA,
@@ -15,14 +13,16 @@ import {
 import { TrialFormSection } from "@/components/landing/TrialFormSection";
 import { ClassesSection } from "@/components/landing/ClassesSection";
 import { DynamicPlansSection } from "@/components/landing/DynamicPlansSection";
-import { PlansSection } from "@/components/landing/PlansSection";
 import { ServicesSection } from "@/components/landing/ServicesSection";
 import { CourtBookingSection } from "@/components/landing/CourtBookingSection";
 import { useState, useCallback } from "react";
+import { supportsClasses, supportsRentals } from "@/components/landing/brand";
 
 export default function LandingPage() {
   const { settings, isVisible, getImage, loaded, businessHours } = useLandingData();
   const [preselectedClassId, setPreselectedClassId] = useState("");
+  const hasClasses = supportsClasses(settings.business_mode);
+  const hasRentals = supportsRentals(settings.business_mode);
 
   const handleSelectClass = useCallback((id: string) => {
     setPreselectedClassId(id);
@@ -41,17 +41,26 @@ export default function LandingPage() {
       <style>{`
         .scroll-indicator { animation: bounce 2s infinite; }
         @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(8px); } }
-        .cta-pulse { animation: ctaPulse 2.5s infinite; }
-        @keyframes ctaPulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(249, 115, 22, 0.4); } 50% { box-shadow: 0 0 0 12px rgba(249, 115, 22, 0); } }
-        .stat-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); }
       `}</style>
-      <div className="font-body text-foreground overflow-x-hidden">
+      <div className="landing-shell font-body">
         <Nav settings={settings} />
         <HeroSection settings={settings} getImage={getImage} />
-        <ServicesSection />
-        <TrialFormSection settings={settings} preselectedClassId={preselectedClassId} />
-        <CourtBookingSection />
-        <FinalCTA settings={settings} />
+        {isVisible("stats") && <StatsStrip settings={settings} />}
+        {isVisible("benefits") && <BenefitsSection settings={settings} />}
+        <ServicesSection settings={settings} getImage={getImage} />
+        {hasClasses && <ClassesSection onSelectClass={handleSelectClass} />}
+        {isVisible("gallery") && <GallerySection settings={settings} getImage={getImage} />}
+        {isVisible("testimonials") && <TestimonialsSection settings={settings} />}
+        {isVisible("plans") && <DynamicPlansSection settings={settings} />}
+        {hasClasses && (
+          <TrialFormSection
+            settings={settings}
+            preselectedClassId={preselectedClassId}
+          />
+        )}
+        {hasRentals && <CourtBookingSection />}
+        {isVisible("faq") && <FAQSection settings={settings} />}
+        {isVisible("final_cta") && <FinalCTA settings={settings} />}
         <Footer settings={settings} businessHours={businessHours} />
       </div>
     </>

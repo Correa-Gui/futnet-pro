@@ -107,6 +107,10 @@
     @apply border-border;
   }
 
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-background text-foreground;
     font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
@@ -125,6 +129,61 @@
 
   .font-body {
     font-family: 'DM Sans', sans-serif;
+  }
+}
+
+@layer components {
+  .landing-shell {
+    position: relative;
+    overflow-x: hidden;
+    background:
+      radial-gradient(circle at top left, rgba(255, 122, 0, 0.16), transparent 24%),
+      radial-gradient(circle at 88% 10%, rgba(52, 83, 255, 0.14), transparent 20%),
+      linear-gradient(180deg, #050505 0%, #090a0d 36%, #0d1117 100%);
+    color: white;
+  }
+
+  .landing-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+    background-size: 72px 72px;
+    mask-image: radial-gradient(circle at top center, black 0%, black 42%, transparent 88%);
+    opacity: 0.35;
+  }
+
+  .landing-shell::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.18) 40%, rgba(0, 0, 0, 0.42) 100%);
+    opacity: 0.8;
+  }
+
+  .landing-panel {
+    @apply rounded-[28px] border border-white/[0.10] bg-white/[0.04] backdrop-blur-2xl shadow-[0_28px_90px_rgba(0,0,0,0.35)];
+  }
+
+  .landing-panel-soft {
+    @apply rounded-[24px] border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl;
+  }
+
+  .landing-eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.05] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/70;
+  }
+
+  .landing-input {
+    @apply w-full rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition duration-200 placeholder:text-white/[0.35] focus:border-secondary/70 focus:bg-white/[0.06] focus:ring-2 focus:ring-secondary/20;
+  }
+
+  .landing-muted-copy {
+    @apply text-white/[0.62];
   }
 }
 
