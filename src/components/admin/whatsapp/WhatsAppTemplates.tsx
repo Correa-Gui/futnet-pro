@@ -160,9 +160,9 @@ export default function WhatsAppTemplates() {
               </CardHeader>
               <CardContent>
                 <pre className="text-sm bg-muted rounded-lg p-3 whitespace-pre-wrap font-body">{t.body}</pre>
-                {t.variables.length > 0 && (
+                {(t.variables ?? []).length > 0 && (
                   <div className="flex gap-1 mt-2 flex-wrap">
-                    {t.variables.map((v) => (
+                    {(t.variables ?? []).map((v) => (
                       <Badge key={v} variant="secondary" className="text-xs">{`{{${v}}}`}</Badge>
                     ))}
                   </div>
