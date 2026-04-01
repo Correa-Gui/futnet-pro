@@ -33,6 +33,7 @@ const menuGroups = [
       { title: 'Turmas', url: '/admin/turmas', icon: GraduationCap },
       { title: 'Alunos', url: '/admin/alunos', icon: Users },
       { title: 'Professores', url: '/admin/professores', icon: UserCheck },
+      { title: 'Usuários', url: '/admin/usuarios', icon: Users },
     ],
   },
   {

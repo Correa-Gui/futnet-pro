@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +38,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
+import { useWhatsAppProviderConfig } from "@/hooks/useWhatsAppProviderConfig";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
@@ -77,16 +78,26 @@ type CalendarEvent =
       courtId: string;
       startTime: string;
       endTime: string;
+      date: string;
       status: BookingStatus;
       phone: string;
       price: number;
     };
+
+type BookingEvent = Extract<CalendarEvent, { type: "booking" }>;
+
+function formatDate(iso: string): string {
+  const [y, m, d] = iso.split("-");
+  return `${d}/${m}/${y}`;
+}
 
 export default function Bookings() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const { data: businessHours } = useBusinessHours();
+  const { data: whatsappConfig } = useWhatsAppProviderConfig();
+  const pendingConfirmRef = useRef<BookingEvent | null>(null);
 
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
   const openHour = businessHours?.open_hour ?? 6;
@@ -199,6 +210,7 @@ export default function Bookings() {
           courtId: (b as any).courts?.id || "",
           startTime: b.start_time,
           endTime: b.end_time,
+          date: b.date,
           status: b.status as BookingStatus,
           phone: b.requester_phone,
           price: Number(b.price),
@@ -243,6 +255,7 @@ export default function Bookings() {
           courtId: court.id,
           startTime: b.start_time,
           endTime: b.end_time,
+          date: b.date,
           status: b.status as BookingStatus,
           phone: b.requester_phone,
           price: Number(b.price),

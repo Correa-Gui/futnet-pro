@@ -47,6 +47,11 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_ANON_KEY")!
   );
 
+  const adminSupabase = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
   try {
     // ── GET: consultar disponibilidade ──────────────────────────────────────
     if (req.method === "GET") {
@@ -96,7 +101,6 @@ Deno.serve(async (req) => {
         .in("status", ["confirmed", "paid"]);
 
       // Busca sessões de aula agendadas no dia (qualquer quadra que seja esta quadra)
-      const dayOfWeek = new Date(date + "T00:00:00").getDay();
       const { data: classSessions } = await supabase
         .from("class_sessions")
         .select("classes(court_id, start_time, end_time)")
@@ -197,6 +201,15 @@ Deno.serve(async (req) => {
       if (insertError) {
         throw insertError;
       }
+
+      // Salva/atualiza o usuário na tabela booking_users (via service role)
+      const normalizedPhone = String(requester_phone).replace(/\D/g, "");
+      await adminSupabase
+        .from("booking_users")
+        .upsert(
+          { name: requester_name, phone: normalizedPhone, updated_at: new Date().toISOString() },
+          { onConflict: "phone" }
+        );
 
       return new Response(
         JSON.stringify({

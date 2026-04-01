@@ -46,151 +46,6 @@ const methodColors: Record<HttpMethod, string> = {
 
 const endpoints: Endpoint[] = [
   {
-    method: "POST",
-    path: "/whatsapp-webhook",
-    summary: "Webhook receptor de mensagens",
-    description:
-      "Recebe eventos enviados pelo Evolution API quando um usuário manda mensagem no WhatsApp. Configurar esta URL na Evolution API como destino de webhook com o evento messages.upsert. Mensagens enviadas pelo próprio bot (fromMe: true) são ignoradas automaticamente. O handler registra a mensagem no histórico e expõe o ponto de integração para o agente de IA.",
-    headers: [
-      {
-        name: "x-webhook-secret",
-        value: "{WHATSAPP_WEBHOOK_SECRET}",
-        required: true,
-        description: "Secret configurado na env var da Edge Function — valida que a requisição veio da Evolution API",
-      },
-      {
-        name: "Content-Type",
-        value: "application/json",
-        required: true,
-        description: "Enviado automaticamente pelo Evolution API",
-      },
-    ],
-    body: `{
-  "event": "messages.upsert",
-  "data": {
-    "key": {
-      "remoteJid": "5511999999999@s.whatsapp.net",
-      "fromMe": false,
-      "id": "MSG_ID_ABC123"
-    },
-    "message": {
-      "conversation": "Quero reservar uma quadra amanhã às 19h"
-    }
-  }
-}`,
-    responses: [
-      {
-        status: 200,
-        label: "Processado",
-        body: `{ "status": "processed", "phone": "5511999999999", "message_length": 38 }`,
-      },
-      {
-        status: 200,
-        label: "Ignorado",
-        body: `{ "status": "ignored", "reason": "fromMe" }`,
-      },
-      {
-        status: 401,
-        label: "Secret inválido",
-        body: `{ "error": "Unauthorized" }`,
-      },
-    ],
-    curl: `curl -X POST \\
-  ${BASE_URL}/whatsapp-webhook \\
-  -H "x-webhook-secret: seu_secret_aqui" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "event": "messages.upsert",
-    "data": {
-      "key": { "remoteJid": "5511999999999@s.whatsapp.net", "fromMe": false },
-      "message": { "conversation": "Quero reservar uma quadra" }
-    }
-  }'`,
-  },
-  {
-    method: "POST",
-    path: "/send-whatsapp",
-    summary: "Enviar mensagem WhatsApp",
-    description:
-      "Envia mensagem de texto para um ou mais destinatários via Evolution API. Suporta substituição de variáveis no formato {{variavel}} através do campo template_variables. Registra todas as mensagens (enviadas ou falhas) na tabela whatsapp_messages. Requer usuário admin autenticado.",
-    headers: [
-      {
-        name: "Authorization",
-        value: "Bearer {access_token}",
-        required: true,
-        description: "JWT do usuário admin — obtido via login no Supabase Auth",
-      },
-      {
-        name: "apikey",
-        value: "{anon_key}",
-        required: true,
-        description: "Chave pública do projeto Supabase",
-      },
-      {
-        name: "Content-Type",
-        value: "application/json",
-        required: true,
-        description: "Formato do body",
-      },
-    ],
-    body: `{
-  "recipients": [
-    { "phone": "5511999999999", "name": "João Silva", "student_id": "uuid-opcional" }
-  ],
-  "message_body": "Olá, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}.",
-  "template_id": "uuid-do-template",
-  "template_variables": {
-    "nome": "João Silva",
-    "valor": "R$ 150,00",
-    "data_vencimento": "05/04/2026"
-  }
-}`,
-    responses: [
-      {
-        status: 200,
-        label: "Enviado",
-        body: `{
-  "sent": 1,
-  "failed": 0,
-  "results": [
-    { "phone": "5511999999999", "success": true, "messageId": "MSG_ID_XYZ" }
-  ]
-}`,
-      },
-      {
-        status: 200,
-        label: "Falha parcial",
-        body: `{
-  "sent": 0,
-  "failed": 1,
-  "results": [
-    { "phone": "5511999999999", "success": false, "error": "Invalid phone number" }
-  ]
-}`,
-      },
-      {
-        status: 401,
-        label: "Não autorizado",
-        body: `{ "error": "Unauthorized" }`,
-      },
-      {
-        status: 403,
-        label: "Sem permissão",
-        body: `{ "error": "Forbidden" }`,
-      },
-    ],
-    curl: `curl -X POST \\
-  ${BASE_URL}/send-whatsapp \\
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \\
-  -H "apikey: SUA_ANON_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "recipients": [{ "phone": "5511999999999", "name": "João Silva" }],
-    "message_body": "Olá, {{nome}}! Sua aula foi cancelada.",
-    "template_variables": { "nome": "João Silva" }
-  }'`,
-  },
-  {
     method: "GET",
     path: "/court-availability?court_id={uuid}&date={YYYY-MM-DD}",
     summary: "Consultar slots disponíveis de quadra",
@@ -299,68 +154,58 @@ const endpoints: Endpoint[] = [
   }'`,
   },
   {
-    method: "POST",
-    path: "/send-invoice-reminders",
-    summary: "Disparar lembretes de cobrança",
+    method: "GET",
+    path: "/list-bookings?phone={phone}",
+    summary: "Listar reservas por telefone",
     description:
-      "Envia mensagens WhatsApp para alunos com faturas próximas do vencimento. Regras: apenas alunos com profiles.status='active' e faturas com invoices.status='pending' cujo due_date seja igual a CURRENT_DATE + days_before_due. Variáveis disponíveis no template: {{nome}}, {{valor}}, {{data_vencimento}}, {{pix_copy_paste}}. Ideal para execução via cron job diário.",
+      "Retorna as últimas 5 reservas ativas (não canceladas) de um cliente pelo número de telefone. Utilizado pelo chatbot para exibir reservas e montar o fluxo de cancelamento. Endpoint público.",
     headers: [
       {
-        name: "Authorization",
-        value: "Bearer {service_role_key}",
+        name: "apikey",
+        value: "{anon_key}",
         required: true,
-        description: "Service role key do Supabase — não expor no frontend",
-      },
-      {
-        name: "Content-Type",
-        value: "application/json",
-        required: true,
-        description: "Formato do body",
+        description: "Chave pública do projeto Supabase",
       },
     ],
-    body: `{
-  "days_before_due": 3,
-  "template_id": "uuid-do-template-cobranca"
-}`,
     responses: [
       {
         status: 200,
-        label: "Concluído",
-        body: `{ "sent": 12, "skipped": 2, "failed": 1 }`,
+        label: "Sucesso",
+        body: `{
+  "bookings": [
+    {
+      "id": "uuid-da-reserva",
+      "date": "2026-04-05",
+      "start_time": "19:00:00",
+      "end_time": "20:00:00",
+      "status": "requested",
+      "courts": { "name": "Quadra 1" }
+    }
+  ]
+}`,
       },
       {
         status: 200,
-        label: "Nenhuma fatura",
-        body: `{ "sent": 0, "skipped": 0, "failed": 0, "message": "Nenhuma fatura encontrada para o critério" }`,
+        label: "Sem reservas",
+        body: `{ "bookings": [] }`,
       },
       {
-        status: 500,
-        label: "Erro de configuração",
-        body: `{ "error": "Configuração da Evolution API incompleta" }`,
+        status: 400,
+        label: "Parâmetro ausente",
+        body: `{ "error": "phone é obrigatório" }`,
       },
     ],
-    curl: `curl -X POST \\
-  ${BASE_URL}/send-invoice-reminders \\
-  -H "Authorization: Bearer SUA_SERVICE_ROLE_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "days_before_due": 3,
-    "template_id": "UUID_DO_TEMPLATE"
-  }'`,
+    curl: `curl -X GET \\
+  "${BASE_URL}/list-bookings?phone=5511999999999" \\
+  -H "apikey: SUA_ANON_KEY"`,
   },
   {
     method: "POST",
-    path: "/notify-class-cancellation",
-    summary: "Notificar cancelamento de aula",
+    path: "/cancel-booking",
+    summary: "Cancelar reserva pelo chatbot",
     description:
-      "Notifica em batch todos os alunos com presença confirmada ou não confirmada em uma sessão de aula. Envia mensagem via WhatsApp com substituição de variáveis: {{nome}}, {{turma}}, {{data}}, {{professor}}. Atualiza class_sessions.status para 'cancelled' somente após todas as notificações serem enviadas. Requer usuário admin autenticado.",
+      "Cancela uma reserva verificando se o telefone informado é o mesmo do solicitante. Reservas com status 'paid' não podem ser canceladas pelo chatbot. Usa service role internamente — seguro para chamadas do orquestrador FastAPI.",
     headers: [
-      {
-        name: "Authorization",
-        value: "Bearer {access_token}",
-        required: true,
-        description: "JWT do usuário admin autenticado",
-      },
       {
         name: "apikey",
         value: "{anon_key}",
@@ -375,40 +220,38 @@ const endpoints: Endpoint[] = [
       },
     ],
     body: `{
-  "session_id": "uuid-da-sessao",
-  "template_id": "uuid-do-template-cancelamento",
-  "custom_message": "Mensagem personalizada opcional — sobrescreve o template"
+  "booking_id": "uuid-da-reserva",
+  "requester_phone": "5511999999999"
 }`,
     responses: [
       {
         status: 200,
-        label: "Concluído",
-        body: `{ "notified": 10, "failed": 0 }`,
+        label: "Cancelado",
+        body: `{ "status": "cancelado", "message": "Reserva cancelada com sucesso." }`,
       },
       {
-        status: 400,
-        label: "Parâmetro ausente",
-        body: `{ "error": "session_id é obrigatório" }`,
+        status: 403,
+        label: "Telefone não confere",
+        body: `{ "error": "Reserva não pertence a este número" }`,
       },
       {
         status: 404,
-        label: "Sessão não encontrada",
-        body: `{ "error": "Sessão não encontrada" }`,
+        label: "Não encontrada",
+        body: `{ "error": "Reserva não encontrada" }`,
       },
       {
-        status: 401,
-        label: "Não autorizado",
-        body: `{ "error": "Unauthorized" }`,
+        status: 409,
+        label: "Não cancelável",
+        body: `{ "error": "Reservas pagas não podem ser canceladas pelo chatbot. Entre em contato com a equipe." }`,
       },
     ],
     curl: `curl -X POST \\
-  ${BASE_URL}/notify-class-cancellation \\
-  -H "Authorization: Bearer SEU_ACCESS_TOKEN" \\
+  ${BASE_URL}/cancel-booking \\
   -H "apikey: SUA_ANON_KEY" \\
   -H "Content-Type: application/json" \\
   -d '{
-    "session_id": "UUID_DA_SESSAO",
-    "template_id": "UUID_DO_TEMPLATE"
+    "booking_id": "UUID_DA_RESERVA",
+    "requester_phone": "5511999999999"
   }'`,
   },
 ];
@@ -555,7 +398,7 @@ export default function ApiDocs() {
           Documentação da API
         </h2>
         <p className="text-sm text-muted-foreground">
-          Endpoints da integração com WhatsApp e IA — {endpoints.length} edge functions disponíveis
+          Endpoints de negócio chamados pelo chatbot (FastAPI) — {endpoints.length} edge functions disponíveis
         </p>
       </div>
 
@@ -563,9 +406,8 @@ export default function ApiDocs() {
       <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
         <p className="text-sm font-semibold text-foreground">Autenticação</p>
         <p className="text-sm text-muted-foreground">
-          Endpoints admin requerem <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">Authorization: Bearer {"{access_token}"}</code> obtido via login Supabase Auth.
-          Endpoints públicos requerem apenas <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">apikey: {"{anon_key}"}</code>.
-          O webhook de cobrança usa <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">Authorization: Bearer {"{service_role_key}"}</code>.
+          Todos os endpoints são públicos e requerem apenas <code className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono">apikey: {"{anon_key}"}</code>.
+          Chamados pelo orquestrador FastAPI — não expor a anon key no frontend.
         </p>
         <div>
           <p className="text-xs text-muted-foreground mb-1">Base URL</p>
