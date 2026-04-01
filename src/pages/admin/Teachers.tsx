@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 
 type TeacherRow = {
@@ -22,6 +22,9 @@ export default function Teachers() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ full_name: '', email: '', password: '', phone: '', rate_per_class: 50 });
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTeacher, setEditingTeacher] = useState<TeacherRow | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', rate_per_class: 0 });
 
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers'],
@@ -62,6 +65,28 @@ export default function Teachers() {
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['teachers'] }); toast.success('Professor criado!'); handleClose(); },
     onError: (e: Error) => toast.error('Erro ao criar professor', { description: e.message }),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ teacher, data }: { teacher: TeacherRow; data: typeof editForm }) => {
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ full_name: data.full_name, phone: data.phone || null })
+        .eq('user_id', teacher.user_id);
+      if (profileError) throw profileError;
+      const { error: teacherError } = await supabase
+        .from('teacher_profiles')
+        .update({ rate_per_class: data.rate_per_class })
+        .eq('id', teacher.id);
+      if (teacherError) throw teacherError;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['teachers'] });
+      toast.success('Professor atualizado!');
+      setEditOpen(false);
+      setEditingTeacher(null);
+    },
+    onError: (e: Error) => toast.error('Erro ao atualizar professor', { description: e.message }),
   });
 
   const deleteMutation = useMutation({
@@ -113,9 +138,18 @@ export default function Teachers() {
                   <TableCell>{formatCurrency(t.rate_per_class)}</TableCell>
                   <TableCell><Badge variant={t.profile?.status === 'active' ? 'default' : 'secondary'}>{t.profile?.status === 'active' ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                   <TableCell>
-                    <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este professor?')) deleteMutation.mutate(t.id); }}>
-                      <Trash2 className="h-4 w-4 text-destructive" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => {
+                        setEditingTeacher(t);
+                        setEditForm({ full_name: t.profile.full_name, phone: t.profile.phone || '', rate_per_class: t.rate_per_class });
+                        setEditOpen(true);
+                      }}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este professor?')) deleteMutation.mutate(t.id); }}>
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -123,6 +157,32 @@ export default function Teachers() {
           </Table>
         </CardContent>
       </Card>
+
+      <Dialog open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditingTeacher(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Professor</DialogTitle></DialogHeader>
+          <form onSubmit={(e) => { e.preventDefault(); if (editingTeacher) updateMutation.mutate({ teacher: editingTeacher, data: editForm }); }} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome completo *</Label>
+              <Input value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} placeholder="João Silva" required />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Telefone</Label>
+                <Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} placeholder="(11) 99999-9999" />
+              </div>
+              <div className="space-y-2">
+                <Label>Valor por aula (R$) *</Label>
+                <Input type="number" min={0} step={0.01} value={editForm.rate_per_class} onChange={(e) => setEditForm({ ...editForm, rate_per_class: parseFloat(e.target.value) || 0 })} required />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => { setEditOpen(false); setEditingTeacher(null); }}>Cancelar</Button>
+              <Button type="submit" disabled={updateMutation.isPending}>{updateMutation.isPending ? 'Salvando...' : 'Salvar'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>

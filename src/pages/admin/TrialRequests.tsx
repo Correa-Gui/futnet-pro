@@ -112,7 +112,7 @@ export default function TrialRequests() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, notes, openWhatsApp }: { id: string; status: TrialStatus; notes?: string; openWhatsApp?: string }) => {
+    mutationFn: async ({ id, status, notes, phone, recipientName, message }: { id: string; status: TrialStatus; notes?: string; phone?: string; recipientName?: string; message?: string }) => {
       const updates: Record<string, any> = { status };
       if (status === "approved") {
         updates.approved_at = new Date().toISOString();
@@ -120,15 +120,20 @@ export default function TrialRequests() {
       }
       if (notes !== undefined) updates.admin_notes = notes;
       await supabase.from("trial_requests" as any).update(updates).eq("id", id);
-      return { openWhatsApp };
+      if (status === "approved" && phone && message) {
+        await supabase.functions.invoke("send-whatsapp", {
+          body: { recipients: [{ phone, name: recipientName }], message_body: message },
+        });
+      }
     },
-    onSuccess: (result) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["admin-trial-requests"] });
       qc.invalidateQueries({ queryKey: ["admin-trial-pending-count"] });
-      toast.success("Status atualizado!");
-      if (result?.openWhatsApp) {
-        window.open(result.openWhatsApp, "_blank");
-      }
+      toast.success("Status atualizado! Mensagem enviada via WhatsApp.");
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ["admin-trial-requests"] });
+      toast.success("Status atualizado!", { description: "Falha ao enviar WhatsApp — verifique as configurações." });
     },
   });
 
@@ -273,14 +278,16 @@ export default function TrialRequests() {
                         <Button
                           size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700"
+                          disabled={updateStatus.isPending}
                           onClick={() => {
                             const msg = buildApprovalMessage(t);
-                            const waUrl = formatWhatsAppLink(t.phone, msg);
                             updateStatus.mutate({
                               id: t.id,
                               status: "approved",
                               notes: expandedNotes[t.id],
-                              openWhatsApp: waUrl,
+                              phone: t.phone,
+                              recipientName: t.name,
+                              message: msg,
                             });
                           }}
                         >

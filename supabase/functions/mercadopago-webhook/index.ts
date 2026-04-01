@@ -113,38 +113,70 @@ Deno.serve(async (req) => {
     console.log("Payment status:", mpData.status, "ID:", paymentId);
 
     if (mpData.status === "approved") {
-      const supabase = createClient(
+      const adminClient = createClient(
         Deno.env.get("SUPABASE_URL")!,
         Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
       );
 
-      const { data: invoice, error: findError } = await supabase
+      // Try invoice first
+      const { data: invoice } = await adminClient
         .from("invoices")
         .select("id")
         .eq("payment_id", String(paymentId))
-        .single();
+        .maybeSingle();
 
-      if (findError || !invoice) {
-        console.error("Invoice not found for payment_id:", paymentId);
-        return new Response(JSON.stringify({ received: true, note: "invoice not found" }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      if (invoice) {
+        const { error: updateError } = await adminClient
+          .from("invoices")
+          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .eq("id", invoice.id);
+        if (updateError) {
+          console.error("Invoice update error:", updateError);
+          throw new Error("Falha ao atualizar fatura");
+        }
+        console.log("Invoice", invoice.id, "marked as paid");
+      } else {
+        // Try court_bookings
+        const { data: booking } = await adminClient
+          .from("court_bookings")
+          .select("id, requester_name, requester_phone, date, start_time, end_time")
+          .eq("payment_id", String(paymentId))
+          .maybeSingle();
+
+        if (booking) {
+          await adminClient
+            .from("court_bookings")
+            .update({ status: "paid" })
+            .eq("id", booking.id);
+          console.log("Booking", booking.id, "marked as paid");
+
+          // Send WhatsApp confirmation inline (avoids auth issue calling send-whatsapp with service role)
+          try {
+            const { data: configs } = await adminClient
+              .from("system_config")
+              .select("key, value")
+              .in("key", ["whatsapp_service_base_url", "whatsapp_instance_name"]);
+            const configMap = Object.fromEntries((configs || []).map((c: any) => [c.key, c.value]));
+            const baseUrl = configMap["whatsapp_service_base_url"];
+            const instanceName = configMap["whatsapp_instance_name"];
+
+            if (baseUrl && booking.requester_phone) {
+              const msg = `Olá ${booking.requester_name}! ✅ Sua reserva foi confirmada e o pagamento recebido!\n📅 ${booking.date}\n🕐 ${booking.start_time} às ${booking.end_time}\n\nObrigado! Até lá! 🏐`;
+              const cleanPhone = booking.requester_phone.replace(/\D/g, "");
+              const fullPhone = cleanPhone.startsWith("55") ? cleanPhone : `55${cleanPhone}`;
+              await fetch(`${baseUrl}/messages/send`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ number: fullPhone, text: msg, instance_name: instanceName }),
+              });
+            }
+          } catch (waErr) {
+            console.error("WhatsApp send failed:", waErr);
+          }
+        } else {
+          console.warn("No invoice or booking found for payment_id:", paymentId);
+        }
       }
-
-      const { error: updateError } = await supabase
-        .from("invoices")
-        .update({
-          status: "paid",
-          paid_at: new Date().toISOString(),
-        })
-        .eq("id", invoice.id);
-
-      if (updateError) {
-        console.error("Update error:", updateError);
-        throw new Error("Falha ao atualizar fatura");
-      }
-
-      console.log("Invoice", invoice.id, "marked as paid");
     }
 
     return new Response(JSON.stringify({ received: true }), {

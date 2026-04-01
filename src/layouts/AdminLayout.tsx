@@ -34,6 +34,7 @@ const menuGroups = [
       { title: 'Alunos', url: '/admin/alunos', icon: Users },
       { title: 'Professores', url: '/admin/professores', icon: UserCheck },
       { title: 'Usuários', url: '/admin/usuarios', icon: Users },
+      { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
     ],
   },
   {
@@ -49,7 +50,6 @@ const menuGroups = [
     label: 'Sistema',
     items: [
       { title: 'Landing Page', url: '/admin/landing-page', icon: Settings },
-      { title: 'Agendamentos', url: '/admin/agendamentos', icon: CalendarDays },
       { title: 'WhatsApp', url: '/admin/whatsapp', icon: MessageCircle },
       { title: 'Apresentação', url: '/admin/apresentacao', icon: Monitor },
       { title: 'API Docs', url: '/admin/api-docs', icon: BookOpen },

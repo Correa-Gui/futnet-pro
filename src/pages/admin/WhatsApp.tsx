@@ -5,6 +5,7 @@ import WhatsAppTemplates from "@/components/admin/whatsapp/WhatsAppTemplates";
 import WhatsAppSend from "@/components/admin/whatsapp/WhatsAppSend";
 import WhatsAppHistory from "@/components/admin/whatsapp/WhatsAppHistory";
 import WhatsAppSettings from "@/components/admin/whatsapp/WhatsAppSettings";
+import WhatsAppSchedules from "@/components/admin/whatsapp/WhatsAppSchedules";
 
 export default function WhatsApp() {
   const [activeTab, setActiveTab] = useState("send");
@@ -22,9 +23,10 @@ export default function WhatsApp() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4 max-w-2xl">
+        <TabsList className="grid w-full grid-cols-5 max-w-3xl">
           <TabsTrigger value="send">Enviar</TabsTrigger>
           <TabsTrigger value="templates">Templates</TabsTrigger>
+          <TabsTrigger value="schedules">Agendamentos</TabsTrigger>
           <TabsTrigger value="settings">Configurações</TabsTrigger>
           <TabsTrigger value="history">Histórico</TabsTrigger>
         </TabsList>
@@ -34,6 +36,9 @@ export default function WhatsApp() {
         </TabsContent>
         <TabsContent value="templates" className="mt-6">
           <WhatsAppTemplates />
+        </TabsContent>
+        <TabsContent value="schedules" className="mt-6">
+          <WhatsAppSchedules />
         </TabsContent>
         <TabsContent value="settings" className="mt-6">
           <WhatsAppSettings />

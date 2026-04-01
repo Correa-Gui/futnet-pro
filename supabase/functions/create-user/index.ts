@@ -90,14 +90,17 @@ Deno.serve(async (req) => {
     const userId = authData.user.id;
 
     // Update profile with extra fields
-    if (phone || cpf || birth_date) {
+    // Students must change password on first login
+    const profileUpdates: Record<string, any> = {
+      ...(phone && { phone }),
+      ...(cpf && { cpf }),
+      ...(birth_date && { birth_date }),
+      ...(role === "student" && { force_password_change: true }),
+    };
+    if (Object.keys(profileUpdates).length > 0) {
       await adminClient
         .from("profiles")
-        .update({
-          ...(phone && { phone }),
-          ...(cpf && { cpf }),
-          ...(birth_date && { birth_date }),
-        })
+        .update(profileUpdates)
         .eq("user_id", userId);
     }
 

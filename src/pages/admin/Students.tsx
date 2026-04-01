@@ -175,6 +175,37 @@ export default function Students() {
           onClick: () => navigate('/admin/faturas'),
         } : undefined,
       });
+
+      // Fire-and-forget: auto-send "Novo Aluno" WhatsApp if phone provided
+      if (form.phone) {
+        (async () => {
+          const { data: cfg } = await supabase
+            .from('system_config')
+            .select('value')
+            .eq('key', 'app_url')
+            .maybeSingle();
+          const appUrl = (cfg as any)?.value || window.location.origin;
+          const { data: tpl } = await (supabase as any)
+            .from('whatsapp_templates')
+            .select('id, body')
+            .eq('category', 'welcome')
+            .eq('is_active', true)
+            .limit(1)
+            .maybeSingle();
+          let messageBody: string;
+          if (tpl?.body) {
+            messageBody = tpl.body
+              .replace(/\{\{nome\}\}/g, form.full_name)
+              .replace(/\{\{app_url\}\}/g, appUrl);
+          } else {
+            messageBody = `Bem-vindo(a), ${form.full_name}! 🏐🎉\n\nSua conta foi criada. Acesse: ${appUrl}`;
+          }
+          supabase.functions.invoke('send-whatsapp', {
+            body: { recipients: [{ phone: form.phone, name: form.full_name }], message_body: messageBody },
+          }).catch(() => {});
+        })();
+      }
+
       handleClose();
     },
     onError: (e: Error) => toast.error('Erro ao criar aluno', { description: e.message }),

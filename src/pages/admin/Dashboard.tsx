@@ -56,11 +56,12 @@ export default function AdminDashboard() {
   const { data: stats } = useQuery({
     queryKey: ['admin-dashboard-stats'],
     queryFn: async () => {
-      const [studentsRes, classesRes, courtsRes, invoicesRes] = await Promise.all([
+      const [studentsRes, classesRes, courtsRes, invoicesRes, bookingsRes] = await Promise.all([
         supabase.from('student_profiles').select('id', { count: 'exact', head: true }),
         supabase.from('classes').select('id', { count: 'exact', head: true }).eq('status', 'active'),
         supabase.from('courts').select('id', { count: 'exact', head: true }).eq('is_active', true),
         supabase.from('invoices').select('amount, discount, status, paid_at, reference_month'),
+        supabase.from('court_bookings').select('price, status, booking_type' as any),
       ]);
 
       const invoices = invoicesRes.data || [];
@@ -70,6 +71,10 @@ export default function AdminDashboard() {
 
       const totalRevenue = paidInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discount || 0), 0);
       const totalPending = pendingInvoices.reduce((s, i) => s + Number(i.amount) - Number(i.discount || 0), 0);
+
+      const paidBookings = (bookingsRes.data || []).filter((b: any) => b.status === 'paid');
+      const rentalRevenue = paidBookings.filter((b: any) => b.booking_type === 'rental').reduce((s: number, b: any) => s + Number(b.price), 0);
+      const dayUseRevenue = paidBookings.filter((b: any) => b.booking_type === 'day_use').reduce((s: number, b: any) => s + Number(b.price), 0);
 
       const monthlyMap: Record<string, number> = {};
       paidInvoices.forEach(i => {
@@ -97,6 +102,9 @@ export default function AdminDashboard() {
         overdueCount: overdueInvoices.length,
         monthlyRevenue,
         statusDist,
+        aulasRevenue: totalRevenue,
+        rentalRevenue,
+        dayUseRevenue,
       };
     },
   });
@@ -265,12 +273,12 @@ export default function AdminDashboard() {
     },
   });
 
-  const s = stats || { students: 0, classes: 0, courts: 0, totalRevenue: 0, totalPending: 0, overdueCount: 0, monthlyRevenue: [], statusDist: [] };
+  const s = stats || { students: 0, classes: 0, courts: 0, totalRevenue: 0, totalPending: 0, overdueCount: 0, monthlyRevenue: [], statusDist: [], aulasRevenue: 0, rentalRevenue: 0, dayUseRevenue: 0 };
 
   const kpis = [
     { label: 'Alunos Ativos', value: s.students, sub: 'matriculados', icon: Users, gradient: 'from-blue-500/10 to-blue-600/5', iconBg: 'bg-blue-500/15 text-blue-600' },
     { label: 'Turmas Ativas', value: s.classes, sub: 'em andamento', icon: GraduationCap, gradient: 'from-emerald-500/10 to-emerald-600/5', iconBg: 'bg-emerald-500/15 text-emerald-600' },
-    { label: 'Receita Total', value: formatCurrency(s.totalRevenue), sub: 'faturas pagas', icon: TrendingUp, gradient: 'from-violet-500/10 to-violet-600/5', iconBg: 'bg-violet-500/15 text-violet-600' },
+    { label: 'Receita Total', value: formatCurrency(s.totalRevenue + s.rentalRevenue + s.dayUseRevenue), sub: 'aulas + aluguel + day use', icon: TrendingUp, gradient: 'from-violet-500/10 to-violet-600/5', iconBg: 'bg-violet-500/15 text-violet-600' },
     { label: 'Em Aberto', value: formatCurrency(s.totalPending), sub: `${s.overdueCount} vencida(s)`, icon: AlertTriangle, gradient: 'from-red-500/10 to-red-600/5', iconBg: 'bg-red-500/15 text-red-600', valueColor: 'text-destructive' },
   ];
 
@@ -383,6 +391,32 @@ export default function AdminDashboard() {
           </motion.div>
         ))}
       </div>
+
+      {/* Revenue Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Receita por Categoria
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Aulas</p>
+              <p className="text-xl font-bold">{formatCurrency(s.aulasRevenue)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Aluguel de Quadra</p>
+              <p className="text-xl font-bold">{formatCurrency(s.rentalRevenue)}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">Day Use</p>
+              <p className="text-xl font-bold">{formatCurrency(s.dayUseRevenue)}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main content: Sessions timeline + Chart */}
       <div className="grid gap-6 lg:grid-cols-5">

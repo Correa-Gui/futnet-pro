@@ -254,6 +254,111 @@ const endpoints: Endpoint[] = [
     "requester_phone": "5511999999999"
   }'`,
   },
+  {
+    method: "POST",
+    path: "/send-whatsapp",
+    summary: "Enviar mensagem WhatsApp",
+    description:
+      "Envia mensagens WhatsApp via Evolution API para um ou mais destinatários. Suporta mensagem livre ou template com variáveis dinâmicas. Requer autenticação de admin. Registra cada envio na tabela whatsapp_messages.",
+    headers: [
+      {
+        name: "Authorization",
+        value: "Bearer {access_token}",
+        required: true,
+        description: "Token JWT de um usuário admin",
+      },
+      {
+        name: "Content-Type",
+        value: "application/json",
+        required: true,
+        description: "Formato do body",
+      },
+    ],
+    body: `{
+  "recipients": [
+    { "phone": "5511999999999", "name": "Nome do Aluno" }
+  ],
+  "message_body": "Olá {{nome}}! Mensagem livre ou com variáveis.",
+  "template_id": "uuid-do-template (opcional)",
+  "template_variables": {
+    "nome": "João",
+    "turma": "Sub-17",
+    "horario": "18:00"
+  }
+}`,
+    responses: [
+      {
+        status: 200,
+        label: "Enviado",
+        body: `{ "sent": 1, "failed": 0, "results": [{ "phone": "5511999999999", "status": "sent" }] }`,
+      },
+      {
+        status: 401,
+        label: "Não autorizado",
+        body: `{ "error": "Não autorizado" }`,
+      },
+    ],
+    curl: `curl -X POST \\
+  ${BASE_URL}/send-whatsapp \\
+  -H "Authorization: Bearer SEU_TOKEN" \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "recipients": [{ "phone": "5511999999999", "name": "João" }],
+    "message_body": "Olá {{nome}}! Sua aula é amanhã.",
+    "template_variables": { "nome": "João" }
+  }'`,
+  },
+  {
+    method: "POST",
+    path: "/create-pix-payment",
+    summary: "Gerar PIX para fatura ou reserva",
+    description:
+      "Gera um pagamento PIX via Mercado Pago. Aceita invoice_id (fatura de aluno) ou booking_id (reserva de quadra). Para booking_id, o valor é calculado automaticamente como booking.price × reservation_deposit_percentage / 100, configurável em system_config. Requer admin para booking_id; aluno autenticado para invoice_id.",
+    headers: [
+      {
+        name: "Authorization",
+        value: "Bearer {access_token}",
+        required: true,
+        description: "Token JWT (admin para reserva, aluno para fatura)",
+      },
+      {
+        name: "Content-Type",
+        value: "application/json",
+        required: true,
+        description: "Formato do body",
+      },
+    ],
+    body: `// Para fatura de aluno:
+{ "invoice_id": "uuid-da-fatura" }
+
+// Para reserva de quadra (admin):
+{ "booking_id": "uuid-da-reserva" }`,
+    responses: [
+      {
+        status: 200,
+        label: "PIX gerado",
+        body: `{
+  "qr_code": "00020126...",
+  "qr_code_base64": "iVBORw0KGgo...",
+  "payment_id": 1234567890,
+  "expires_at": "2026-04-02T13:30:00.000Z",
+  "deposit_amount": 45.00,
+  "deposit_percentage": 30
+}`,
+      },
+      {
+        status: 400,
+        label: "Erro",
+        body: `{ "error": "Reserva não encontrada" }`,
+      },
+    ],
+    curl: `# Para reserva de quadra:
+curl -X POST \\
+  ${BASE_URL}/create-pix-payment \\
+  -H "Authorization: Bearer SEU_TOKEN_ADMIN" \\
+  -H "Content-Type: application/json" \\
+  -d '{ "booking_id": "UUID_DA_RESERVA" }'`,
+  },
 ];
 
 function CopyButton({ text }: { text: string }) {

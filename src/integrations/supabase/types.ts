@@ -147,6 +147,7 @@ export type Database = {
       }
       court_bookings: {
         Row: {
+          booking_type: string
           court_id: string
           created_at: string
           date: string
@@ -161,6 +162,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          booking_type?: string
           court_id: string
           created_at?: string
           date: string
@@ -175,6 +177,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          booking_type?: string
           court_id?: string
           created_at?: string
           date?: string
@@ -471,6 +474,7 @@ export type Database = {
           cpf: string | null
           created_at: string
           email: string | null
+          force_password_change: boolean
           full_name: string
           id: string
           phone: string | null
@@ -484,6 +488,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           email?: string | null
+          force_password_change?: boolean
           full_name: string
           id?: string
           phone?: string | null
@@ -497,6 +502,7 @@ export type Database = {
           cpf?: string | null
           created_at?: string
           email?: string | null
+          force_password_change?: boolean
           full_name?: string
           id?: string
           phone?: string | null
@@ -760,6 +766,47 @@ export type Database = {
           },
           {
             foreignKeyName: "whatsapp_messages_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_schedules: {
+        Row: {
+          created_at: string
+          days_before: number
+          id: string
+          is_active: boolean
+          name: string
+          template_id: string | null
+          trigger_event: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          days_before?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          template_id?: string | null
+          trigger_event: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          days_before?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          template_id?: string | null
+          trigger_event?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_schedules_template_id_fkey"
             columns: ["template_id"]
             isOneToOne: false
             referencedRelation: "whatsapp_templates"

@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, profile } = useAuth();
 
   if (loading) {
     return (
@@ -16,6 +16,8 @@ const Index = () => {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  if ((profile as any)?.force_password_change) return <Navigate to="/change-password" replace />;
 
   if (role === 'admin') return <Navigate to="/admin" replace />;
   if (role === 'teacher') return <Navigate to="/professor" replace />;

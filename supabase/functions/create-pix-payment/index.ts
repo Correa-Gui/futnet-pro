@@ -42,10 +42,130 @@ Deno.serve(async (req) => {
 
     const userId = claimsData.claims.sub;
 
-    const { invoice_id } = await req.json();
-    if (!invoice_id) {
-      throw new Error("invoice_id é obrigatório");
+    const body = await req.json();
+    const { invoice_id, booking_id } = body;
+
+    if (!invoice_id && !booking_id) {
+      throw new Error("invoice_id ou booking_id é obrigatório");
     }
+
+    // --- Booking PIX mode ---
+    if (booking_id) {
+      const adminClient = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+
+      // Verify admin role
+      const { data: roleRow } = await adminClient
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", userId)
+        .single();
+      if (!roleRow || roleRow.role !== "admin") {
+        return new Response(JSON.stringify({ error: "Acesso negado" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const { data: booking, error: bookingError } = await adminClient
+        .from("court_bookings")
+        .select("id, price, status, requester_name, requester_phone, date, payment_id")
+        .eq("id", booking_id)
+        .single();
+
+      if (bookingError || !booking) {
+        throw new Error("Reserva não encontrada");
+      }
+      if (booking.status === "paid") {
+        throw new Error("Esta reserva já foi paga");
+      }
+
+      // Load deposit percentage from system_config
+      const { data: configRow } = await adminClient
+        .from("system_config")
+        .select("value")
+        .eq("key", "reservation_deposit_percentage")
+        .maybeSingle();
+      const depositPct = parseFloat((configRow as any)?.value || "30");
+      const depositAmount = Math.max(0.01, Number(booking.price) * depositPct / 100);
+
+      // Reuse existing payment if still valid
+      if (booking.payment_id) {
+        const checkRes = await fetch(
+          `https://api.mercadopago.com/v1/payments/${booking.payment_id}`,
+          { headers: { Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}` } }
+        );
+        const checkData = await checkRes.json();
+        if (checkRes.ok && checkData.status === "pending" && checkData.point_of_interaction?.transaction_data) {
+          const expirationDate = checkData.date_of_expiration ? new Date(checkData.date_of_expiration) : null;
+          if (expirationDate && expirationDate > new Date()) {
+            return new Response(
+              JSON.stringify({
+                qr_code: checkData.point_of_interaction.transaction_data.qr_code,
+                qr_code_base64: checkData.point_of_interaction.transaction_data.qr_code_base64,
+                payment_id: checkData.id,
+                expires_at: checkData.date_of_expiration,
+              }),
+              { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+        await adminClient.from("court_bookings").update({ payment_id: null }).eq("id", booking_id);
+      }
+
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+      const mpRes = await fetch("https://api.mercadopago.com/v1/payments", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${MERCADOPAGO_ACCESS_TOKEN}`,
+          "Content-Type": "application/json",
+          "X-Idempotency-Key": `booking-${booking_id}-${Date.now()}`,
+        },
+        body: JSON.stringify({
+          transaction_amount: depositAmount,
+          description: `Reserva de quadra ${booking.date}`,
+          payment_method_id: "pix",
+          date_of_expiration: expiresAt,
+          external_reference: booking_id,
+          notification_url: `${Deno.env.get("SUPABASE_URL")}/functions/v1/mercadopago-webhook`,
+          payer: {
+            email: "reserva@arena.com",
+            first_name: booking.requester_name?.split(" ")[0] || "Cliente",
+          },
+        }),
+      });
+
+      const mpData = await mpRes.json();
+      if (!mpRes.ok) {
+        console.error("Mercado Pago error:", JSON.stringify(mpData));
+        throw new Error(`Erro ao gerar PIX: ${mpData.message || mpRes.status}`);
+      }
+
+      const qrCode = mpData.point_of_interaction?.transaction_data?.qr_code;
+      const qrCodeBase64 = mpData.point_of_interaction?.transaction_data?.qr_code_base64;
+
+      await adminClient
+        .from("court_bookings")
+        .update({ payment_id: String(mpData.id) })
+        .eq("id", booking_id);
+
+      return new Response(
+        JSON.stringify({
+          qr_code: qrCode,
+          qr_code_base64: qrCodeBase64,
+          payment_id: mpData.id,
+          expires_at: mpData.date_of_expiration || expiresAt,
+          deposit_amount: depositAmount,
+          deposit_percentage: depositPct,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // --- Invoice PIX mode (existing logic) ---
+    if (!invoice_id) throw new Error("invoice_id é obrigatório");
 
     // Fetch the invoice and verify it belongs to the user
     const { data: invoice, error: invError } = await supabase
