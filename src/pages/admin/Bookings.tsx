@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -9,7 +9,6 @@ import {
   subWeeks,
   eachDayOfInterval,
   getDay,
-  isSameDay,
   isToday,
   addMonths,
   subMonths,
@@ -19,7 +18,6 @@ import {
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -32,32 +30,14 @@ import {
   LayoutGrid,
   CalendarRange,
   User,
-  Phone,
   DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
-import { useWhatsAppProviderConfig } from "@/hooks/useWhatsAppProviderConfig";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
-
-const STATUS_COLORS: Record<BookingStatus, string> = {
-  requested: "bg-warning/20 border-warning text-warning-foreground",
-  confirmed: "bg-primary/15 border-primary text-primary",
-  paid: "bg-success/15 border-success text-success",
-  cancelled: "bg-destructive/15 border-destructive text-destructive",
-};
-
-const STATUS_LABELS: Record<BookingStatus, string> = {
-  requested: "Solicitado",
-  confirmed: "Confirmado",
-  paid: "Pago",
-  cancelled: "Cancelado",
-};
-
 type ViewMode = "week" | "day";
-
 type Court = { id: string; name: string };
 
 type CalendarEvent =
@@ -84,11 +64,54 @@ type CalendarEvent =
       price: number;
     };
 
-type BookingEvent = Extract<CalendarEvent, { type: "booking" }>;
+const HOUR_HEIGHT = 64; // px per hour
+const TIME_COL_W = 52; // px for time label column
 
-function formatDate(iso: string): string {
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
+const STATUS_STYLE: Record<BookingStatus, string> = {
+  requested: "bg-amber-50 dark:bg-amber-950/40 border-l-amber-400",
+  confirmed: "bg-blue-50 dark:bg-blue-950/40 border-l-blue-500",
+  paid:      "bg-emerald-50 dark:bg-emerald-950/40 border-l-emerald-500",
+  cancelled: "bg-red-50 dark:bg-red-950/40 border-l-red-400",
+};
+
+const STATUS_TEXT: Record<BookingStatus, string> = {
+  requested: "text-amber-700 dark:text-amber-400",
+  confirmed: "text-blue-700 dark:text-blue-400",
+  paid:      "text-emerald-700 dark:text-emerald-400",
+  cancelled: "text-red-700 dark:text-red-400",
+};
+
+function timeToMinutes(time: string): number {
+  const [h, m] = time.slice(0, 5).split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+/** Assigns lane (column) to each event so overlapping events appear side-by-side */
+function layoutEvents(events: CalendarEvent[]) {
+  if (!events.length) return [];
+  const sorted = [...events].sort(
+    (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime)
+  );
+  const colEnds: number[] = [];
+  const lanes = sorted.map((ev) => {
+    const startMins = timeToMinutes(ev.startTime);
+    let col = colEnds.findIndex((end) => end <= startMins);
+    if (col === -1) col = colEnds.length;
+    colEnds[col] = timeToMinutes(ev.endTime);
+    return col;
+  });
+
+  return sorted.map((event, i) => {
+    const startMins = timeToMinutes(event.startTime);
+    const endMins = timeToMinutes(event.endTime);
+    const totalCols = sorted.reduce((max, _, j) => {
+      const s = timeToMinutes(sorted[j].startTime);
+      const e = timeToMinutes(sorted[j].endTime);
+      if (s < endMins && e > startMins) return Math.max(max, lanes[j] + 1);
+      return max;
+    }, 1);
+    return { event, col: lanes[i], totalCols };
+  });
 }
 
 export default function Bookings() {
@@ -96,25 +119,23 @@ export default function Bookings() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
   const { data: businessHours } = useBusinessHours();
-  const { data: whatsappConfig } = useWhatsAppProviderConfig();
-  const pendingConfirmRef = useRef<BookingEvent | null>(null);
 
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
   const openHour = businessHours?.open_hour ?? 6;
   const closeHour = businessHours?.close_hour ?? 22;
   const HOURS = Array.from({ length: closeHour - openHour }, (_, i) => i + openHour);
+  const totalHeight = HOURS.length * HOUR_HEIGHT;
 
-  // Week range
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = eachDayOfInterval({ start: weekStart, end: weekEnd });
+  const filteredWeekDays = weekDays.filter((day) => openDays.includes(getDay(day)));
 
   const dateRange = {
     from: format(viewMode === "day" ? currentDate : weekStart, "yyyy-MM-dd"),
     to: format(viewMode === "day" ? currentDate : weekEnd, "yyyy-MM-dd"),
   };
 
-  // Fetch courts
   const { data: courts = [] } = useQuery({
     queryKey: ["admin-courts-list"],
     queryFn: async () => {
@@ -128,7 +149,6 @@ export default function Bookings() {
     },
   });
 
-  // Fetch bookings
   const { data: bookings = [] } = useQuery({
     queryKey: ["admin-bookings-range", dateRange.from, dateRange.to],
     queryFn: async () => {
@@ -144,7 +164,6 @@ export default function Bookings() {
     },
   });
 
-  // Fetch active classes
   const { data: classes = [] } = useQuery({
     queryKey: ["admin-classes-schedule"],
     queryFn: async () => {
@@ -180,153 +199,190 @@ export default function Bookings() {
     paid: bookings.filter((b) => b.status === "paid").length,
   };
 
-  // ── Week view helpers ─────────────────────────────────────────────────────
-  const filteredWeekDays = weekDays.filter((day) => openDays.includes(getDay(day)));
+  function getEventsForDay(day: Date): CalendarEvent[] {
+    const dayOfWeek = getDay(day);
+    const dateStr = format(day, "yyyy-MM-dd");
+    const dayClasses: CalendarEvent[] = classes
+      .filter((c) => c.day_of_week.includes(dayOfWeek))
+      .map((c) => ({
+        type: "class" as const,
+        id: c.id,
+        name: c.name,
+        court: (c as any).courts?.name || "",
+        courtId: (c as any).courts?.id || "",
+        startTime: c.start_time,
+        endTime: c.end_time,
+      }));
+    const dayBookings: CalendarEvent[] = bookings
+      .filter((b) => b.date === dateStr)
+      .map((b) => ({
+        type: "booking" as const,
+        id: b.id,
+        name: b.requester_name,
+        court: (b as any).courts?.name || "",
+        courtId: (b as any).courts?.id || "",
+        startTime: b.start_time,
+        endTime: b.end_time,
+        date: b.date,
+        status: b.status as BookingStatus,
+        phone: b.requester_phone,
+        price: Number(b.price),
+      }));
+    return [...dayClasses, ...dayBookings];
+  }
 
-  const weekDayEvents = useMemo(() => {
-    return filteredWeekDays.map((day) => {
-      const dayOfWeek = getDay(day);
-      const dateStr = format(day, "yyyy-MM-dd");
+  function getEventsForCourt(courtId: string): CalendarEvent[] {
+    const dayOfWeek = getDay(currentDate);
+    const dateStr = format(currentDate, "yyyy-MM-dd");
+    const courtClasses: CalendarEvent[] = classes
+      .filter((c) => (c as any).courts?.id === courtId && c.day_of_week.includes(dayOfWeek))
+      .map((c) => ({
+        type: "class" as const,
+        id: c.id,
+        name: c.name,
+        court: courts.find((ct) => ct.id === courtId)?.name || "",
+        courtId,
+        startTime: c.start_time,
+        endTime: c.end_time,
+      }));
+    const courtBookings: CalendarEvent[] = bookings
+      .filter((b) => b.date === dateStr && (b as any).courts?.id === courtId)
+      .map((b) => ({
+        type: "booking" as const,
+        id: b.id,
+        name: b.requester_name,
+        court: courts.find((ct) => ct.id === courtId)?.name || "",
+        courtId,
+        startTime: b.start_time,
+        endTime: b.end_time,
+        date: b.date,
+        status: b.status as BookingStatus,
+        phone: b.requester_phone,
+        price: Number(b.price),
+      }));
+    return [...courtClasses, ...courtBookings];
+  }
 
-      const dayClasses: CalendarEvent[] = classes
-        .filter((c) => c.day_of_week.includes(dayOfWeek))
-        .map((c) => ({
-          type: "class" as const,
-          id: c.id,
-          name: c.name,
-          court: (c as any).courts?.name || "",
-          courtId: (c as any).courts?.id || "",
-          startTime: c.start_time,
-          endTime: c.end_time,
-        }));
+  function EventCard({
+    event,
+    col,
+    totalCols,
+  }: {
+    event: CalendarEvent;
+    col: number;
+    totalCols: number;
+  }) {
+    const startMins = timeToMinutes(event.startTime);
+    const endMins = timeToMinutes(event.endTime);
+    const top = (startMins - openHour * 60) * (HOUR_HEIGHT / 60);
+    const height = Math.max((endMins - startMins) * (HOUR_HEIGHT / 60), 26);
+    const pctW = 100 / totalCols;
+    const isShort = height < 44;
 
-      const dayBookings: CalendarEvent[] = bookings
-        .filter((b) => b.date === dateStr)
-        .map((b) => ({
-          type: "booking" as const,
-          id: b.id,
-          name: b.requester_name,
-          court: (b as any).courts?.name || "",
-          courtId: (b as any).courts?.id || "",
-          startTime: b.start_time,
-          endTime: b.end_time,
-          date: b.date,
-          status: b.status as BookingStatus,
-          phone: b.requester_phone,
-          price: Number(b.price),
-        }));
-
-      return { day, dayOfWeek, events: [...dayClasses, ...dayBookings] };
-    });
-  }, [filteredWeekDays, classes, bookings]);
-
-  // ── Day view helpers ──────────────────────────────────────────────────────
-  const dayDateStr = format(currentDate, "yyyy-MM-dd");
-  const dayOfWeek = getDay(currentDate);
-
-  const dayEvents = useMemo((): Record<string, CalendarEvent[]> => {
-    const result: Record<string, CalendarEvent[]> = {};
-    courts.forEach((court) => {
-      const classEvents: CalendarEvent[] = classes
-        .filter(
-          (c) =>
-            (c as any).courts?.id === court.id &&
-            c.day_of_week.includes(dayOfWeek)
-        )
-        .map((c) => ({
-          type: "class" as const,
-          id: c.id,
-          name: c.name,
-          court: court.name,
-          courtId: court.id,
-          startTime: c.start_time,
-          endTime: c.end_time,
-        }));
-
-      const bookingEvents: CalendarEvent[] = bookings
-        .filter(
-          (b) => b.date === dayDateStr && (b as any).courts?.id === court.id
-        )
-        .map((b) => ({
-          type: "booking" as const,
-          id: b.id,
-          name: b.requester_name,
-          court: court.name,
-          courtId: court.id,
-          startTime: b.start_time,
-          endTime: b.end_time,
-          date: b.date,
-          status: b.status as BookingStatus,
-          phone: b.requester_phone,
-          price: Number(b.price),
-        }));
-
-      result[court.id] = [...classEvents, ...bookingEvents];
-    });
-    return result;
-  }, [courts, classes, bookings, dayDateStr, dayOfWeek]);
-
-  const weekLabel = `${format(weekStart, "dd MMM", { locale: ptBR })} — ${format(weekEnd, "dd MMM yyyy", { locale: ptBR })}`;
-  const dayLabel = format(currentDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
-
-  function EventBlock({ event }: { event: CalendarEvent }) {
     if (event.type === "class") {
       return (
-        <div className="rounded-lg border border-primary/40 bg-primary/10 px-2 py-1.5 mb-1 text-[11px] leading-tight">
-          <div className="flex items-center gap-1">
+        <div
+          style={{
+            position: "absolute",
+            top,
+            height,
+            left: `calc(${pctW * col}% + 3px)`,
+            width: `calc(${pctW}% - 6px)`,
+            zIndex: 1,
+          }}
+          className="rounded-md border-l-4 border-l-primary bg-primary/10 dark:bg-primary/20 px-2 py-1 overflow-hidden"
+        >
+          <div className="flex items-center gap-1 leading-none">
             <GraduationCap className="h-3 w-3 text-primary shrink-0" />
-            <span className="font-semibold truncate text-foreground">{event.name}</span>
+            <span className="text-[11px] font-semibold text-foreground truncate">
+              {event.name}
+            </span>
           </div>
-          <p className="text-muted-foreground truncate">
-            {event.startTime?.slice(0, 5)}–{event.endTime?.slice(0, 5)}
-          </p>
+          {!isShort && (
+            <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
+              {event.startTime.slice(0, 5)}–{event.endTime.slice(0, 5)}
+              {event.court ? ` · ${event.court}` : ""}
+            </p>
+          )}
         </div>
       );
     }
 
     return (
       <div
+        style={{
+          position: "absolute",
+          top,
+          height,
+          left: `calc(${pctW * col}% + 3px)`,
+          width: `calc(${pctW}% - 6px)`,
+          zIndex: 1,
+        }}
         className={cn(
-          "rounded-lg border px-2 py-1.5 mb-1 text-[11px] leading-tight",
-          STATUS_COLORS[event.status]
+          "rounded-md border-l-4 px-2 py-1 overflow-hidden",
+          STATUS_STYLE[event.status]
         )}
       >
-        <div className="flex items-center gap-1 mb-0.5">
-          <User className="h-3 w-3 shrink-0" />
-          <p className="font-semibold truncate text-foreground">{event.name}</p>
-        </div>
-        <p className="text-muted-foreground">
-          {event.startTime?.slice(0, 5)}–{event.endTime?.slice(0, 5)} · R${event.price.toFixed(0)}
-        </p>
-        {event.status === "requested" && (
-          <div className="flex gap-1 mt-1">
-            <button
-              title="Confirmar"
-              onClick={() => updateStatus.mutate({ id: event.id, status: "confirmed" })}
-              className="flex items-center gap-0.5 text-primary hover:text-primary/80 font-semibold"
-            >
-              <CheckCircle className="h-3.5 w-3.5" /> Confirmar
-            </button>
-            <button
-              title="Cancelar"
-              onClick={() => updateStatus.mutate({ id: event.id, status: "cancelled" })}
-              className="flex items-center gap-0.5 text-destructive hover:text-destructive/80 font-semibold ml-1"
-            >
-              <XCircle className="h-3.5 w-3.5" />
-            </button>
-          </div>
-        )}
-        {event.status === "confirmed" && (
-          <button
-            className="text-[10px] text-primary underline mt-1 font-semibold"
-            onClick={() => updateStatus.mutate({ id: event.id, status: "paid" })}
+        <div className="flex items-center gap-1 leading-none">
+          <User className="h-3 w-3 shrink-0 text-muted-foreground" />
+          <span
+            className={cn(
+              "text-[11px] font-semibold truncate",
+              STATUS_TEXT[event.status]
+            )}
           >
-            Marcar Pago
-          </button>
+            {event.name}
+          </span>
+        </div>
+        {!isShort && (
+          <>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {event.startTime.slice(0, 5)}–{event.endTime.slice(0, 5)} · R$
+              {event.price.toFixed(0)}
+            </p>
+            {event.status === "requested" && (
+              <div className="flex gap-2 mt-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateStatus.mutate({ id: event.id, status: "confirmed" });
+                  }}
+                  className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 flex items-center gap-0.5 hover:underline"
+                >
+                  <CheckCircle className="h-3 w-3" /> Confirmar
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    updateStatus.mutate({ id: event.id, status: "cancelled" });
+                  }}
+                  className="text-[10px] font-semibold text-destructive flex items-center gap-0.5 hover:underline"
+                >
+                  <XCircle className="h-3 w-3" />
+                </button>
+              </div>
+            )}
+            {event.status === "confirmed" && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateStatus.mutate({ id: event.id, status: "paid" });
+                }}
+                className="text-[10px] text-emerald-600 dark:text-emerald-400 underline mt-1 font-semibold block"
+              >
+                Marcar Pago
+              </button>
+            )}
+          </>
         )}
       </div>
     );
   }
+
+  const weekLabel = `${format(weekStart, "dd MMM", { locale: ptBR })} — ${format(weekEnd, "dd MMM yyyy", { locale: ptBR })}`;
+  const dayLabel = format(currentDate, "EEEE, dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+
+  const columns = viewMode === "week" ? filteredWeekDays.length : courts.length;
 
   return (
     <div className="space-y-4">
@@ -338,7 +394,6 @@ export default function Bookings() {
             Visualize reservas e horários das turmas
           </p>
         </div>
-        {/* View toggle */}
         <div className="flex items-center rounded-lg border border-border bg-muted/30 p-0.5 gap-0.5">
           <Button
             variant={viewMode === "week" ? "default" : "ghost"}
@@ -346,8 +401,7 @@ export default function Bookings() {
             className="gap-1.5 h-8"
             onClick={() => setViewMode("week")}
           >
-            <CalendarRange className="h-3.5 w-3.5" />
-            Semana
+            <CalendarRange className="h-3.5 w-3.5" /> Semana
           </Button>
           <Button
             variant={viewMode === "day" ? "default" : "ghost"}
@@ -355,8 +409,7 @@ export default function Bookings() {
             className="gap-1.5 h-8"
             onClick={() => setViewMode("day")}
           >
-            <LayoutGrid className="h-3.5 w-3.5" />
-            Dia
+            <LayoutGrid className="h-3.5 w-3.5" /> Dia
           </Button>
         </div>
       </div>
@@ -365,9 +418,9 @@ export default function Bookings() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total", value: stats.total, icon: CalendarDays, color: "text-primary" },
-          { label: "Pendentes", value: stats.requested, icon: Clock, color: "text-warning" },
-          { label: "Confirmados", value: stats.confirmed, icon: CheckCircle, color: "text-primary" },
-          { label: "Pagos", value: stats.paid, icon: DollarSign, color: "text-success" },
+          { label: "Pendentes", value: stats.requested, icon: Clock, color: "text-amber-500" },
+          { label: "Confirmados", value: stats.confirmed, icon: CheckCircle, color: "text-blue-500" },
+          { label: "Pagos", value: stats.paid, icon: DollarSign, color: "text-emerald-500" },
         ].map((s, i) => (
           <Card key={i}>
             <CardContent className="p-3 flex items-center gap-3">
@@ -386,15 +439,30 @@ export default function Bookings() {
         <div className="flex items-center gap-1">
           {viewMode === "week" ? (
             <>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(subMonths(currentDate, 1))} title="Mês anterior">
-                <ChevronLeft className="h-4 w-4" /><ChevronLeft className="h-4 w-4 -ml-3" />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                title="Mês anterior"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 -ml-3" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(subWeeks(currentDate, 1))} title="Semana anterior">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentDate(subWeeks(currentDate, 1))}
+                title="Semana anterior"
+              >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="icon" onClick={() => setCurrentDate(subDays(currentDate, 1))} title="Dia anterior">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentDate(subDays(currentDate, 1))}
+            >
               <ChevronLeft className="h-4 w-4" />
             </Button>
           )}
@@ -404,7 +472,12 @@ export default function Bookings() {
           <p className="text-sm font-semibold capitalize">
             {viewMode === "week" ? weekLabel : dayLabel}
           </p>
-          <Button variant="link" size="sm" className="text-xs h-auto p-0" onClick={() => setCurrentDate(new Date())}>
+          <Button
+            variant="link"
+            size="sm"
+            className="text-xs h-auto p-0"
+            onClick={() => setCurrentDate(new Date())}
+          >
             Ir para hoje
           </Button>
         </div>
@@ -412,15 +485,30 @@ export default function Bookings() {
         <div className="flex items-center gap-1">
           {viewMode === "week" ? (
             <>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(addWeeks(currentDate, 1))} title="Próxima semana">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentDate(addWeeks(currentDate, 1))}
+                title="Próxima semana"
+              >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-              <Button variant="outline" size="icon" onClick={() => setCurrentDate(addMonths(currentDate, 1))} title="Próximo mês">
-                <ChevronRight className="h-4 w-4" /><ChevronRight className="h-4 w-4 -ml-3" />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                title="Próximo mês"
+              >
+                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 -ml-3" />
               </Button>
             </>
           ) : (
-            <Button variant="outline" size="icon" onClick={() => setCurrentDate(addDays(currentDate, 1))} title="Próximo dia">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setCurrentDate(addDays(currentDate, 1))}
+            >
               <ChevronRight className="h-4 w-4" />
             </Button>
           )}
@@ -430,161 +518,188 @@ export default function Bookings() {
       {/* Legend */}
       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-primary/30 border border-primary" /> Turma fixa
+          <span className="inline-block w-3 h-3 rounded-sm bg-primary/20 border-l-2 border-primary" />
+          Turma fixa
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-warning/30 border border-warning" /> Solicitado
+          <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/40 border-l-2 border-amber-400" />
+          Solicitado
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-primary/15 border border-primary" /> Confirmado
+          <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 dark:bg-blue-900/40 border-l-2 border-blue-500" />
+          Confirmado
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="w-3 h-3 rounded bg-success/15 border border-success" /> Pago
+          <span className="inline-block w-3 h-3 rounded-sm bg-emerald-100 dark:bg-emerald-900/40 border-l-2 border-emerald-500" />
+          Pago
         </span>
       </div>
 
-      {/* ── WEEK VIEW ────────────────────────────────────────────────────────── */}
-      {viewMode === "week" && (
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            <div
-              className={cn(
-                "grid min-w-[700px] overflow-x-auto",
-                `grid-cols-[auto_repeat(${filteredWeekDays.length},1fr)]`
-              )}
-            >
-              {/* Header */}
-              <div className="sticky left-0 bg-card z-10 border-b border-r p-2" />
-              {filteredWeekDays.map((day) => (
+      {/* Calendar */}
+      <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+        {/* Sticky column headers */}
+        <div
+          className="sticky top-0 z-20 bg-card border-b"
+          style={{
+            display: "grid",
+            gridTemplateColumns: `${TIME_COL_W}px repeat(${columns}, 1fr)`,
+          }}
+        >
+          {/* Corner cell */}
+          <div className="border-r py-2" />
+
+          {viewMode === "week"
+            ? filteredWeekDays.map((day) => (
                 <div
                   key={day.toISOString()}
                   className={cn(
-                    "border-b border-r p-2 text-center",
+                    "border-r p-2 text-center select-none",
                     isToday(day) && "bg-primary/10"
                   )}
                 >
                   <p className="text-xs text-muted-foreground capitalize">
                     {format(day, "EEE", { locale: ptBR })}
                   </p>
-                  <p className={cn("text-lg font-bold", isToday(day) && "text-primary")}>
+                  <p
+                    className={cn(
+                      "text-lg font-bold leading-none mt-0.5",
+                      isToday(day) && "text-primary"
+                    )}
+                  >
                     {format(day, "dd")}
                   </p>
                 </div>
+              ))
+            : courts.map((court, i) => (
+                <div
+                  key={court.id}
+                  className={cn(
+                    "border-r p-3 text-center font-semibold text-sm",
+                    i % 2 === 0 ? "text-primary" : "text-secondary-foreground"
+                  )}
+                >
+                  {court.name}
+                </div>
               ))}
+        </div>
 
-              {/* Time rows */}
-              {HOURS.map((hour) => (
-                <>
-                  <div
-                    key={`hour-${hour}`}
-                    className="sticky left-0 bg-card z-10 border-b border-r px-2 py-3 text-xs text-muted-foreground text-right min-w-[50px]"
-                  >
-                    {String(hour).padStart(2, "0")}:00
-                  </div>
-                  {weekDayEvents.map(({ day, events }) => {
-                    const cellEvents = events.filter((e) => {
-                      const startHour = parseInt(e.startTime?.slice(0, 2) || "0", 10);
-                      return startHour === hour;
-                    });
+        {/* Scrollable time area */}
+        <div className="overflow-y-auto" style={{ maxHeight: 580 }}>
+          <div
+            style={{
+              position: "relative",
+              height: totalHeight,
+              minWidth: 700,
+            }}
+          >
+            {/* Time labels */}
+            {HOURS.map((hour, i) => (
+              <div
+                key={hour}
+                style={{
+                  position: "absolute",
+                  top: i * HOUR_HEIGHT - 8,
+                  left: 0,
+                  width: TIME_COL_W,
+                  paddingRight: 8,
+                  textAlign: "right",
+                }}
+                className="text-[11px] text-muted-foreground select-none"
+              >
+                {String(hour).padStart(2, "0")}:00
+              </div>
+            ))}
+
+            {/* Full-hour lines */}
+            {HOURS.map((_, i) => (
+              <div
+                key={`h-${i}`}
+                style={{
+                  position: "absolute",
+                  top: i * HOUR_HEIGHT,
+                  left: TIME_COL_W,
+                  right: 0,
+                  height: 1,
+                }}
+                className="bg-border/50"
+              />
+            ))}
+
+            {/* Half-hour lines */}
+            {HOURS.map((_, i) => (
+              <div
+                key={`hh-${i}`}
+                style={{
+                  position: "absolute",
+                  top: i * HOUR_HEIGHT + HOUR_HEIGHT / 2,
+                  left: TIME_COL_W,
+                  right: 0,
+                  height: 1,
+                }}
+                className="bg-border/25"
+              />
+            ))}
+
+            {/* Day/Court columns */}
+            <div
+              style={{
+                position: "absolute",
+                top: 0,
+                bottom: 0,
+                left: TIME_COL_W,
+                right: 0,
+                display: "grid",
+                gridTemplateColumns: `repeat(${columns}, 1fr)`,
+              }}
+            >
+              {viewMode === "week"
+                ? filteredWeekDays.map((day) => {
+                    const events = getEventsForDay(day);
+                    const laid = layoutEvents(events);
                     return (
                       <div
-                        key={`${day.toISOString()}-${hour}`}
+                        key={day.toISOString()}
+                        style={{ position: "relative" }}
                         className={cn(
-                          "border-b border-r p-0.5 min-h-[56px] relative",
-                          isToday(day) && "bg-primary/5"
+                          "border-l border-border/40",
+                          isToday(day) && "bg-primary/[0.03]"
                         )}
                       >
-                        {cellEvents.map((event) => (
-                          <EventBlock key={event.id} event={event} />
+                        {laid.map(({ event, col, totalCols }) => (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            col={col}
+                            totalCols={totalCols}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })
+                : courts.map((court) => {
+                    const events = getEventsForCourt(court.id);
+                    const laid = layoutEvents(events);
+                    return (
+                      <div
+                        key={court.id}
+                        style={{ position: "relative" }}
+                        className="border-l border-border/40"
+                      >
+                        {laid.map(({ event, col, totalCols }) => (
+                          <EventCard
+                            key={event.id}
+                            event={event}
+                            col={col}
+                            totalCols={totalCols}
+                          />
                         ))}
                       </div>
                     );
                   })}
-                </>
-              ))}
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* ── DAY VIEW ─────────────────────────────────────────────────────────── */}
-      {viewMode === "day" && (
-        <Card className="overflow-hidden">
-          <CardContent className="p-0">
-            {courts.length === 0 ? (
-              <p className="text-muted-foreground text-center py-12 text-sm">
-                Nenhuma quadra ativa cadastrada.
-              </p>
-            ) : (
-              <div
-                className="overflow-x-auto"
-                style={{ minWidth: `${60 + courts.length * 200}px` }}
-              >
-                <div
-                  className="grid"
-                  style={{
-                    gridTemplateColumns: `60px repeat(${courts.length}, 1fr)`,
-                  }}
-                >
-                  {/* Header row — courts as columns */}
-                  <div className="sticky left-0 bg-card z-10 border-b border-r" />
-                  {courts.map((court, i) => {
-                    const colors = [
-                      "bg-primary/10 text-primary border-primary/20",
-                      "bg-secondary/10 text-secondary border-secondary/20",
-                    ];
-                    return (
-                      <div
-                        key={court.id}
-                        className={cn(
-                          "border-b border-r p-3 text-center font-bold text-sm",
-                          colors[i % 2]
-                        )}
-                      >
-                        {court.name}
-                        <div className="text-xs font-normal mt-0.5 opacity-70">
-                          {(dayEvents[court.id] || []).length} evento(s)
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Time rows */}
-                  {HOURS.map((hour) => (
-                    <>
-                      <div
-                        key={`day-hour-${hour}`}
-                        className="sticky left-0 bg-card z-10 border-b border-r px-2 py-3 text-xs text-muted-foreground text-right"
-                      >
-                        {String(hour).padStart(2, "0")}:00
-                      </div>
-                      {courts.map((court) => {
-                        const cellEvents = (dayEvents[court.id] || []).filter(
-                          (e) => parseInt(e.startTime?.slice(0, 2) || "0", 10) === hour
-                        );
-                        const isEmpty = cellEvents.length === 0;
-                        return (
-                          <div
-                            key={`${court.id}-${hour}`}
-                            className={cn(
-                              "border-b border-r p-1 min-h-[60px]",
-                              isEmpty && "bg-muted/10"
-                            )}
-                          >
-                            {cellEvents.map((event) => (
-                              <EventBlock key={event.id} event={event} />
-                            ))}
-                          </div>
-                        );
-                      })}
-                    </>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
