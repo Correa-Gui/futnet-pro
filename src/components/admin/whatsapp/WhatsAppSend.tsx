@@ -147,7 +147,9 @@ export default function WhatsAppSend() {
   };
 
   const resolveVars = (body: string, student: StudentWithProfile): string => {
-    const classInfo = selectedClassId ? classes.find((item) => item.id === selectedClassId) : null;
+    const classInfo = selectedClassId
+      ? classes.find((item) => item.id === selectedClassId)
+      : classes.find((item) => student.classIds.includes(item.id)) || null;
     return body
       .replace(/\{\{nome\}\}/g, student.fullName)
       .replace(/\{\{turma\}\}/g, classInfo?.name || "")
@@ -319,7 +321,8 @@ export default function WhatsAppSend() {
                 value={selectedClassId}
                 onValueChange={(value) => {
                   setSelectedClassId(value);
-                  setSelectedStudents(new Set());
+                  const inClass = students.filter((s) => s.classIds.includes(value));
+                  setSelectedStudents(new Set(inClass.map((s) => s.studentId)));
                 }}
               >
                 <SelectTrigger>
