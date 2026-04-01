@@ -47,21 +47,11 @@ export default function LandingPage() {
       `}</style>
       <div className="font-body text-foreground overflow-x-hidden">
         <Nav settings={settings} />
-        {isVisible("hero") && <HeroSection settings={settings} getImage={getImage} />}
-        {isVisible("stats") && <StatsStrip />}
+        <HeroSection settings={settings} getImage={getImage} />
         <ServicesSection />
-        {isVisible("about") && <AboutSection getImage={getImage} />}
-        {isVisible("gallery") && <GallerySection getImage={getImage} />}
-        {isVisible("benefits") && <BenefitsSection settings={settings} />}
-        {isVisible("how_it_works") && <HowItWorksSection settings={settings} />}
-        {isVisible("testimonials") && <TestimonialsSection />}
-        <ClassesSection onSelectClass={handleSelectClass} />
-        <DynamicPlansSection settings={settings} />
-        {isVisible("plans") && <PlansSection settings={settings} />}
         <TrialFormSection settings={settings} preselectedClassId={preselectedClassId} />
         <CourtBookingSection />
-        {isVisible("faq") && <FAQSection settings={settings} />}
-        {isVisible("final_cta") && <FinalCTA settings={settings} />}
+        <FinalCTA settings={settings} />
         <Footer settings={settings} businessHours={businessHours} />
       </div>
     </>

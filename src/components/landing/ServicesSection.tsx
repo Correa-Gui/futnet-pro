@@ -16,8 +16,18 @@ const rentalPerks = [
   "Iluminação completa à noite",
 ];
 
+function TwinCourtsIcon() {
+  return (
+    <div className="grid grid-cols-2 gap-1">
+      <div className="h-6 w-8 rounded-sm border-2 border-orange-500 bg-orange-100" />
+      <div className="h-6 w-8 rounded-sm border-2 border-orange-500 bg-orange-100" />
+    </div>
+  );
+}
+
+
 function ServiceCard({
-  icon: Icon,
+  icon,
   label,
   title,
   description,
@@ -26,7 +36,7 @@ function ServiceCard({
   ctaTarget,
   accent,
 }: {
-  icon: React.ElementType;
+  icon: React.ReactNode;
   label: string;
   title: string;
   description: string;
@@ -69,9 +79,7 @@ function ServiceCard({
               isPrimary ? "bg-secondary/15" : "bg-primary/10"
             }`}
           >
-            <Icon
-              className={`h-6 w-6 ${isPrimary ? "text-secondary" : "text-primary"}`}
-            />
+            {icon}
           </div>
           <span
             className={`text-xs font-bold uppercase tracking-widest ${
@@ -142,7 +150,7 @@ export function ServicesSection() {
 
         <div className="grid gap-6 md:grid-cols-2">
           <ServiceCard
-            icon={GraduationCap}
+            icon={<GraduationCap className="h-6 w-6 text-secondary" />}
             label="Aulas"
             title="Aprenda Futevôlei"
             description="Turmas estruturadas com professores certificados para iniciantes e avançados. Evolua no seu ritmo com acompanhamento de verdade."
@@ -152,10 +160,10 @@ export function ServicesSection() {
             accent="secondary"
           />
           <ServiceCard
-            icon={Calendar}
+            icon={<TwinCourtsIcon />}
             label="Aluguel"
-            title="Reserve uma Quadra"
-            description="Duas quadras profissionais disponíveis para reserva online. Você escolhe a quadra, a data e o horário — em poucos cliques."
+            title="Duas quadras lado a lado"
+            description="Selecione uma das quadras e reserve online em poucos passos. Horários flexíveis para treinar com os amigos."
             perks={rentalPerks}
             ctaText="Ver disponibilidade"
             ctaTarget="reservar-quadra"

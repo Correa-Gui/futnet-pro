@@ -257,6 +257,26 @@ export function CourtBookingSection() {
 
   const stepLabels = ["Escolha a quadra", "Data e horário", "Confirmar"];
 
+  function TwoCourtGraphic() {
+    return (
+      <div className="mb-6 flex justify-center gap-3">
+        {[1, 2].map((i) => (
+          <div key={i} className="w-40 h-24 rounded-xl border-2 border-orange-400 bg-orange-50 p-2">
+            <div className="h-1/2 bg-white rounded-sm" />
+            <div className="h-1/2 flex items-center justify-around mt-1">
+              {[...Array(4)].map((_, j) => (
+                <div
+                  key={j}
+                  className="w-2 h-2 rounded-full bg-orange-400"
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <Section id="reservar-quadra" className="py-20 px-6 bg-card">
       <div className="max-w-4xl mx-auto">
@@ -266,6 +286,7 @@ export function CourtBookingSection() {
           <SectionTitle>
             Reserve sua <span className="text-secondary">quadra online</span>
           </SectionTitle>
+          <TwoCourtGraphic />
           <p className="text-muted-foreground max-w-xl mx-auto text-base">
             Escolha a quadra, selecione a data e o horário disponível. Em
             poucos cliques sua reserva está feita.
