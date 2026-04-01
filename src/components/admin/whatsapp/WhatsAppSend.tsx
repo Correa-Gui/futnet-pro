@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -20,12 +21,27 @@ interface StudentWithProfile {
   classIds: string[];
 }
 
+// Variables resolved automatically from context (no manual input needed)
+const AUTO_VARS = new Set(["nome", "turma", "horario", "dia", "professor", "quadra", "app_url"]);
+
+// Human-friendly labels for common manual variables
+const VAR_LABELS: Record<string, string> = {
+  valor: "Valor (ex: R$ 150,00)",
+  mes: "Mês de referência (ex: Abril/2026)",
+  data_vencimento: "Data de vencimento (ex: 10/04/2026)",
+  data: "Data (ex: 05/04/2026)",
+  horario_inicio: "Horário início (ex: 09:00)",
+  horario_fim: "Horário fim (ex: 10:00)",
+  quadra: "Quadra",
+};
+
 export default function WhatsAppSend() {
   const [mode, setMode] = useState<"class" | "individual">("class");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [templateId, setTemplateId] = useState<string>("");
   const [messageBody, setMessageBody] = useState("");
+  const [manualVars, setManualVars] = useState<Record<string, string>>({});
   const [sending, setSending] = useState(false);
   const { data: providerConfig } = useWhatsAppProviderConfig();
 
@@ -55,27 +71,27 @@ export default function WhatsAppSend() {
 
       if (!studentProfiles) return [];
 
-      const userIds = studentProfiles.map((student) => student.user_id);
+      const userIds = studentProfiles.map((s) => s.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name, phone")
         .in("user_id", userIds);
 
-      const profileMap = Object.fromEntries((profiles || []).map((profile) => [profile.user_id, profile]));
+      const profileMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p]));
       const enrollMap: Record<string, string[]> = {};
-      (enrollments || []).forEach((enrollment) => {
-        if (!enrollMap[enrollment.student_id]) enrollMap[enrollment.student_id] = [];
-        enrollMap[enrollment.student_id].push(enrollment.class_id);
+      (enrollments || []).forEach((e) => {
+        if (!enrollMap[e.student_id]) enrollMap[e.student_id] = [];
+        enrollMap[e.student_id].push(e.class_id);
       });
 
       return studentProfiles
-        .map((studentProfile): StudentWithProfile => ({
-          studentId: studentProfile.id,
-          fullName: profileMap[studentProfile.user_id]?.full_name || "Aluno",
-          phone: profileMap[studentProfile.user_id]?.phone || null,
-          classIds: enrollMap[studentProfile.id] || [],
+        .map((sp): StudentWithProfile => ({
+          studentId: sp.id,
+          fullName: profileMap[sp.user_id]?.full_name || "Aluno",
+          phone: profileMap[sp.user_id]?.phone || null,
+          classIds: enrollMap[sp.id] || [],
         }))
-        .filter((student) => student.phone);
+        .filter((s) => s.phone);
     },
   });
 
@@ -96,17 +112,13 @@ export default function WhatsAppSend() {
     queryFn: async () => {
       const { data: teachers } = await supabase.from("teacher_profiles").select("id, user_id");
       if (!teachers?.length) return {};
-
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name")
-        .in("user_id", teachers.map((teacher) => teacher.user_id));
-
-      const profilesMap = Object.fromEntries((profiles || []).map((profile) => [profile.user_id, profile.full_name]));
+        .in("user_id", teachers.map((t) => t.user_id));
+      const profilesMap = Object.fromEntries((profiles || []).map((p) => [p.user_id, p.full_name]));
       const map: Record<string, string> = {};
-      teachers.forEach((teacher) => {
-        map[teacher.id] = profilesMap[teacher.user_id] || "Professor";
-      });
+      teachers.forEach((t) => { map[t.id] = profilesMap[t.user_id] || "Professor"; });
       return map;
     },
   });
@@ -115,13 +127,33 @@ export default function WhatsAppSend() {
     queryKey: ["wa-court-map"],
     queryFn: async () => {
       const { data } = await supabase.from("courts").select("id, name");
-      return Object.fromEntries((data || []).map((court) => [court.id, court.name]));
+      return Object.fromEntries((data || []).map((c) => [c.id, c.name]));
     },
   });
 
+  // Load app_url from system_config for automatic resolution
+  const { data: appUrl = "" } = useQuery({
+    queryKey: ["wa-app-url"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "app_url")
+        .maybeSingle();
+      return data?.value || "";
+    },
+  });
+
+  // Detect variables in the message that are NOT auto-resolvable → need manual input
+  const pendingVarNames = useMemo(() => {
+    const matches = [...messageBody.matchAll(/\{\{(\w+)\}\}/g)].map((m) => m[1]);
+    const unique = [...new Set(matches)];
+    return unique.filter((v) => !AUTO_VARS.has(v));
+  }, [messageBody]);
+
   const filteredStudents = useMemo(() => {
     if (mode === "class" && selectedClassId) {
-      return students.filter((student) => student.classIds.includes(selectedClassId));
+      return students.filter((s) => s.classIds.includes(selectedClassId));
     }
     return students;
   }, [students, mode, selectedClassId]);
@@ -134,51 +166,62 @@ export default function WhatsAppSend() {
     });
   };
 
-  const selectAll = () => {
-    setSelectedStudents(new Set(filteredStudents.map((student) => student.studentId)));
-  };
-
+  const selectAll = () =>
+    setSelectedStudents(new Set(filteredStudents.map((s) => s.studentId)));
   const deselectAll = () => setSelectedStudents(new Set());
 
   const applyTemplate = (tplId: string) => {
     setTemplateId(tplId);
-    const template = templates.find((item) => item.id === tplId);
-    if (template) setMessageBody(template.body);
+    const template = templates.find((t) => t.id === tplId);
+    if (template) {
+      setMessageBody(template.body);
+      setManualVars({}); // reset manual vars when template changes
+    }
   };
 
   const resolveVars = (body: string, student: StudentWithProfile): string => {
     const classInfo = selectedClassId
-      ? classes.find((item) => item.id === selectedClassId)
-      : classes.find((item) => student.classIds.includes(item.id)) || null;
-    return body
+      ? classes.find((c) => c.id === selectedClassId)
+      : classes.find((c) => student.classIds.includes(c.id)) || null;
+
+    let resolved = body
       .replace(/\{\{nome\}\}/g, student.fullName)
       .replace(/\{\{turma\}\}/g, classInfo?.name || "")
       .replace(/\{\{horario\}\}/g, classInfo ? `${classInfo.start_time.slice(0, 5)} às ${classInfo.end_time.slice(0, 5)}` : "")
       .replace(/\{\{dia\}\}/g, classInfo ? formatDaysOfWeek(classInfo.day_of_week) : "")
       .replace(/\{\{professor\}\}/g, classInfo ? teacherMap[classInfo.teacher_id] || "" : "")
-      .replace(/\{\{quadra\}\}/g, classInfo ? courtMap[classInfo.court_id] || "" : "");
+      .replace(/\{\{quadra\}\}/g, classInfo ? courtMap[classInfo.court_id] || "" : "")
+      .replace(/\{\{app_url\}\}/g, appUrl);
+
+    // Apply manually filled variables
+    for (const [key, value] of Object.entries(manualVars)) {
+      resolved = resolved.replace(new RegExp(`\\{\\{${key}\\}\\}`, "g"), value);
+    }
+
+    return resolved;
   };
 
   const handleSend = async () => {
-    const selected = filteredStudents.filter((student) => selectedStudents.has(student.studentId));
+    const selected = filteredStudents.filter((s) => selectedStudents.has(s.studentId));
     if (selected.length === 0) return toast.error("Selecione ao menos um aluno.");
     if (!providerConfig?.baseUrl.trim()) return toast.error("Configure a URL do serviço na aba Configurações.");
     if (!providerConfig?.instanceName.trim()) return toast.error("Configure o nome da instância na aba Configurações.");
     if (!messageBody.trim()) return toast.error("Escreva a mensagem.");
 
+    // Warn if there are still unresolved variables with empty values
+    const emptyVars = pendingVarNames.filter((v) => !manualVars[v]?.trim());
+    if (emptyVars.length > 0) {
+      toast.warning(`Preencha as variáveis: ${emptyVars.map((v) => `{{${v}}}`).join(", ")}`);
+      return;
+    }
+
     setSending(true);
     try {
-      const recipients = selected.map((student) => ({
-        phone: student.phone!,
-        name: student.fullName,
-        student_id: student.studentId,
-      }));
       const hasVars = /\{\{\w+\}\}/.test(messageBody);
 
       if (hasVars) {
         let sentCount = 0;
         let failCount = 0;
-
         for (const student of selected) {
           const resolvedMessage = resolveVars(messageBody, student);
           const { data, error } = await supabase.functions.invoke("send-whatsapp", {
@@ -190,17 +233,16 @@ export default function WhatsAppSend() {
               provider_instance_name: providerConfig.instanceName,
             },
           });
-
-          if (error) {
-            failCount++;
-            continue;
-          }
-
+          if (error) { failCount++; continue; }
           sentCount += data?.sent || 0;
         }
-
         toast.success(`${sentCount} mensagem(ns) enviada(s)${failCount > 0 ? `, ${failCount} falha(s)` : ""}`);
       } else {
+        const recipients = selected.map((s) => ({
+          phone: s.phone!,
+          name: s.fullName,
+          student_id: s.studentId,
+        }));
         const { data, error } = await supabase.functions.invoke("send-whatsapp", {
           body: {
             recipients,
@@ -210,7 +252,6 @@ export default function WhatsAppSend() {
             provider_instance_name: providerConfig.instanceName,
           },
         });
-
         if (error) throw error;
         toast.success(`${data.sent} enviada(s), ${data.failed} falha(s)`);
       }
@@ -224,7 +265,7 @@ export default function WhatsAppSend() {
   };
 
   const previewStudent =
-    filteredStudents.find((student) => selectedStudents.has(student.studentId)) || filteredStudents[0];
+    filteredStudents.find((s) => selectedStudents.has(s.studentId)) || filteredStudents[0];
   const previewMessage = previewStudent ? resolveVars(messageBody, previewStudent) : messageBody;
 
   return (
@@ -232,6 +273,7 @@ export default function WhatsAppSend() {
       <div className="space-y-4">
         <Card>
           <CardContent className="space-y-4 p-4">
+            {/* Template selector */}
             <div>
               <Label>Template local (opcional)</Label>
               <Select value={templateId} onValueChange={applyTemplate}>
@@ -239,10 +281,8 @@ export default function WhatsAppSend() {
                   <SelectValue placeholder="Escolher template..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {templates.map((template) => (
-                    <SelectItem key={template.id} value={template.id}>
-                      {template.name}
-                    </SelectItem>
+                  {templates.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -251,16 +291,48 @@ export default function WhatsAppSend() {
               </p>
             </div>
 
+            {/* Manual variable inputs — shown only when there are unresolved vars */}
+            {pendingVarNames.length > 0 && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 p-3 space-y-3">
+                <p className="text-xs font-medium text-amber-700 dark:text-amber-400">
+                  Preencha as variáveis da mensagem:
+                </p>
+                {pendingVarNames.map((varName) => (
+                  <div key={varName} className="space-y-1">
+                    <Label className="text-xs">
+                      {`{{${varName}}}`}
+                      <span className="ml-1 text-muted-foreground font-normal">
+                        — {VAR_LABELS[varName] || varName}
+                      </span>
+                    </Label>
+                    <Input
+                      value={manualVars[varName] || ""}
+                      onChange={(e) =>
+                        setManualVars((prev) => ({ ...prev, [varName]: e.target.value }))
+                      }
+                      placeholder={VAR_LABELS[varName] || `Valor de {{${varName}}}`}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Message textarea */}
             <div>
               <Label>Mensagem</Label>
               <Textarea
                 value={messageBody}
-                onChange={(e) => setMessageBody(e.target.value)}
+                onChange={(e) => {
+                  setMessageBody(e.target.value);
+                  setManualVars({}); // reset when message changes manually
+                }}
                 placeholder="Escreva sua mensagem ou selecione um template..."
                 rows={6}
               />
             </div>
 
+            {/* Preview */}
             {messageBody && previewStudent && (
               <div>
                 <Label className="text-xs text-muted-foreground">Pré-visualização</Label>
@@ -276,19 +348,16 @@ export default function WhatsAppSend() {
               disabled={sending || selectedStudents.size === 0 || !messageBody.trim()}
             >
               {sending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...
-                </>
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
               ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" /> Enviar para {selectedStudents.size} aluno(s)
-                </>
+                <><Send className="mr-2 h-4 w-4" /> Enviar para {selectedStudents.size} aluno(s)</>
               )}
             </Button>
           </CardContent>
         </Card>
       </div>
 
+      {/* Recipient selector */}
       <div className="space-y-4">
         <Card>
           <CardContent className="space-y-4 p-4">
@@ -296,21 +365,14 @@ export default function WhatsAppSend() {
               <Button
                 size="sm"
                 variant={mode === "class" ? "default" : "outline"}
-                onClick={() => {
-                  setMode("class");
-                  setSelectedStudents(new Set());
-                }}
+                onClick={() => { setMode("class"); setSelectedStudents(new Set()); }}
               >
                 <Users className="mr-1 h-4 w-4" /> Por Turma
               </Button>
               <Button
                 size="sm"
                 variant={mode === "individual" ? "default" : "outline"}
-                onClick={() => {
-                  setMode("individual");
-                  setSelectedClassId("");
-                  setSelectedStudents(new Set());
-                }}
+                onClick={() => { setMode("individual"); setSelectedClassId(""); setSelectedStudents(new Set()); }}
               >
                 <User className="mr-1 h-4 w-4" /> Individual
               </Button>
@@ -329,9 +391,9 @@ export default function WhatsAppSend() {
                   <SelectValue placeholder="Selecionar turma..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map((classItem) => (
-                    <SelectItem key={classItem.id} value={classItem.id}>
-                      {classItem.name} - {formatDaysOfWeek(classItem.day_of_week)} {classItem.start_time.slice(0, 5)}
+                  {classes.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} - {formatDaysOfWeek(c.day_of_week)} {c.start_time.slice(0, 5)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -341,12 +403,8 @@ export default function WhatsAppSend() {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">{filteredStudents.length} aluno(s)</span>
               <div className="flex gap-2">
-                <Button size="sm" variant="ghost" onClick={selectAll}>
-                  Todos
-                </Button>
-                <Button size="sm" variant="ghost" onClick={deselectAll}>
-                  Nenhum
-                </Button>
+                <Button size="sm" variant="ghost" onClick={selectAll}>Todos</Button>
+                <Button size="sm" variant="ghost" onClick={deselectAll}>Nenhum</Button>
               </div>
             </div>
 
@@ -365,9 +423,7 @@ export default function WhatsAppSend() {
                     <p className="text-xs text-muted-foreground">{student.phone}</p>
                   </div>
                   {selectedStudents.has(student.studentId) && (
-                    <Badge variant="secondary" className="shrink-0 text-xs">
-                      Selecionado
-                    </Badge>
+                    <Badge variant="secondary" className="shrink-0 text-xs">Selecionado</Badge>
                   )}
                 </label>
               ))}
