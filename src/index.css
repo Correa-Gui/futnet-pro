@@ -130,6 +130,14 @@
   .font-body {
     font-family: 'DM Sans', sans-serif;
   }
+
+  .font-landing-headline {
+    font-family: 'Space Grotesk', sans-serif;
+  }
+
+  .font-landing-body {
+    font-family: 'Manrope', sans-serif;
+  }
 }
 
 @layer components {
@@ -184,6 +192,30 @@
 
   .landing-muted-copy {
     @apply text-white/[0.62];
+  }
+
+  .kinetic-glass {
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+  }
+
+  .kinetic-grid {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+    background-size: 72px 72px;
+  }
+
+  .kinetic-text-glow {
+    text-shadow: 0 0 28px rgba(255, 182, 147, 0.28);
+  }
+
+  .kinetic-teal-glow {
+    box-shadow: 0 0 18px rgba(70, 234, 237, 0.45);
+  }
+
+  .kinetic-clip {
+    clip-path: polygon(0 0, 100% 5%, 100% 100%, 0 95%);
   }
 }
 
