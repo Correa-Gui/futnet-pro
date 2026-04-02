@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import {
-  ArrowUpRight,
+  ArrowRight,
+  CheckCircle2,
   Clock3,
-  Instagram,
   MapPin,
   Menu,
   MessageCircle,
+  Play,
+  Share2,
   Star,
   Users,
   X,
-  Youtube,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClassesSection } from "@/components/landing/ClassesSection";
@@ -36,56 +38,107 @@ function formatOpenDays(openDays: number[] | undefined) {
   return openDays
     .slice()
     .sort((a, b) => a - b)
-    .map((day) => DAY_LABELS[day] || "")
+    .map((d) => DAY_LABELS[d] || "")
     .filter(Boolean)
-    .join(" • ");
+    .join(" · ");
+}
+
+// ── PRIMITIVES ──────────────────────────────────────────────────────────────
+
+function PrimaryButton({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ext = href.startsWith("http");
+  return (
+    <a
+      href={href}
+      target={ext ? "_blank" : undefined}
+      rel={ext ? "noopener noreferrer" : undefined}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full bg-[#F97316] px-7 py-3.5 text-sm font-semibold text-white no-underline transition-all hover:bg-[#EA6C0A] hover:shadow-[0_8px_24px_rgba(249,115,22,0.35)] active:scale-95",
+        className
+      )}
+    >
+      {children}
+    </a>
+  );
+}
+
+function GhostButton({
+  href,
+  children,
+  className,
+}: {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const ext = href.startsWith("http");
+  return (
+    <a
+      href={href}
+      target={ext ? "_blank" : undefined}
+      rel={ext ? "noopener noreferrer" : undefined}
+      className={cn(
+        "inline-flex items-center gap-2 rounded-full border border-white/20 px-7 py-3.5 text-sm font-medium text-white/80 no-underline transition-all hover:border-white/40 hover:text-white",
+        className
+      )}
+    >
+      {children}
+    </a>
+  );
 }
 
 function ServiceCard({
   image,
-  label,
+  badge,
   title,
   description,
   href,
   action,
 }: {
   image: string;
-  label: string;
+  badge: string;
   title: string;
   description: string;
   href: string;
   action: string;
 }) {
   return (
-    <article className="group relative flex h-[600px] items-end overflow-hidden bg-zinc-900">
+    <article className="group relative flex min-h-[500px] flex-col justify-end overflow-hidden rounded-2xl bg-[#141414]">
       <img
         src={image}
         alt={title}
-        className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
+        className="absolute inset-0 h-full w-full object-cover opacity-70 transition-transform duration-700 group-hover:scale-105"
         loading="lazy"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d] via-[#0d0d0d]/60 to-transparent opacity-90" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
 
-      <div className="relative z-10 w-full p-10 sm:p-12">
-        <span className="mb-4 block font-landing-headline text-[11px] font-bold uppercase tracking-[0.3em] text-[#46eaed]">
-          {label}
+      <div className="relative z-10 p-8 sm:p-10">
+        <span className="mb-3 inline-block rounded-full border border-[#2DD4BF]/30 bg-[#2DD4BF]/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-widest text-[#2DD4BF]">
+          {badge}
         </span>
-        <h3 className="font-landing-headline text-4xl font-black uppercase leading-none tracking-tight text-white sm:text-5xl">
-          {title}
-        </h3>
-        <p className="mt-5 max-w-md font-landing-body text-sm leading-7 text-zinc-400">
-          {description}
-        </p>
+        <h3 className="mt-1 font-semibold text-2xl text-white leading-snug">{title}</h3>
+        <p className="mt-3 text-sm leading-relaxed text-white/60 max-w-sm">{description}</p>
         <a
           href={href}
-          className="mt-8 inline-flex items-center gap-3 border border-white/20 px-8 py-3 font-landing-headline text-[11px] font-bold uppercase tracking-widest text-white no-underline transition-colors hover:bg-white hover:text-black"
+          className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-white no-underline opacity-70 transition-opacity hover:opacity-100"
         >
           {action}
+          <ArrowRight className="h-4 w-4" />
         </a>
       </div>
     </article>
   );
 }
+
+// ── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
   const { settings, loaded, getImage, businessHours } = useLandingData();
@@ -98,7 +151,7 @@ export default function LandingPage() {
   const ctaHref = `#${getDefaultCtaTarget(settings.business_mode)}`;
   const heroImage = settings.hero_image_url || getImage("hero", landingImages.hero);
   const aboutImage = getImage("about", landingImages.servicesClasses);
-  const primaryText = settings.primary_cta_text || (hasClasses ? "Agendar aula experimental" : "Reservar quadra");
+  const primaryText = settings.primary_cta_text || (hasClasses ? "Agendar aula grátis" : "Reservar quadra");
   const whatsappLink = getWhatsAppLink(
     settings.whatsapp_number,
     hasClasses
@@ -107,84 +160,64 @@ export default function LandingPage() {
   );
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 32);
+    const onScroll = () => setScrolled(window.scrollY > 40);
     window.addEventListener("scroll", onScroll);
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
   if (!loaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0d0d0d] text-white">
-        Carregando...
+      <div className="flex min-h-screen items-center justify-center bg-[#0A0A0A] text-white/50 text-sm">
+        Carregando…
       </div>
     );
   }
 
-  const hero =
+  // ── Textos por modo ──
+  const heroHeadline =
     hasClasses && hasRentals
-      ? {
-          top: "ONDE O TREINO",
-          middle: "ENCONTRA A",
-          accent: "AREIA CERTA",
-          desc: "Turmas por nível, reserva de quadra em poucos toques e uma experiência pensada para quem leva a areia a sério.",
-        }
+      ? { line1: "Treino e jogo", line2: "na mesma arena." }
       : hasClasses
-        ? {
-            top: "ONDE A EVOLUÇÃO",
-            middle: "ENCONTRA O",
-            accent: "MÉTODO CERTO",
-            desc: "Aulas por nível, professores atentos e um fluxo claro para transformar interesse em primeira aula.",
-          }
-        : {
-            top: "ONDE O JOGO",
-            middle: "ENCONTRA A",
-            accent: "QUADRA PERFEITA",
-            desc: "Escolha quadra, data e horário em um fluxo direto, com estrutura premium e menos atrito para reservar.",
-          };
+        ? { line1: "Evolua no futevôlei", line2: "com método." }
+        : { line1: "Quadra premium,", line2: "agenda sem atrito." };
 
-  const about =
+  const heroSub =
     hasClasses && hasRentals
-      ? {
-          top: "O RITMO DA CIDADE",
-          accent: "ENCONTRA A",
-          bottom: "DISCIPLINA DA AREIA",
-          text: "A FutVôlei Arena nasce para quem quer treinar com método, jogar com estrutura e sentir uma marca que respeita a rotina do atleta.",
-          quote: "Cada detalhe da experiência foi pensado para gerar confiança antes mesmo do primeiro treino.",
-        }
+      ? "Turmas por nível, reserva de quadra em poucos toques e uma experiência feita para quem leva a areia a sério."
       : hasClasses
-        ? {
-            top: "MÉTODO FORTE,",
-            accent: "ROTINA CLARA,",
-            bottom: "EVOLUÇÃO VISÍVEL",
-            text: "Aqui a aula não parece improviso. Cada turma tem nível definido, progressão clara e um professor que acompanha de perto.",
-            quote: "Do iniciante ao competitivo — existe um caminho aqui para cada fase da sua evolução.",
-          }
-        : {
-            top: "ESTRUTURA CERTA",
-            accent: "PARA QUEM QUER",
-            bottom: "JOGAR SÉRIO",
-            text: "Areia tratada, iluminação LED e reserva online sem burocracia. Estrutura premium para quem respeita o jogo.",
-            quote: "Quando a agenda é clara e a marca transmite confiança, a decisão acontece mais rápido.",
-          };
+        ? "Aulas por nível com professores atentos. Do iniciante ao competitivo, existe um caminho claro para a sua evolução."
+        : "Escolha quadra, data e horário de forma direta. Estrutura premium e menos fricção para você jogar mais.";
+
+  const aboutHeadline =
+    hasClasses && hasRentals
+      ? { top: "Uma arena que respeita", accent: "quem treina de verdade." }
+      : hasClasses
+        ? { top: "Método que gera", accent: "evolução visível." }
+        : { top: "Estrutura pensada", accent: "para quem joga sério." };
+
+  const aboutText =
+    hasClasses && hasRentals
+      ? "Nascemos para quem quer treinar com método e jogar com estrutura. Cada detalhe foi pensado para respeitar a rotina do atleta."
+      : hasClasses
+        ? "Aqui a aula não parece improviso. Turmas por nível, progressão clara e um professor que acompanha de perto cada aluno."
+        : "Areia tratada, iluminação LED e reserva online sem burocracia. Estrutura completa para você focar no que importa: o jogo.";
+
+  const aboutQuote =
+    "Cada detalhe da experiência foi pensado para gerar confiança antes mesmo do primeiro treino.";
+
+  const statusTitle =
+    hasClasses && hasRentals ? "Aulas e reservas abertas" : hasClasses ? "Turmas abertas" : "Reservas abertas";
 
   const secondaryAction =
     hasClasses && hasRentals
-      ? { label: "Reservar quadra", href: "#reservar-quadra" }
+      ? { label: "Ver horários", href: "#turmas" }
       : hasClasses
         ? { label: "Ver turmas", href: "#turmas" }
         : { label: "Falar no WhatsApp", href: whatsappLink !== "#" ? whatsappLink : "#contato" };
 
-  const statusTitle =
-    hasClasses && hasRentals
-      ? "Aulas e reservas abertas"
-      : hasClasses
-        ? "Turmas abertas"
-        : "Reservas abertas";
-
   const navLinks = [
     { label: "Serviços", href: "#servicos" },
     { label: "Sobre", href: "#sobre" },
-    { label: "Galeria", href: "#galeria" },
     ...(hasClasses ? [{ label: "Turmas", href: "#turmas" }] : []),
     ...(hasRentals ? [{ label: "Quadras", href: "#reservar-quadra" }] : []),
     { label: "Contato", href: "#contato" },
@@ -195,12 +228,12 @@ export default function LandingPage() {
       ? [
           {
             image: getImage("about", landingImages.servicesClasses),
-            label: "Alta Performance",
-            title: "Aulas de Futevôlei",
+            badge: "Aulas",
+            title: "Futevôlei para todos os níveis",
             description:
-              "Do iniciante ao aluno competitivo. Metodologia exclusiva focada em biomecânica, leitura de jogo e explosão muscular.",
+              "Metodologia exclusiva, turmas organizadas por nível e professores que acompanham sua evolução do início ao fim.",
             href: "#turmas",
-            action: "Ver turmas",
+            action: "Ver turmas disponíveis",
           },
         ]
       : []),
@@ -208,12 +241,12 @@ export default function LandingPage() {
       ? [
           {
             image: getImage("gallery", landingImages.servicesRentals),
-            label: "Exclusividade",
-            title: "Aluguel de Quadras",
+            badge: "Reservas",
+            title: "Quadras com estrutura completa",
             description:
-              "Areia tratada, iluminação LED premium e estrutura completa de vestiário e lounge para o seu jogo.",
+              "Areia tratada, iluminação LED premium e vestiário completo. Reserve em minutos e venha jogar.",
             href: "#reservar-quadra",
-            action: "Reservar horário",
+            action: "Reservar uma quadra",
           },
         ]
       : []),
@@ -222,114 +255,73 @@ export default function LandingPage() {
   if (cards.length === 1) {
     cards.push({
       image: landingImages.galleryLifestyle,
-      label: "Experiência de arena",
-      title: "Estrutura que sustenta a rotina",
+      badge: "Comunidade",
+      title: "Um ambiente que motiva",
       description:
-        "Mais que areia e rede: presença de marca, sensação de cuidado e ambiente pronto para treino, jogo e comunidade.",
+        "Mais que areia e rede: uma comunidade ativa de atletas, ambiente acolhedor e uma marca que respeita quem joga.",
       href: whatsappLink !== "#" ? whatsappLink : ctaHref,
-      action: whatsappLink !== "#" ? "Falar no WhatsApp" : "Entrar em contato",
+      action: "Falar no WhatsApp",
     });
   }
 
+  const stats = [
+    { value: "500+", label: "Alunos ativos" },
+    { value: "4.9★", label: "Avaliação média" },
+    { value: hasRentals ? "8" : "5", label: "Quadras disponíveis" },
+    { value: "6 anos", label: "De experiência" },
+  ];
+
   const gallery = [
-    {
-      image: getImage("gallery", landingImages.galleryLead),
-      alt: "Treino noturno",
-      label: "Treino em alta intensidade",
-      className: "md:col-span-2 md:row-span-2",
-    },
-    {
-      image: landingImages.galleryNight,
-      alt: "Arena iluminada",
-      label: "Arena iluminada",
-      className: "md:col-span-1 md:row-span-1",
-    },
-    {
-      image: landingImages.galleryCrowd,
-      alt: "Clima de jogo",
-      label: "Clima de jogo",
-      className: "md:col-span-1 md:row-span-1",
-    },
-    {
-      image: landingImages.galleryMotion,
-      alt: "Movimento e explosão",
-      label: "Movimento e explosão",
-      className: "md:col-span-1 md:row-span-2",
-    },
+    { image: getImage("gallery", landingImages.galleryLead), alt: "Treino noturno", label: "Treino noturno", cls: "md:col-span-2 md:row-span-2" },
+    { image: landingImages.galleryNight, alt: "Arena iluminada", label: "Arena iluminada", cls: "" },
+    { image: landingImages.galleryCrowd, alt: "Clima de jogo", label: "Clima de jogo", cls: "" },
+    { image: landingImages.galleryMotion, alt: "Em movimento", label: "Em movimento", cls: "md:row-span-2" },
   ];
 
   const testimonials = [
-    {
-      quote: "A estrutura da arena é incrível. Areia de qualidade, iluminação perfeita à noite e professores que realmente acompanham sua evolução.",
-      name: "Mateus S.",
-      role: "Aluno avançado",
-      accent: "teal",
-    },
-    {
-      quote: "Comecei sem saber jogar e em dois meses já estava na turma intermediária. O método faz toda a diferença.",
-      name: "Ana Lima",
-      role: "Aluna recorrente",
-      accent: "orange",
-    },
-    {
-      quote: "Reservei a quadra em menos de dois minutos. Facilidade total e qualidade na estrutura — virei cliente fixo.",
-      name: "Carlos M.",
-      role: "Jogador regular",
-      accent: "teal",
-    },
+    { quote: "A estrutura é incrível. Areia de qualidade, iluminação perfeita à noite e professores que realmente acompanham sua evolução.", name: "Mateus S.", role: "Aluno avançado" },
+    { quote: "Comecei sem saber jogar e em dois meses já estava na turma intermediária. O método faz toda a diferença.", name: "Ana Lima", role: "Aluna recorrente" },
+    { quote: "Reservei a quadra em menos de dois minutos. Facilidade total e qualidade na estrutura — virei cliente fixo.", name: "Carlos M.", role: "Jogador regular" },
   ];
 
   const socialLinks = [
     settings.whatsapp_number ? { href: whatsappLink, label: "WhatsApp", icon: MessageCircle } : null,
-    settings.instagram_url ? { href: settings.instagram_url, label: "Instagram", icon: Instagram } : null,
-    settings.youtube_url ? { href: settings.youtube_url, label: "YouTube", icon: Youtube } : null,
+    settings.instagram_url ? { href: settings.instagram_url, label: "Instagram", icon: Share2 } : null,
+    settings.youtube_url ? { href: settings.youtube_url, label: "YouTube", icon: Play } : null,
   ].filter(Boolean) as { href: string; label: string; icon: typeof MessageCircle }[];
 
   return (
-    <div className="relative overflow-x-hidden bg-[#0d0d0d] text-white" style={{ fontFamily: "'Manrope', sans-serif" }}>
+    <div className="relative overflow-x-hidden bg-[#0A0A0A]" style={{ fontFamily: "'Inter', 'DM Sans', sans-serif", color: "#F0F0F0" }}>
 
-      {/* ── NAV ── */}
-      <nav
-        className={cn(
-          "fixed inset-x-0 top-0 z-50 transition-all duration-300",
-          scrolled ? "bg-[#0d0d0d]/80 backdrop-blur-xl shadow-lg shadow-orange-500/5" : "bg-transparent"
-        )}
-      >
-        <div className="flex items-center justify-between px-8 py-4 max-w-full mx-auto">
-          <a
-            href="#hero"
-            className="font-landing-headline text-2xl font-black italic tracking-tight text-white no-underline"
-          >
+      {/* ── NAV ───────────────────────────────────────────────── */}
+      <nav className={cn(
+        "fixed inset-x-0 top-0 z-50 transition-all duration-300",
+        scrolled ? "bg-[#0A0A0A]/90 backdrop-blur-xl shadow-sm shadow-black/50" : "bg-transparent"
+      )}>
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-6 py-4">
+          <a href="#hero" className="text-lg font-bold text-white no-underline tracking-tight">
             FutVôlei Arena
           </a>
 
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link, i) => (
+          <div className="hidden items-center gap-7 md:flex">
+            {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
-                className={cn(
-                  "font-landing-headline text-sm font-bold uppercase tracking-tight no-underline transition-colors",
-                  i === 0
-                    ? "text-[#ffb693] border-b-2 border-[#ffb693]"
-                    : "text-zinc-400 hover:text-white"
-                )}
+                className="text-sm font-medium text-white/55 no-underline transition-colors hover:text-white"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
-          <a
-            href={ctaHref}
-            className="hidden md:inline-flex bg-[#46eaed] text-[#003738] px-6 py-2 font-landing-headline font-bold uppercase text-xs tracking-widest hover:scale-105 transition-transform no-underline"
-          >
-            {hasClasses ? "Agendar Aula" : "Reservar"}
-          </a>
+          <PrimaryButton href={ctaHref} className="hidden md:inline-flex text-xs px-5 py-2.5">
+            {hasClasses ? "Aula grátis" : "Reservar"}
+          </PrimaryButton>
 
           <button
             type="button"
-            className="md:hidden rounded border border-white/10 bg-white/5 p-2 text-white"
+            className="rounded-lg border border-white/10 bg-white/5 p-2 text-white md:hidden"
             onClick={() => setMenuOpen((o) => !o)}
             aria-label={menuOpen ? "Fechar menu" : "Abrir menu"}
           >
@@ -338,207 +330,217 @@ export default function LandingPage() {
         </div>
 
         {menuOpen && (
-          <div className="mx-4 mb-4 flex flex-col gap-4 rounded border border-white/10 bg-[#111]/95 px-5 py-5 backdrop-blur-xl md:hidden">
+          <div className="mx-4 mb-4 flex flex-col gap-3 rounded-xl border border-white/10 bg-[#111]/95 p-5 backdrop-blur-xl md:hidden">
             {navLinks.map((link) => (
               <a
                 key={link.label}
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
-                className="font-landing-headline text-sm font-bold uppercase tracking-widest text-white/80 no-underline"
+                className="py-1 text-sm font-medium text-white/70 no-underline"
               >
                 {link.label}
               </a>
             ))}
-            <a
-              href={ctaHref}
-              className="bg-[#46eaed] text-[#003738] px-6 py-3 text-center font-landing-headline font-bold uppercase text-xs tracking-widest no-underline"
-            >
+            <PrimaryButton href={ctaHref} className="mt-2 justify-center">
               {primaryText}
-            </a>
+            </PrimaryButton>
           </div>
         )}
       </nav>
 
-      {/* ── HERO ── */}
-      <section id="hero" className="relative flex min-h-screen items-center overflow-hidden pt-20">
-        <div className="absolute inset-0 z-0">
+      {/* ── HERO ──────────────────────────────────────────────── */}
+      <section id="hero" className="relative flex min-h-[100svh] items-end overflow-hidden pb-16 pt-28 sm:items-center sm:pb-0">
+        <div className="absolute inset-0">
           <img
             src={heroImage}
             alt="Arena de futevôlei"
-            className="h-full w-full object-cover opacity-60"
+            className="h-full w-full object-cover"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0d0d0d] via-[#0d0d0d]/80 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#0A0A0A] via-[#0A0A0A]/75 to-[#0A0A0A]/20" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#0A0A0A]/60 via-transparent to-transparent" />
         </div>
 
-        <div className="relative z-10 px-8 md:px-20 max-w-5xl">
-          <h1
-            className="font-landing-headline text-[clamp(3.5rem,10vw,7rem)] font-black leading-none tracking-tight mb-8"
-            style={{ textShadow: "0 0 20px rgba(255,182,147,0.4)" }}
-          >
-            FUTVÔLEI ARENA:
-            <br />
-            {hero.top}
-            <br />
-            {hero.middle}
-            <br />
-            <span className="text-[#ffb693] italic">{hero.accent}</span>
-          </h1>
-
-          <p className="font-landing-body text-lg md:text-xl text-zinc-300 max-w-2xl mb-10 border-l-4 border-[#46eaed] pl-6">
-            {hero.desc}
-          </p>
-
-          <div className="flex flex-wrap gap-5 mb-8">
-            <a
-              href={ctaHref}
-              className="inline-flex items-center gap-3 bg-gradient-to-br from-[#ffb693] to-[#ff6b00] text-[#351000] px-10 py-4 font-landing-headline font-black uppercase tracking-widest rounded-md hover:scale-105 transition-transform no-underline"
-            >
-              {primaryText}
-              <ArrowUpRight className="h-4 w-4" />
-            </a>
-            <a
-              href={secondaryAction.href}
-              className="inline-flex items-center gap-3 border border-white/20 bg-white/5 text-white px-8 py-4 font-landing-headline font-bold uppercase text-xs tracking-widest backdrop-blur-xl hover:border-white/40 transition-colors no-underline"
-            >
-              {secondaryAction.label}
-            </a>
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <div className="inline-flex items-center gap-3 border border-white/10 bg-white/5 px-5 py-3 font-landing-body text-[11px] uppercase tracking-widest text-white/70 backdrop-blur-xl">
-              <Clock3 className="h-4 w-4 text-[#46eaed]" />
-              {formatHours(businessHours)}
-            </div>
-            <div className="inline-flex items-center gap-3 border border-white/10 bg-white/5 px-5 py-3 font-landing-body text-[11px] uppercase tracking-widest text-white/70 backdrop-blur-xl">
-              <Users className="h-4 w-4 text-[#46eaed]" />
+        <div className="relative z-10 mx-auto w-full max-w-6xl px-6">
+          <div className="max-w-xl">
+            <span className="mb-5 inline-flex items-center gap-2 rounded-full border border-[#2DD4BF]/25 bg-[#2DD4BF]/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-[#2DD4BF]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#2DD4BF]" />
               {statusTitle}
+            </span>
+
+            <h1 className="text-[clamp(2.8rem,7vw,5rem)] font-bold leading-[1.05] tracking-tight text-white">
+              {heroHeadline.line1}
+              <br />
+              <span className="text-[#F97316]">{heroHeadline.line2}</span>
+            </h1>
+
+            <p className="mt-5 max-w-md text-base leading-relaxed text-white/65">
+              {heroSub}
+            </p>
+
+            <div className="mt-8 flex flex-wrap gap-3">
+              <PrimaryButton href={ctaHref}>
+                {primaryText}
+                <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
+              <GhostButton href={secondaryAction.href}>
+                {secondaryAction.label}
+              </GhostButton>
             </div>
-            <div className="inline-flex items-center gap-3 border border-white/10 bg-white/5 px-5 py-3 font-landing-body text-[11px] uppercase tracking-widest text-white/70 backdrop-blur-xl">
-              <MapPin className="h-4 w-4 text-[#46eaed]" />
-              {formatOpenDays(businessHours?.open_days)}
+
+            <div className="mt-10 flex flex-wrap gap-4">
+              <div className="flex items-center gap-2 text-xs text-white/45">
+                <Clock3 className="h-3.5 w-3.5 text-[#2DD4BF]" />
+                {formatHours(businessHours)}
+              </div>
+              <div className="flex items-center gap-2 text-xs text-white/45">
+                <MapPin className="h-3.5 w-3.5 text-[#2DD4BF]" />
+                {formatOpenDays(businessHours?.open_days)}
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── SERVIÇOS ── */}
-      <section id="servicos" className="py-32 px-8 md:px-20 bg-[#0d0d0d]">
-        <div className="flex flex-col md:flex-row gap-10 items-end mb-20">
-          <h2 className="font-landing-headline text-5xl font-bold uppercase tracking-tight shrink-0 text-white">
-            Nossos Serviços
-          </h2>
-          <div className="h-px bg-white/10 w-full mb-1" />
+      {/* ── STATS ─────────────────────────────────────────────── */}
+      <div className="border-y border-white/[0.06] bg-[#0F0F0F]">
+        <div className="mx-auto grid max-w-6xl grid-cols-2 divide-x divide-white/[0.06] md:grid-cols-4">
+          {stats.map((s) => (
+            <div key={s.label} className="flex flex-col items-center py-8 px-4 text-center">
+              <span className="text-2xl font-bold text-white">{s.value}</span>
+              <span className="mt-1 text-xs font-medium uppercase tracking-widest text-white/40">{s.label}</span>
+            </div>
+          ))}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      </div>
+
+      {/* ── SERVIÇOS ──────────────────────────────────────────── */}
+      <section id="servicos" className="mx-auto max-w-6xl px-6 py-20 sm:py-28">
+        <div className="mb-12">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#F97316]">Nossos serviços</p>
+          <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">O que oferecemos</h2>
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
           {cards.map((card) => (
             <ServiceCard key={card.title} {...card} />
           ))}
         </div>
       </section>
 
-      {/* ── SOBRE ── */}
-      <section id="sobre" className="py-32 bg-[#111111] overflow-hidden">
-        <div className="max-w-7xl mx-auto px-8 md:px-20 grid grid-cols-1 md:grid-cols-12 gap-16 items-center">
-          <div className="md:col-span-7 relative">
-            <div className="absolute -top-12 -left-12 w-64 h-64 bg-[#ffb693]/10 blur-[100px]" />
-            <h2 className="font-landing-headline text-[clamp(3rem,8vw,5.5rem)] font-black uppercase leading-none tracking-tight mb-12 relative z-10">
-              {about.top}
+      {/* ── SOBRE ─────────────────────────────────────────────── */}
+      <section id="sobre" className="bg-[#0F0F0F] py-20 sm:py-28">
+        <div className="mx-auto grid max-w-6xl gap-12 px-6 lg:grid-cols-2 lg:items-center">
+          {/* texto */}
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#F97316]">Sobre a arena</p>
+            <h2 className="mt-3 text-3xl font-bold leading-tight text-white sm:text-4xl">
+              {aboutHeadline.top}
               <br />
-              <span className="text-[#46eaed]">{about.accent}</span>
-              <br />
-              {about.bottom}
+              <span className="text-[#2DD4BF]">{aboutHeadline.accent}</span>
             </h2>
-            <div className="space-y-8 relative z-10">
-              <p className="font-landing-body text-lg leading-relaxed text-zinc-300 max-w-xl">
-                {about.text}
-              </p>
-              <p className="font-landing-body text-lg leading-relaxed text-zinc-300 italic border-l-2 border-[#ffb693] pl-6 max-w-xl">
-                "{about.quote}"
-              </p>
+            <p className="mt-5 text-sm leading-relaxed text-white/60 max-w-lg">{aboutText}</p>
+            <blockquote className="mt-6 border-l-2 border-[#F97316] pl-5 text-sm italic text-white/50">
+              "{aboutQuote}"
+            </blockquote>
+
+            <div className="mt-8 grid gap-3 sm:grid-cols-2">
+              {[
+                "Metodologia desenvolvida por profissionais",
+                "Areia tratada e iluminação LED premium",
+                "Reservas online rápidas e sem burocracia",
+                "Ambiente para atletas de todos os níveis",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3">
+                  <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[#2DD4BF]" />
+                  <span className="text-sm text-white/60">{item}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-10">
+              <PrimaryButton href={ctaHref}>
+                {primaryText}
+                <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
             </div>
           </div>
 
-          <div className="md:col-span-5 relative">
-            <div
-              className="w-full aspect-[4/5] overflow-hidden"
-              style={{ clipPath: "polygon(0 0, 100% 5%, 100% 100%, 0 95%)" }}
-            >
+          {/* imagem */}
+          <div className="relative">
+            <div className="overflow-hidden rounded-2xl">
               <img
                 src={aboutImage}
                 alt="Atleta na arena"
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
+                style={{ maxHeight: "520px" }}
                 loading="lazy"
               />
             </div>
-            <div className="absolute -bottom-6 -left-8 flex items-center gap-4 border border-white/10 bg-[#393939]/40 p-5 backdrop-blur-xl rounded-xl">
-              <div className="h-3 w-3 rounded-full bg-[#46eaed]" style={{ boxShadow: "0 0 18px rgba(70,234,237,0.6)" }} />
+            <div className="absolute -bottom-4 -left-4 flex items-center gap-3 rounded-xl border border-white/10 bg-[#141414]/90 px-5 py-4 backdrop-blur-lg">
+              <span className="flex h-2.5 w-2.5 rounded-full bg-[#2DD4BF]" style={{ boxShadow: "0 0 10px #2DD4BF" }} />
               <div>
-                <p className="font-landing-body text-[10px] uppercase tracking-widest text-zinc-400">Status Agora</p>
-                <p className="font-landing-headline font-bold text-white uppercase">{statusTitle}</p>
+                <p className="text-[10px] uppercase tracking-widest text-white/40">Status</p>
+                <p className="text-sm font-semibold text-white">{statusTitle}</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── GALERIA ── */}
-      <section id="galeria" className="py-32 px-8 md:px-20 bg-[#0d0d0d]">
-        <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-2 gap-4 h-auto md:h-[800px]">
-          {gallery.map((tile) => (
-            <article
-              key={tile.label}
-              className={cn("group relative min-h-[260px] overflow-hidden bg-zinc-900", tile.className)}
-            >
-              <img
-                src={tile.image}
-                alt={tile.alt}
-                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                loading="lazy"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#0d0d0d]/80 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-5">
-                <p className="font-landing-headline text-sm font-bold uppercase tracking-widest text-white">
+      {/* ── GALERIA ───────────────────────────────────────────── */}
+      <section id="galeria" className="py-20 sm:py-28 px-6">
+        <div className="mx-auto max-w-6xl">
+          <div className="mb-10">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#F97316]">Galeria</p>
+            <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">A arena em ação</h2>
+          </div>
+          <div className="grid h-auto gap-3 md:h-[680px] md:grid-cols-4 md:grid-rows-2">
+            {gallery.map((tile) => (
+              <article
+                key={tile.label}
+                className={cn("group relative min-h-[220px] overflow-hidden rounded-xl bg-[#141414]", tile.cls)}
+              >
+                <img
+                  src={tile.image}
+                  alt={tile.alt}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                <p className="absolute bottom-4 left-4 text-xs font-semibold uppercase tracking-wider text-white/70">
                   {tile.label}
                 </p>
-              </div>
-            </article>
-          ))}
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* ── DEPOIMENTOS ── */}
-      <section className="py-32 bg-[#080808]">
-        <div className="max-w-7xl mx-auto px-8 md:px-20">
-          <h2 className="font-landing-headline text-4xl font-black uppercase tracking-tight mb-16 text-center text-white">
-            Elite Feedback
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* ── DEPOIMENTOS ───────────────────────────────────────── */}
+      <section className="bg-[#0F0F0F] py-20 sm:py-28">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mb-12 text-center">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[#F97316]">Depoimentos</p>
+            <h2 className="mt-2 text-3xl font-bold text-white sm:text-4xl">O que dizem nossos alunos</h2>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-3">
             {testimonials.map((t) => (
               <article
                 key={t.name}
-                className={cn(
-                  "p-10 border-t-4 bg-[#161616]",
-                  t.accent === "teal" ? "border-[#46eaed]" : "border-[#ffb693]"
-                )}
+                className="flex flex-col rounded-2xl border border-white/[0.07] bg-[#141414] p-7"
               >
-                <div
-                  className={cn(
-                    "flex gap-1 mb-6",
-                    t.accent === "teal" ? "text-[#46eaed]" : "text-[#ffb693]"
-                  )}
-                >
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                <div className="flex gap-0.5 text-[#F97316]">
+                  {Array.from({ length: 5 }).map((_, j) => (
+                    <Star key={j} className="h-3.5 w-3.5 fill-current" />
                   ))}
                 </div>
-                <p className="font-landing-body text-lg italic text-zinc-300 mb-8">"{t.quote}"</p>
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-800 font-landing-headline text-sm font-bold uppercase text-white/80">
-                    FV
+                <p className="mt-5 flex-1 text-sm leading-relaxed text-white/60">"{t.quote}"</p>
+                <div className="mt-6 flex items-center gap-3 border-t border-white/[0.06] pt-5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#F97316]/15 text-xs font-bold text-[#F97316]">
+                    {t.name.charAt(0)}
                   </div>
                   <div>
-                    <p className="font-landing-headline font-bold text-sm uppercase text-white">{t.name}</p>
-                    <p className="font-landing-body text-[10px] uppercase tracking-widest text-zinc-500">{t.role}</p>
+                    <p className="text-sm font-semibold text-white">{t.name}</p>
+                    <p className="text-[11px] text-white/35">{t.role}</p>
                   </div>
                 </div>
               </article>
@@ -547,54 +549,55 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SEÇÕES DINÂMICAS ── */}
+      {/* ── SEÇÕES DINÂMICAS ──────────────────────────────────── */}
       {hasClasses && <ClassesSection onSelectClass={setPreselectedClassId} />}
       {hasClasses && <TrialFormSection settings={settings} preselectedClassId={preselectedClassId} />}
       {hasRentals && <CourtBookingSection />}
 
-      {/* ── FOOTER ── */}
-      <footer id="contato" className="bg-zinc-900">
-        {/* CTA email */}
-        <div className="max-w-7xl mx-auto px-12 py-24 flex flex-col md:flex-row items-center justify-between border-b border-white/5 gap-12">
-          <div className="text-center md:text-left">
-            <h2 className="font-landing-headline text-5xl font-black uppercase tracking-tight mb-4 text-white">
-              PRONTO PARA O JOGO?
-            </h2>
-            <p className="font-landing-body text-sm uppercase tracking-[0.2em] text-zinc-500">
-              Sua primeira aula experimental é por nossa conta.
-            </p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-6 w-full md:w-auto">
-            <input
-              type="email"
-              placeholder="SEU MELHOR E-MAIL"
-              className="bg-[#353534] border-b-2 border-transparent focus:border-[#46eaed] outline-none px-6 py-4 text-white font-landing-headline text-sm w-full md:w-80 transition-colors"
-            />
-            <a
-              href={ctaHref}
-              className="bg-[#ffb693] text-[#351000] px-12 py-4 font-landing-headline font-black uppercase tracking-widest hover:bg-[#ff6b00] transition-colors shrink-0 text-center no-underline"
-            >
-              {primaryText}
-            </a>
+      {/* ── FOOTER ────────────────────────────────────────────── */}
+      <footer id="contato" className="border-t border-white/[0.06] bg-[#080808]">
+        {/* CTA */}
+        <div className="mx-auto max-w-6xl px-6 py-20">
+          <div className="rounded-2xl bg-gradient-to-br from-[#F97316]/15 via-transparent to-[#2DD4BF]/10 border border-white/[0.06] p-10 sm:p-14 flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#F97316]/10 px-3 py-1 text-xs font-semibold text-[#F97316]">
+                <Zap className="h-3 w-3" />
+                Primeira aula gratuita
+              </div>
+              <h2 className="text-3xl font-bold text-white sm:text-4xl">Pronto para jogar?</h2>
+              <p className="mt-2 text-sm text-white/50">Comece agora. Sem compromisso.</p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <PrimaryButton href={ctaHref} className="justify-center text-sm">
+                {primaryText}
+                <ArrowRight className="h-4 w-4" />
+              </PrimaryButton>
+              {whatsappLink !== "#" && (
+                <GhostButton href={whatsappLink} className="justify-center text-sm">
+                  <MessageCircle className="h-4 w-4" />
+                  WhatsApp
+                </GhostButton>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Links */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 px-12 py-16 max-w-7xl mx-auto">
-          <div className="flex flex-col gap-6">
-            <p className="font-landing-headline text-xl font-bold text-[#ff6b00]">FutVôlei Arena</p>
-            <p className="font-landing-body text-xs tracking-widest uppercase text-zinc-500 max-w-xs">
+        <div className="mx-auto grid max-w-6xl gap-10 px-6 pb-16 sm:grid-cols-3">
+          <div>
+            <p className="font-bold text-white">FutVôlei Arena</p>
+            <p className="mt-3 text-sm leading-relaxed text-white/40 max-w-xs">
               A arena ideal para quem leva o futevôlei a sério. Aulas com método, quadras premium e uma comunidade que cresce junto.
             </p>
             {socialLinks.length > 0 && (
-              <div className="flex gap-4">
+              <div className="mt-5 flex gap-3">
                 {socialLinks.map(({ href, label, icon: Icon }) => (
                   <a
                     key={label}
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex h-10 w-10 items-center justify-center border border-white/10 bg-white/5 text-zinc-500 transition hover:text-[#46eaed] hover:border-[#46eaed]/30"
+                    className="flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-white/40 transition hover:border-[#2DD4BF]/30 hover:text-[#2DD4BF]"
                     aria-label={label}
                   >
                     <Icon className="h-4 w-4" />
@@ -604,40 +607,40 @@ export default function LandingPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-8">
-            <div className="flex flex-col gap-4">
-              <h4 className="font-landing-headline font-bold text-sm uppercase text-white">Menu</h4>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/30 mb-4">Navegação</p>
+            <div className="flex flex-col gap-3">
               {navLinks.map((link) => (
                 <a
                   key={link.label}
                   href={link.href}
-                  className="font-landing-body text-xs tracking-widest uppercase text-zinc-500 hover:text-[#46eaed] transition-colors no-underline"
+                  className="text-sm text-white/45 no-underline transition hover:text-white"
                 >
                   {link.label}
                 </a>
               ))}
             </div>
-            <div className="flex flex-col gap-4">
-              <h4 className="font-landing-headline font-bold text-sm uppercase text-white">Operação</h4>
-              <div className="flex items-start gap-2 font-landing-body text-xs text-zinc-500">
-                <Clock3 className="h-3.5 w-3.5 mt-0.5 text-[#46eaed] shrink-0" />
-                <div>
-                  <p>{formatHours(businessHours)}</p>
-                  <p className="text-zinc-600">{formatOpenDays(businessHours?.open_days)}</p>
-                </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/30 mb-4">Contato</p>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-sm text-white/45">
+                <Clock3 className="h-4 w-4 text-[#2DD4BF]" />
+                {formatHours(businessHours)}
               </div>
-              <div className="flex items-start gap-2 font-landing-body text-xs text-zinc-500">
-                <MapPin className="h-3.5 w-3.5 mt-0.5 text-[#46eaed] shrink-0" />
-                <p>Endereço via WhatsApp</p>
+              <div className="flex items-center gap-2 text-sm text-white/45">
+                <Users className="h-4 w-4 text-[#2DD4BF]" />
+                {formatOpenDays(businessHours?.open_days)}
               </div>
               {settings.whatsapp_number && (
                 <a
                   href={whatsappLink}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 font-landing-body text-xs text-[#46eaed] no-underline hover:text-white transition-colors"
+                  className="flex items-center gap-2 text-sm text-[#2DD4BF] no-underline transition hover:text-white"
                 >
-                  <MessageCircle className="h-3.5 w-3.5" />
+                  <MessageCircle className="h-4 w-4" />
                   Falar no WhatsApp
                 </a>
               )}
@@ -645,8 +648,8 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="px-12 py-8 bg-black text-center">
-          <p className="font-landing-body text-xs tracking-widest uppercase text-zinc-700">
+        <div className="border-t border-white/[0.05] px-6 py-6 text-center">
+          <p className="text-xs text-white/20">
             © {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.
           </p>
         </div>

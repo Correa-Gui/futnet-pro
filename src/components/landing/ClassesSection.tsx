@@ -94,8 +94,8 @@ export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string)
           </div>
           <div className="landing-panel-soft p-6">
             <p className="text-sm leading-8 text-white/66 sm:text-base">
-              O bloco de turmas deixou de ser uma grade burocrática. Agora ele funciona como vitrine
-              de oferta: filtro visível, leitura rápida de agenda e CTA direto para a aula teste.
+              Turmas organizadas por nível, com horários e dias definidos. Filtre pelo seu nível
+              e agende a aula experimental diretamente.
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
               {levels.map((level) => (

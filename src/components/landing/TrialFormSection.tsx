@@ -133,19 +133,19 @@ export function TrialFormSection({
         <div className="landing-panel overflow-hidden p-8 sm:p-10">
           <SectionLabel light>Aula experimental</SectionLabel>
           <SectionTitle light className="max-w-[10ch]">
-            O FORMULÁRIO AGORA FAZ PARTE DA HISTÓRIA, NÃO FICA SOLTO NA PÁGINA.
+            AGENDE SUA AULA EXPERIMENTAL GRATUITA
           </SectionTitle>
           <p className="max-w-[32rem] text-sm leading-8 text-white/68 sm:text-base">
-            Em vez de parecer um bloco técnico isolado, a captação foi integrada ao discurso da
-            marca com copy, contexto e visual coerentes com a proposta premium.
+            Sem compromisso. Preencha o formulário, escolha a turma que te interessa e nossa
+            equipe confirma o horário direto no WhatsApp.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
             {[
-              "Selecione a turma e já caia no fluxo com contexto.",
-              "A primeira interação mantém sensação de exclusividade.",
-              "A transição para WhatsApp continua simples e elegante.",
-              "O layout favorece leitura rápida no mobile.",
+              "Primeira aula 100% gratuita, sem compromisso.",
+              "Avaliação de nível na chegada para a turma ideal.",
+              "Confirmação rápida direto no WhatsApp.",
+              "Instrutores certificados e metodologia comprovada.",
             ].map((item) => (
               <div key={item} className="landing-panel-soft p-5">
                 <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-2xl bg-secondary/12 text-secondary">
@@ -162,7 +162,7 @@ export function TrialFormSection({
             Agendar aula
           </p>
           <p className="mt-4 max-w-[32rem] text-sm leading-8 text-white/68 sm:text-base">
-            Preencha os dados e mantenha o ritmo até o CTA final. Clareza, contraste e resposta rápida.
+            Escolha a turma que te interessa e preencha seus dados. Confirmamos em até 24h.
           </p>
 
           <div className="mt-8 grid gap-5">

@@ -240,13 +240,13 @@ export function CourtBookingSection() {
           <div className="max-w-[34rem]">
             <SectionLabel light>Reserva de quadra</SectionLabel>
             <SectionTitle light className="max-w-[12ch]">
-              FLUXO MAIS TECNOLÓGICO, MAIS SIMPLES E MUITO MAIS DESEJÁVEL.
+              RESERVE SUA QUADRA EM POUCOS PASSOS
             </SectionTitle>
           </div>
           <div className="landing-panel-soft p-6">
             <p className="text-sm leading-8 text-white/66 sm:text-base">
-              A reserva foi redesenhada como experiência de produto: escolha visual da quadra,
-              agenda clara, stepper com boa leitura e confirmação sem cara de sistema antigo.
+              Escolha a quadra, defina data e horário e confirme sua solicitação. Rápido,
+              simples e sem complicação — você recebe o contato em breve.
             </p>
           </div>
         </div>
@@ -354,8 +354,8 @@ export function CourtBookingSection() {
                         Passo 01
                       </p>
                       <p className="mt-4 text-sm leading-8 text-white/66 sm:text-base">
-                        A quadra já é a primeira decisão visual do fluxo. Mais clareza de escolha e
-                        menos sensação de lista utilitária.
+                        Temos quadras com areia de alta qualidade, iluminação LED e estrutura completa.
+                        Escolha a que combina com seu jogo.
                       </p>
                     </div>
 
@@ -536,8 +536,8 @@ export function CourtBookingSection() {
                         Confirmar pedido
                       </p>
                       <p className="mt-4 max-w-[32rem] text-sm leading-8 text-white/66 sm:text-base">
-                        O fechamento mantém a linguagem visual da página e pede apenas o essencial
-                        para concluir a solicitação.
+                        Informe seus dados e confirmaremos sua reserva pelo contato informado.
+                        Processo rápido e sem burocracia.
                       </p>
 
                       <div className="mt-8 grid gap-5">
