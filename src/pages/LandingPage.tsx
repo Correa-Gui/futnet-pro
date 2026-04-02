@@ -259,9 +259,9 @@ export default function LandingPage() {
   ];
 
   const testimonials = [
-    "A landing passa sensação de marca séria. Antes mesmo de chegar na arena já dá para entender que existe método e organização.",
-    "O fluxo de reserva ficou rápido e claro. Em poucos toques eu escolho horário e sigo com a solicitação sem ruído.",
-    "A comunicação tem mais presença. Não parece um site genérico, parece uma arena que sabe exatamente o que entrega.",
+    "A estrutura da arena é incrível. Areia de qualidade, iluminação perfeita à noite e professores que realmente acompanham sua evolução.",
+    "Comecei sem saber jogar e em dois meses já estava na turma intermediária. O método faz toda a diferença.",
+    "Reservei a quadra em menos de dois minutos. Facilidade total e qualidade na estrutura — virei cliente fixo.",
   ];
 
   const socialLinks = [
@@ -316,7 +316,7 @@ export default function LandingPage() {
           <div className="max-w-[760px]">
             <span className="inline-flex items-center gap-2 border border-white/12 bg-white/[0.05] px-4 py-2 font-landing-body text-[11px] font-semibold uppercase tracking-[0.28em] text-white/76 kinetic-glass">
               <Sparkles className="h-3.5 w-3.5 text-[#46eaed]" />
-              Futvôlei com presença de marca
+              A arena de futevôlei que você procurava
             </span>
 
             <h1 className="kinetic-text-glow mt-8 font-landing-headline text-[clamp(3.8rem,11vw,7.8rem)] font-bold uppercase leading-[0.9] tracking-[-0.06em] text-white">
@@ -356,7 +356,7 @@ export default function LandingPage() {
               <Trophy className="h-4 w-4 text-[#ffb693]" />
             </div>
             <p className="mt-5 font-landing-body text-sm leading-7 text-white/70">
-              Página mais forte visualmente, com linguagem coerente com aula, reserva e rotina de arena.
+              Estrutura completa, metodologia séria e uma comunidade de atletas que evoluem juntos.
             </p>
             <div className="mt-6 grid gap-3">
               {hero.bullets.map((item) => (
@@ -404,10 +404,10 @@ export default function LandingPage() {
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  "Posicionamento forte para aula e reserva",
-                  "Tipografia editorial com mais presença",
-                  "Fluxos conectados ao produto real",
-                  "Visual consistente no desktop e no mobile",
+                  "Metodologia desenvolvida por profissionais",
+                  "Areia tratada e iluminação LED premium",
+                  "Reservas online rápidas e sem burocracia",
+                  "Ambiente para atletas de todos os níveis",
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 font-landing-body text-sm text-white/66">
                     <CheckCircle2 className="h-4 w-4 text-[#46eaed]" />
@@ -466,9 +466,9 @@ export default function LandingPage() {
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/8 font-landing-headline text-sm font-bold uppercase text-white/82">FV</div>
                   <div>
                     <p className="font-landing-headline text-sm font-bold uppercase tracking-[0.14em] text-white">
-                      {index === 0 ? "Aluno iniciante" : index === 1 ? "Jogadora recorrente" : "Rotina pós-trabalho"}
+                      {index === 0 ? "Mateus S." : index === 1 ? "Ana Lima" : "Carlos M."}
                     </p>
-                    <p className="mt-1 font-landing-body text-[10px] uppercase tracking-[0.28em] text-white/38">Feedback da arena</p>
+                    <p className="mt-1 font-landing-body text-[10px] uppercase tracking-[0.28em] text-white/38">{index === 0 ? "Aluno avançado" : index === 1 ? "Aluna recorrente" : "Jogador regular"}</p>
                   </div>
                 </div>
               </article>
@@ -489,7 +489,7 @@ export default function LandingPage() {
                 Pronto para entrar no jogo?
               </h2>
               <p className="mt-4 font-landing-body text-sm uppercase tracking-[0.22em] text-white/44 sm:text-[12px]">
-                Marca forte na superfície. Conversão real no clique.
+                Sua primeira aula experimental é por nossa conta.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -503,7 +503,7 @@ export default function LandingPage() {
               <div>
                 <p className="font-landing-headline text-xl font-bold uppercase tracking-[-0.04em] text-[#ffb693]">FutVôlei Arena</p>
                 <p className="mt-4 max-w-[26rem] font-landing-body text-sm leading-7 text-white/58">
-                  Uma landing inspirada na referência que você gostou, mas agora com nome, tom e mensagens coerentes com o produto real.
+                  A arena ideal para quem leva o futevôlei a sério. Aulas com método, quadras premium e uma comunidade que cresce junto.
                 </p>
               </div>
               {socialLinks.length > 0 ? (
@@ -545,8 +545,8 @@ export default function LandingPage() {
               <div className="flex items-start gap-3 font-landing-body text-sm leading-7 text-white/62">
                 <MapPin className="mt-1 h-4 w-4 text-[#46eaed]" />
                 <div>
-                  <p>Fluxo público conectado à aula experimental e à reserva.</p>
-                  <p className="text-white/38">Sem perder o tom premium da referência.</p>
+                  <p>Endereço e localização disponíveis via WhatsApp</p>
+                  <p className="text-white/38">Consulte nosso calendário completo</p>
                 </div>
               </div>
               {settings.whatsapp_number ? (
@@ -560,7 +560,7 @@ export default function LandingPage() {
 
           <div className="border-t border-white/8 px-6 py-5 text-center sm:px-8">
             <p className="font-landing-body text-[11px] uppercase tracking-[0.22em] text-white/28">
-              © {new Date().getFullYear()} FutVôlei Arena. Direção visual urbana, textos corrigidos e CTA ligado ao produto.
+              © {new Date().getFullYear()} FutVôlei Arena. Todos os direitos reservados.
             </p>
           </div>
         </div>
