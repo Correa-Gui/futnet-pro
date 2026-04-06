@@ -21,7 +21,7 @@ import { ADMIN_MENU_GROUPS } from '@/lib/adminMenus';
 
 // Full menu definitions (key must match ADMIN_MENU_GROUPS keys)
 type FullMenuItem = { key: string; title: string; url: string; icon: React.ElementType };
-type FullMenuGroup = { label: string; items: FullMenuItem[]; superAdminOnly?: boolean };
+type FullMenuGroup = { label: string; items: FullMenuItem[] };
 
 const iconMap: Record<string, React.ElementType> = {
   dashboard:              LayoutDashboard,
@@ -65,26 +65,21 @@ const urlMap: Record<string, string> = {
   configuracoes:          '/admin/configuracoes',
 };
 
-// Build full menu groups from shared definitions, appending super-admin-only items
-const menuGroups: FullMenuGroup[] = [
-  ...ADMIN_MENU_GROUPS.map(group => ({
-    label: group.label,
-    items: group.items.map(item => ({
-      key: item.key,
-      title: item.title,
-      url: urlMap[item.key] || `/admin/${item.key}`,
-      icon: iconMap[item.key] || Settings,
-    })),
+// Base menu groups built from shared definitions (no icons/urls — added here)
+const baseMenuGroups: FullMenuGroup[] = ADMIN_MENU_GROUPS.map(group => ({
+  label: group.label,
+  items: group.items.map(item => ({
+    key: item.key,
+    title: item.title,
+    url: urlMap[item.key] || `/admin/${item.key}`,
+    icon: iconMap[item.key] || Settings,
   })),
-  // Super-admin-only section
-  {
-    label: 'Super Admin',
-    superAdminOnly: true,
-    items: [
-      { key: 'roles',        title: 'Permissões',          url: '/admin/roles',        icon: ShieldCheck },
-      { key: 'system-users', title: 'Usuários do Sistema', url: '/admin/system-users', icon: UserCog },
-    ],
-  },
+}));
+
+// Super-admin-only items appended to the "Sistema" group at runtime (see AdminSidebar)
+const SUPER_ADMIN_ITEMS: FullMenuItem[] = [
+  { key: 'roles',        title: 'Permissões',          url: '/admin/roles',        icon: ShieldCheck },
+  { key: 'system-users', title: 'Usuários do Sistema', url: '/admin/system-users', icon: UserCog },
 ];
 
 function AdminSidebar() {
@@ -112,6 +107,14 @@ function AdminSidebar() {
 
   const isSuperAdmin = allowedMenus === null;
 
+  // Inject super-admin-only items into the "Sistema" group
+  const menuGroups: FullMenuGroup[] = baseMenuGroups.map(group => {
+    if (group.label === 'Sistema' && isSuperAdmin) {
+      return { ...group, items: [...group.items, ...SUPER_ADMIN_ITEMS] };
+    }
+    return group;
+  });
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-4">
@@ -132,9 +135,6 @@ function AdminSidebar() {
 
       <SidebarContent className="px-3 py-4">
         {menuGroups.map((group) => {
-          // Super-admin-only groups are hidden for restricted admins
-          if (group.superAdminOnly && !isSuperAdmin) return null;
-
           // Filter items by allowedMenus (null = see all)
           const visibleItems = isSuperAdmin
             ? group.items
@@ -211,7 +211,10 @@ function AdminHeader() {
 
   const getPageTitle = () => {
     const path = location.pathname;
-    const allItems = menuGroups.flatMap(g => g.items);
+    const allItems = [
+      ...baseMenuGroups.flatMap(g => g.items),
+      ...SUPER_ADMIN_ITEMS,
+    ];
     const item = allItems.find(i =>
       i.url === '/admin' ? path === '/admin' : path.startsWith(i.url)
     );
