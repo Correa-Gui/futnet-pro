@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { interpolateVariables } from "../send-whatsapp/evolution.ts";
-import { loadWhatsAppProviderConfig, sendViaWhatsAppProvider } from "../send-whatsapp/provider.ts";
+import {
+  loadWhatsAppProviderConfig,
+  sendTemplateViaWhatsAppProvider,
+  sendViaWhatsAppProvider,
+  type TemplateComponent,
+} from "../send-whatsapp/provider.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -40,6 +45,7 @@ Deno.serve(async (req) => {
         id,
         amount,
         due_date,
+        reference_month,
         pix_copy_paste,
         student_id,
         profiles!inner(
@@ -62,14 +68,19 @@ Deno.serve(async (req) => {
     }
 
     let templateBody: string | null = null;
+    let metaTemplateName: string | null = null;
+    let metaTemplateLanguage = "pt_BR";
+
     if (templateId) {
       const { data: template } = await serviceClient
         .from("whatsapp_templates")
-        .select("body")
+        .select("body, meta_template_name, meta_template_language")
         .eq("id", templateId)
         .eq("is_active", true)
         .single();
       templateBody = template?.body ?? null;
+      metaTemplateName = template?.meta_template_name ?? null;
+      metaTemplateLanguage = template?.meta_template_language ?? "pt_BR";
     }
 
     const providerConfig = await loadWhatsAppProviderConfig(serviceClient);
@@ -94,27 +105,75 @@ Deno.serve(async (req) => {
       const [year, month, day] = (invoice.due_date as string).split("-");
       const dueDateFormatted = `${day}/${month}/${year}`;
 
+      const digitsOnly = profile.phone.replace(/\D/g, "");
+      const phone = digitsOnly.startsWith("55") ? digitsOnly : `55${digitsOnly}`;
+
+      // Format reference_month (YYYY-MM) to "Mês/YYYY" label
+      const refMonth = invoice.reference_month as string | null;
+      let mesLabel = "";
+      if (refMonth) {
+        const [y, m] = refMonth.split("-");
+        const monthNames = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
+        mesLabel = `${monthNames[parseInt(m, 10) - 1]}/${y}`;
+      }
+
+      // Build a human-readable message body for logging (used in both paths)
       const vars: Record<string, string> = {
         nome: profile.full_name ?? "",
         valor: amountFormatted,
         data_vencimento: dueDateFormatted,
-        pix_copy_paste: invoice.pix_copy_paste ?? "Consulte o app",
+        mes: mesLabel,
+        pix_copy_paste: invoice.pix_copy_paste ?? "",
       };
-
       const defaultMessage =
         `Ola, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}. ` +
         `Para pagar via PIX, copie o codigo: {{pix_copy_paste}}`;
-
       const rawMessage = templateBody ?? defaultMessage;
       const messageBody = interpolateVariables(rawMessage, vars);
-      const digitsOnly = profile.phone.replace(/\D/g, "");
-      const phone = digitsOnly.startsWith("55") ? digitsOnly : `55${digitsOnly}`;
 
       try {
-        const { response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
-          number: phone,
-          text: messageBody,
-        });
+        let response: Response;
+        let responseJson: unknown;
+
+        if (metaTemplateName && invoice.pix_copy_paste) {
+          // Send via Evolution API template endpoint (buttons: copy_code + url)
+          const components: TemplateComponent[] = [
+            {
+              type: "body",
+              parameters: [
+                { type: "text", text: profile.full_name ?? "" },
+                { type: "text", text: mesLabel },
+                { type: "text", text: amountFormatted },
+                { type: "text", text: dueDateFormatted },
+              ],
+            },
+            {
+              type: "button",
+              sub_type: "copy_code",
+              index: "0",
+              parameters: [{ type: "coupon_code", coupon_code: invoice.pix_copy_paste as string }],
+            },
+            {
+              type: "button",
+              sub_type: "url",
+              index: "1",
+              parameters: [{ type: "text", text: invoice.id as string }],
+            },
+          ];
+
+          ({ response, responseJson } = await sendTemplateViaWhatsAppProvider(providerConfig, {
+            number: phone,
+            name: metaTemplateName,
+            language: metaTemplateLanguage,
+            components,
+          }));
+        } else {
+          // Fallback: plain text message
+          ({ response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
+            number: phone,
+            text: messageBody,
+          }));
+        }
 
         const typedResponse = responseJson as Record<string, unknown> | null;
         const messageId =
