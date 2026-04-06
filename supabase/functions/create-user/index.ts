@@ -55,7 +55,7 @@ Deno.serve(async (req) => {
     const {
       email, password, full_name, phone, cpf, birth_date,
       role, rate_per_class, skill_level, plan_id,
-      class_ids,
+      class_ids, admin_role_id,
     } = body;
 
     if (!email || !password || !full_name || !role) {
@@ -65,8 +65,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!["teacher", "student"].includes(role)) {
-      return new Response(JSON.stringify({ error: "Role deve ser 'teacher' ou 'student'" }), {
+    if (!["admin", "teacher", "student"].includes(role)) {
+      return new Response(JSON.stringify({ error: "Role deve ser 'admin', 'teacher' ou 'student'" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -105,7 +105,26 @@ Deno.serve(async (req) => {
     }
 
     // Update role (trigger already created student role, so update it)
-    if (role === "teacher") {
+    if (role === "admin") {
+      await adminClient
+        .from("user_roles")
+        .update({ role: "admin" })
+        .eq("user_id", userId);
+
+      // Set admin_role_id if provided
+      if (admin_role_id) {
+        await adminClient
+          .from("profiles")
+          .update({ admin_role_id })
+          .eq("user_id", userId);
+      }
+
+      // Delete the auto-created student profile
+      await adminClient
+        .from("student_profiles")
+        .delete()
+        .eq("user_id", userId);
+    } else if (role === "teacher") {
       await adminClient
         .from("user_roles")
         .update({ role: "teacher" })

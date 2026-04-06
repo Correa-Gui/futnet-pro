@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { useAppMeta } from "@/hooks/useAppMeta";
 
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
@@ -46,10 +47,17 @@ import AdminWhatsApp from "./pages/admin/WhatsApp";
 import AdminPresentation from "./pages/admin/Presentation";
 import AdminApiDocs from "./pages/admin/ApiDocs";
 import AdminBookingUsers from "./pages/admin/BookingUsers";
+import AdminRoles from "./pages/admin/Roles";
+import AdminSystemUsers from "./pages/admin/SystemUsers";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
 const queryClient = new QueryClient();
+
+function AppMeta() {
+  useAppMeta();
+  return null;
+}
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -58,6 +66,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <AppMeta />
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
@@ -95,6 +104,8 @@ const App = () => (
               <Route path="apresentacao" element={<AdminPresentation />} />
               <Route path="api-docs" element={<AdminApiDocs />} />
               <Route path="usuarios" element={<AdminBookingUsers />} />
+              <Route path="roles" element={<AdminRoles />} />
+              <Route path="system-users" element={<AdminSystemUsers />} />
             </Route>
 
             {/* Student routes */}

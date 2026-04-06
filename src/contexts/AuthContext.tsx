@@ -10,6 +10,8 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole | null;
   profile: Database['public']['Tables']['profiles']['Row'] | null;
+  /** null = super admin (no menu restriction); string[] = allowed menu keys */
+  allowedMenus: string[] | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
@@ -24,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
+  const [allowedMenus, setAllowedMenus] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   // Guard against double-setting loading from both getSession and onAuthStateChange
   const initializedRef = useRef(false);
@@ -42,12 +45,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Failed to fetch user profile:', profileResult.error.message);
       }
 
-      setRole(roleResult.data?.role ?? null);
-      setProfile(profileResult.data ?? null);
+      const fetchedRole = roleResult.data?.role ?? null;
+      const fetchedProfile = profileResult.data ?? null;
+
+      setRole(fetchedRole);
+      setProfile(fetchedProfile);
+
+      // Fetch allowed menus for admins that have a specific admin_role assigned.
+      // admin_role_id = null means super admin → no restrictions (allowedMenus = null).
+      if (fetchedRole === 'admin' && fetchedProfile?.admin_role_id) {
+        const { data: adminRoleData } = await supabase
+          .from('admin_roles')
+          .select('allowed_menus')
+          .eq('id', fetchedProfile.admin_role_id)
+          .single();
+        setAllowedMenus(adminRoleData?.allowed_menus ?? null);
+      } else {
+        setAllowedMenus(null);
+      }
     } catch (err) {
       console.error('Unexpected error fetching user data:', err);
       setRole(null);
       setProfile(null);
+      setAllowedMenus(null);
     }
   }, []);
 
@@ -88,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           setRole(null);
           setProfile(null);
+          setAllowedMenus(null);
         }
 
         // Don't set loading=false here during initialization — getSession handles that
@@ -133,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, session, role, profile, allowedMenus, loading, signIn, signUp, signOut, resetPassword }}>
       {children}
     </AuthContext.Provider>
   );

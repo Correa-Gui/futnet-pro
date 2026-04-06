@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          id: string
+          name: string
+          description: string | null
+          allowed_menus: string[]
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description?: string | null
+          allowed_menus?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string | null
+          allowed_menus?: string[]
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       attendances: {
         Row: {
           confirmed_at: string | null
@@ -469,6 +496,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          admin_role_id: string | null
           avatar_url: string | null
           birth_date: string | null
           cpf: string | null
@@ -483,6 +511,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_role_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
@@ -497,6 +526,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_role_id?: string | null
           avatar_url?: string | null
           birth_date?: string | null
           cpf?: string | null
@@ -510,7 +540,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_admin_role_id_fkey"
+            columns: ["admin_role_id"]
+            isOneToOne: false
+            referencedRelation: "admin_roles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       student_profiles: {
         Row: {
