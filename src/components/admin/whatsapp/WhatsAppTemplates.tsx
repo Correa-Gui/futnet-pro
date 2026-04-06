@@ -8,8 +8,97 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+
+const STARTER_TEMPLATES = [
+  {
+    name: "Boas-vindas ao aluno",
+    category: "onboarding",
+    body: `🏐 Olá, {{nome}}! Seja muito bem-vindo(a) à {{turma}}!
+
+Ficamos felizes em ter você com a gente. Sua primeira aula é {{dia}} às {{horario}} na {{quadra}}.
+
+📍 Lembre-se de chegar com 10 minutos de antecedência e trazer água.
+
+Qualquer dúvida, é só chamar! 😊`,
+  },
+  {
+    name: "Lembrete de aula",
+    category: "reminder",
+    body: `⏰ Oi, {{nome}}! Lembrete da sua aula de amanhã.
+
+🗓 {{dia}} às {{horario}}
+📍 {{quadra}}
+👨‍🏫 Prof. {{professor}}
+
+Confirme sua presença respondendo esta mensagem. Nos vemos lá! 🏐`,
+  },
+  {
+    name: "Cobrança de mensalidade",
+    category: "billing",
+    body: `💰 Olá, {{nome}}! Tudo bem?
+
+Sua mensalidade de {{mes}} no valor de *R$ {{valor}}* vence em {{data_vencimento}}.
+
+Para pagar, acesse: {{app_url}}
+
+Qualquer dúvida estamos à disposição! 🙏`,
+  },
+  {
+    name: "Mensalidade vencida",
+    category: "billing",
+    body: `⚠️ Oi, {{nome}}! Notamos que sua mensalidade de {{mes}} (R$ {{valor}}) está em aberto.
+
+Para regularizar e continuar aproveitando suas aulas, acesse: {{app_url}}
+
+Se já realizou o pagamento, por favor ignore esta mensagem. Obrigado! 😊`,
+  },
+  {
+    name: "Confirmação de reserva de quadra",
+    category: "booking",
+    body: `✅ Reserva confirmada, {{nome}}!
+
+🏟️ Quadra: {{quadra}}
+📅 Data: {{dia}}
+🕐 Horário: {{horario}}
+
+Chegue alguns minutinhos antes para não perder nenhum tempo de jogo. 🎯
+
+Qualquer alteração, entre em contato conosco!`,
+  },
+  {
+    name: "Aula cancelada",
+    category: "schedule",
+    body: `📢 Oi, {{nome}}! Informamos que a aula de {{turma}} de {{dia}} às {{horario}} foi *cancelada*.
+
+Pedimos desculpas pelo transtorno. Em breve entraremos em contato para remarcar.
+
+Obrigado pela compreensão! 🙏`,
+  },
+  {
+    name: "Convite para Day Use",
+    category: "marketing",
+    body: `🌟 Oi, {{nome}}! Temos uma ótima notícia pra você!
+
+Estamos com vagas disponíveis para **Day Use** na {{quadra}}. Venha jogar com a gente!
+
+📍 Local: {{quadra}}
+📅 Consulte os horários disponíveis: {{app_url}}
+
+Chame os amigos e garanta sua vaga! 🏐⚽`,
+  },
+  {
+    name: "Parabéns de aniversário",
+    category: "engagement",
+    body: `🎂 Feliz aniversário, {{nome}}!
+
+A equipe toda deseja um dia incrível cheio de alegria e muita bola boa! 🏐🎉
+
+Como presente especial, temos uma surpresa pra você. Fale com a gente!`,
+  },
+];
+
 
 interface Template {
   id: string;
@@ -83,11 +172,40 @@ export default function WhatsAppTemplates() {
     setDialogOpen(true);
   };
 
+  const useStarter = (t: typeof STARTER_TEMPLATES[0]) => {
+    setForm({ name: t.name, body: t.body, category: t.category });
+    setEditing(null);
+    setDialogOpen(true);
+  };
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Starter templates */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold">Modelos prontos</p>
+          <span className="text-xs text-muted-foreground">— clique para usar como base</span>
+        </div>
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {STARTER_TEMPLATES.map((t) => (
+            <button
+              key={t.name}
+              onClick={() => useStarter(t)}
+              className="text-left rounded-lg border border-border bg-muted/30 px-3 py-2.5 hover:border-primary/40 hover:bg-primary/5 transition-colors group"
+            >
+              <p className="text-sm font-medium group-hover:text-primary transition-colors truncate">{t.name}</p>
+              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+                {t.body.slice(0, 80)}…
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="flex justify-between items-center">
         <p className="text-sm text-muted-foreground">
-          Crie templates reutilizáveis com variáveis como <code className="bg-muted px-1 rounded">{"{{nome}}"}</code>, <code className="bg-muted px-1 rounded">{"{{turma}}"}</code>
+          Templates salvos com variáveis como <code className="bg-muted px-1 rounded">{"{{nome}}"}</code>, <code className="bg-muted px-1 rounded">{"{{turma}}"}</code>
         </p>
         <Dialog open={dialogOpen} onOpenChange={(o) => { if (!o) resetForm(); setDialogOpen(o); }}>
           <DialogTrigger asChild>
@@ -113,11 +231,11 @@ export default function WhatsAppTemplates() {
                 <Textarea
                   value={form.body}
                   onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-                  placeholder={"Olá {{nome}}! Sua aula de {{turma}} é amanhã às {{horario}}. Não esqueça! 🏐"}
-                  rows={6}
+                  placeholder={"⏰ Oi, {{nome}}! Lembrete da sua aula de amanhã.\n\n🗓 {{dia}} às {{horario}}\n📍 {{quadra}}\n\nNos vemos lá! 🏐"}
+                  rows={8}
                 />
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use {"{{variavel}}"} para dados dinâmicos. Variáveis disponíveis: nome, turma, horario, dia, professor, quadra
+                  Use {"{{variavel}}"} para dados dinâmicos. Disponíveis: <span className="font-medium">nome, turma, horario, dia, professor, quadra, valor, mes, data_vencimento, app_url</span>
                 </p>
               </div>
               <div className="flex justify-end gap-2">

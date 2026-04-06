@@ -38,6 +38,19 @@ export default function CourtBooking() {
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
+  const { data: courtRentalPrice = 0 } = useQuery({
+    queryKey: ["system-config-rental-price"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "court_rental_price")
+        .maybeSingle();
+      return Number(data?.value || 0);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: courts = [] } = useQuery({
     queryKey: ["public-courts"],
     queryFn: async () => {
@@ -117,8 +130,9 @@ export default function CourtBooking() {
         end_time: endTime,
         requester_name: validation.data.requester_name,
         requester_phone: validation.data.requester_phone,
-        price: 80,
+        price: courtRentalPrice,
         status: "requested",
+        booking_type: "rental",
       });
       if (error) throw error;
     },
@@ -332,7 +346,11 @@ export default function CourtBooking() {
                 </div>
                 <div className="flex justify-between border-t border-border pt-2">
                   <span className="text-muted-foreground">Valor</span>
-                  <span className="font-bold text-primary">R$ 80,00</span>
+                  <span className="font-bold text-primary">
+                    {courtRentalPrice > 0
+                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(courtRentalPrice)
+                      : "A confirmar"}
+                  </span>
                 </div>
               </CardContent>
             </Card>

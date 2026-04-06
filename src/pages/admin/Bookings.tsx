@@ -38,7 +38,16 @@ import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 type ViewMode = "week" | "day";
+type FilterType = "all" | "class" | "rental" | "dayuse";
 type Court = { id: string; name: string };
+
+const COURT_BG_COLORS = [
+  "bg-cyan-500/15 border-cyan-500 text-cyan-700 dark:text-cyan-400",
+  "bg-violet-500/15 border-violet-500 text-violet-700 dark:text-violet-400",
+  "bg-orange-500/15 border-orange-500 text-orange-700 dark:text-orange-400",
+  "bg-rose-500/15 border-rose-500 text-rose-700 dark:text-rose-400",
+  "bg-teal-500/15 border-teal-500 text-teal-700 dark:text-teal-400",
+];
 
 type CalendarEvent =
   | {
@@ -62,6 +71,7 @@ type CalendarEvent =
       status: BookingStatus;
       phone: string;
       price: number;
+      booking_type: string;
     };
 
 const HOUR_HEIGHT = 64; // px per hour
@@ -118,6 +128,7 @@ export default function Bookings() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>("week");
+  const [filterType, setFilterType] = useState<FilterType>("all");
   const { data: businessHours } = useBusinessHours();
 
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
@@ -177,6 +188,18 @@ export default function Bookings() {
     },
   });
 
+  const { data: sysConfig } = useQuery({
+    queryKey: ["system-config-booking-prices"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("key, value")
+        .in("key", ["court_rental_price", "day_use_price"]);
+      return Object.fromEntries((data || []).map((r: any) => [r.key, r.value]));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BookingStatus }) => {
       const { error } = await supabase
@@ -199,22 +222,38 @@ export default function Bookings() {
     paid: bookings.filter((b) => b.status === "paid").length,
   };
 
+  function resolvePrice(b: any): number {
+    const stored = Number(b.price);
+    if (stored > 0) return stored;
+    if (b.booking_type === "day_use") return Number(sysConfig?.day_use_price || 0);
+    return Number(sysConfig?.court_rental_price || 0);
+  }
+
   function getEventsForDay(day: Date): CalendarEvent[] {
     const dayOfWeek = getDay(day);
     const dateStr = format(day, "yyyy-MM-dd");
-    const dayClasses: CalendarEvent[] = classes
-      .filter((c) => c.day_of_week.includes(dayOfWeek))
-      .map((c) => ({
-        type: "class" as const,
-        id: c.id,
-        name: c.name,
-        court: (c as any).courts?.name || "",
-        courtId: (c as any).courts?.id || "",
-        startTime: c.start_time,
-        endTime: c.end_time,
-      }));
+    const dayClasses: CalendarEvent[] =
+      filterType === "all" || filterType === "class"
+        ? classes
+            .filter((c) => c.day_of_week.includes(dayOfWeek))
+            .map((c) => ({
+              type: "class" as const,
+              id: c.id,
+              name: c.name,
+              court: (c as any).courts?.name || "",
+              courtId: (c as any).courts?.id || "",
+              startTime: c.start_time,
+              endTime: c.end_time,
+            }))
+        : [];
     const dayBookings: CalendarEvent[] = bookings
-      .filter((b) => b.date === dateStr)
+      .filter((b) => {
+        if (b.date !== dateStr) return false;
+        if (filterType === "class") return false;
+        if (filterType === "rental") return (b as any).booking_type === "rental";
+        if (filterType === "dayuse") return (b as any).booking_type === "day_use";
+        return true;
+      })
       .map((b) => ({
         type: "booking" as const,
         id: b.id,
@@ -226,7 +265,8 @@ export default function Bookings() {
         date: b.date,
         status: b.status as BookingStatus,
         phone: b.requester_phone,
-        price: Number(b.price),
+        price: resolvePrice(b),
+        booking_type: (b as any).booking_type || "rental",
       }));
     return [...dayClasses, ...dayBookings];
   }
@@ -234,19 +274,28 @@ export default function Bookings() {
   function getEventsForCourt(courtId: string): CalendarEvent[] {
     const dayOfWeek = getDay(currentDate);
     const dateStr = format(currentDate, "yyyy-MM-dd");
-    const courtClasses: CalendarEvent[] = classes
-      .filter((c) => (c as any).courts?.id === courtId && c.day_of_week.includes(dayOfWeek))
-      .map((c) => ({
-        type: "class" as const,
-        id: c.id,
-        name: c.name,
-        court: courts.find((ct) => ct.id === courtId)?.name || "",
-        courtId,
-        startTime: c.start_time,
-        endTime: c.end_time,
-      }));
+    const courtClasses: CalendarEvent[] =
+      filterType === "all" || filterType === "class"
+        ? classes
+            .filter((c) => (c as any).courts?.id === courtId && c.day_of_week.includes(dayOfWeek))
+            .map((c) => ({
+              type: "class" as const,
+              id: c.id,
+              name: c.name,
+              court: courts.find((ct) => ct.id === courtId)?.name || "",
+              courtId,
+              startTime: c.start_time,
+              endTime: c.end_time,
+            }))
+        : [];
     const courtBookings: CalendarEvent[] = bookings
-      .filter((b) => b.date === dateStr && (b as any).courts?.id === courtId)
+      .filter((b) => {
+        if (b.date !== dateStr || (b as any).courts?.id !== courtId) return false;
+        if (filterType === "class") return false;
+        if (filterType === "rental") return (b as any).booking_type === "rental";
+        if (filterType === "dayuse") return (b as any).booking_type === "day_use";
+        return true;
+      })
       .map((b) => ({
         type: "booking" as const,
         id: b.id,
@@ -258,7 +307,8 @@ export default function Bookings() {
         date: b.date,
         status: b.status as BookingStatus,
         phone: b.requester_phone,
-        price: Number(b.price),
+        price: resolvePrice(b),
+        booking_type: (b as any).booking_type || "rental",
       }));
     return [...courtClasses, ...courtBookings];
   }
@@ -409,7 +459,7 @@ export default function Bookings() {
             className="gap-1.5 h-8"
             onClick={() => setViewMode("day")}
           >
-            <LayoutGrid className="h-3.5 w-3.5" /> Dia
+            <LayoutGrid className="h-3.5 w-3.5" /> Por Quadra
           </Button>
         </div>
       </div>
@@ -431,6 +481,26 @@ export default function Bookings() {
               </div>
             </CardContent>
           </Card>
+        ))}
+      </div>
+
+      {/* Type Filter Tabs */}
+      <div className="flex items-center gap-1 border border-border rounded-lg p-0.5 bg-muted/30 w-fit">
+        {([
+          { key: "all",     label: "Todos" },
+          { key: "class",   label: "Aulas" },
+          { key: "rental",  label: "Aluguel" },
+          { key: "dayuse",  label: "Day Use" },
+        ] as { key: FilterType; label: string }[]).map((tab) => (
+          <Button
+            key={tab.key}
+            variant={filterType === tab.key ? "default" : "ghost"}
+            size="sm"
+            className="h-7 text-xs px-3"
+            onClick={() => setFilterType(tab.key)}
+          >
+            {tab.label}
+          </Button>
         ))}
       </div>
 
@@ -516,23 +586,46 @@ export default function Bookings() {
       </div>
 
       {/* Legend */}
-      <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm bg-primary/20 border-l-2 border-primary" />
-          Turma fixa
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/40 border-l-2 border-amber-400" />
-          Solicitado
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 dark:bg-blue-900/40 border-l-2 border-blue-500" />
-          Confirmado
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="inline-block w-3 h-3 rounded-sm bg-emerald-100 dark:bg-emerald-900/40 border-l-2 border-emerald-500" />
-          Pago
-        </span>
+      <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-4">
+          {(filterType === "all" || filterType === "class") && (
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block w-3 h-3 rounded-sm bg-primary/20 border-l-2 border-primary" />
+              Turma fixa
+            </span>
+          )}
+          {filterType !== "class" && (
+            <>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/40 border-l-2 border-amber-400" />
+                Solicitado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-sm bg-blue-100 dark:bg-blue-900/40 border-l-2 border-blue-500" />
+                Confirmado
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="inline-block w-3 h-3 rounded-sm bg-emerald-100 dark:bg-emerald-900/40 border-l-2 border-emerald-500" />
+                Pago
+              </span>
+            </>
+          )}
+        </div>
+        {viewMode === "day" && courts.length > 0 && (
+          <div className="flex flex-wrap gap-4 border-l border-border pl-6">
+            {courts.map((court, i) => {
+              const colorClasses = COURT_BG_COLORS[i % COURT_BG_COLORS.length].split(" ");
+              const bgClass = colorClasses.find((c) => c.startsWith("bg-")) || "bg-primary/20";
+              const borderClass = colorClasses.find((c) => c.startsWith("border-")) || "border-primary";
+              return (
+                <span key={court.id} className="flex items-center gap-1.5">
+                  <span className={`inline-block w-3 h-3 rounded-sm border-l-2 ${bgClass} ${borderClass}`} />
+                  {court.name}
+                </span>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Calendar */}
@@ -570,17 +663,19 @@ export default function Bookings() {
                   </p>
                 </div>
               ))
-            : courts.map((court, i) => (
-                <div
-                  key={court.id}
-                  className={cn(
-                    "border-r p-3 text-center font-semibold text-sm",
-                    i % 2 === 0 ? "text-primary" : "text-secondary-foreground"
-                  )}
-                >
-                  {court.name}
-                </div>
-              ))}
+            : courts.map((court, i) => {
+                const colorClasses = COURT_BG_COLORS[i % COURT_BG_COLORS.length].split(" ");
+                const textClass = colorClasses.find((c) => c.startsWith("text-")) || "text-primary";
+                const bgClass = colorClasses.find((c) => c.startsWith("bg-")) || "bg-primary/10";
+                return (
+                  <div
+                    key={court.id}
+                    className={cn("border-r p-3 text-center font-semibold text-sm", textClass, bgClass)}
+                  >
+                    {court.name}
+                  </div>
+                );
+              })}
         </div>
 
         {/* Scrollable time area */}
