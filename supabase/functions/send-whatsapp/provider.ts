@@ -23,6 +23,22 @@ export interface SendTemplatePayload {
   components: TemplateComponent[];
 }
 
+export interface ButtonItem {
+  type: "reply" | "url" | "call";
+  displayText: string;
+  id?: string;
+  url?: string;
+  phoneNumber?: string;
+}
+
+export interface SendButtonsPayload {
+  number: string;
+  title: string;
+  description: string;
+  footer?: string;
+  buttons: ButtonItem[];
+}
+
 export function resolveWhatsAppProviderConfig(input?: {
   provider_base_url?: string;
   provider_instance_name?: string;
@@ -43,6 +59,10 @@ export function buildMessagesSendEndpoint(baseUrl: string): string {
 
 export function buildTemplateSendEndpoint(baseUrl: string, instanceName: string): string {
   return `${baseUrl.replace(/\/$/, "")}/message/sendTemplate/${instanceName}`;
+}
+
+export function buildButtonsSendEndpoint(baseUrl: string, instanceName: string): string {
+  return `${baseUrl.replace(/\/$/, "")}/message/sendButtons/${instanceName}`;
 }
 
 export async function loadWhatsAppProviderConfig(serviceClient: any): Promise<WhatsAppProviderConfig> {
@@ -99,6 +119,28 @@ export async function sendTemplateViaWhatsAppProvider(
   payload: SendTemplatePayload
 ) {
   const response = await fetch(buildTemplateSendEndpoint(config.baseUrl, config.instanceName), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let responseJson: unknown = null;
+  try {
+    responseJson = await response.json();
+  } catch {
+    responseJson = null;
+  }
+
+  return { response, responseJson };
+}
+
+export async function sendButtonsViaWhatsAppProvider(
+  config: WhatsAppProviderConfig,
+  payload: SendButtonsPayload
+) {
+  const response = await fetch(buildButtonsSendEndpoint(config.baseUrl, config.instanceName), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

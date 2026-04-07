@@ -2,9 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { interpolateVariables } from "../send-whatsapp/evolution.ts";
 import {
   loadWhatsAppProviderConfig,
-  sendTemplateViaWhatsAppProvider,
+  sendButtonsViaWhatsAppProvider,
   sendViaWhatsAppProvider,
-  type TemplateComponent,
 } from "../send-whatsapp/provider.ts";
 
 const corsHeaders = {
@@ -68,22 +67,30 @@ Deno.serve(async (req) => {
     }
 
     let templateBody: string | null = null;
-    let metaTemplateName: string | null = null;
-    let metaTemplateLanguage = "pt_BR";
-
     if (templateId) {
       const { data: template } = await serviceClient
         .from("whatsapp_templates")
-        .select("body, meta_template_name, meta_template_language")
+        .select("body")
         .eq("id", templateId)
         .eq("is_active", true)
         .single();
       templateBody = template?.body ?? null;
-      metaTemplateName = template?.meta_template_name ?? null;
-      metaTemplateLanguage = template?.meta_template_language ?? "pt_BR";
     }
 
-    const providerConfig = await loadWhatsAppProviderConfig(serviceClient);
+    // Load provider config and app_url in parallel
+    const [providerConfig, configRows] = await Promise.all([
+      loadWhatsAppProviderConfig(serviceClient),
+      serviceClient
+        .from("system_config")
+        .select("key, value")
+        .in("key", ["app_url", "company_name"]),
+    ]);
+
+    const configMap = Object.fromEntries(
+      ((configRows.data ?? []) as { key: string; value: string }[]).map((r) => [r.key, r.value?.trim() ?? ""])
+    );
+    const appUrl = configMap.app_url ?? "";
+    const companyName = configMap.company_name ?? "";
 
     let sent = 0;
     let skipped = 0;
@@ -97,6 +104,9 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      const digitsOnly = profile.phone.replace(/\D/g, "");
+      const phone = digitsOnly.startsWith("55") ? digitsOnly : `55${digitsOnly}`;
+
       const amountFormatted = new Intl.NumberFormat("pt-BR", {
         style: "currency",
         currency: "BRL",
@@ -105,10 +115,6 @@ Deno.serve(async (req) => {
       const [year, month, day] = (invoice.due_date as string).split("-");
       const dueDateFormatted = `${day}/${month}/${year}`;
 
-      const digitsOnly = profile.phone.replace(/\D/g, "");
-      const phone = digitsOnly.startsWith("55") ? digitsOnly : `55${digitsOnly}`;
-
-      // Format reference_month (YYYY-MM) to "Mês/YYYY" label
       const refMonth = invoice.reference_month as string | null;
       let mesLabel = "";
       if (refMonth) {
@@ -117,17 +123,21 @@ Deno.serve(async (req) => {
         mesLabel = `${monthNames[parseInt(m, 10) - 1]}/${y}`;
       }
 
-      // Build a human-readable message body for logging (used in both paths)
+      const pixCode = invoice.pix_copy_paste as string | null;
+
       const vars: Record<string, string> = {
         nome: profile.full_name ?? "",
         valor: amountFormatted,
         data_vencimento: dueDateFormatted,
         mes: mesLabel,
-        pix_copy_paste: invoice.pix_copy_paste ?? "",
+        pix_copy_paste: pixCode ?? "",
+        app_url: appUrl,
       };
+
       const defaultMessage =
-        `Ola, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}. ` +
-        `Para pagar via PIX, copie o codigo: {{pix_copy_paste}}`;
+        `Ola, {{nome}}! Sua fatura de {{valor}} vence em {{data_vencimento}}.` +
+        (pixCode ? ` Para pagar via PIX, copie o codigo: {{pix_copy_paste}}` : "");
+
       const rawMessage = templateBody ?? defaultMessage;
       const messageBody = interpolateVariables(rawMessage, vars);
 
@@ -135,40 +145,37 @@ Deno.serve(async (req) => {
         let response: Response;
         let responseJson: unknown;
 
-        if (metaTemplateName && invoice.pix_copy_paste) {
-          // Send via Evolution API template endpoint (buttons: copy_code + url)
-          const components: TemplateComponent[] = [
-            {
-              type: "body",
-              parameters: [
-                { type: "text", text: profile.full_name ?? "" },
-                { type: "text", text: mesLabel },
-                { type: "text", text: amountFormatted },
-                { type: "text", text: dueDateFormatted },
-              ],
-            },
-            {
-              type: "button",
-              sub_type: "copy_code",
-              index: "0",
-              parameters: [{ type: "coupon_code", coupon_code: invoice.pix_copy_paste as string }],
-            },
-            {
-              type: "button",
-              sub_type: "url",
-              index: "1",
-              parameters: [{ type: "text", text: invoice.id as string }],
-            },
-          ];
+        if (pixCode) {
+          // Send interactive message: PIX code in body + URL button to invoice
+          const invoiceUrl = appUrl ? `${appUrl}/invoices/${invoice.id}` : "";
 
-          ({ response, responseJson } = await sendTemplateViaWhatsAppProvider(providerConfig, {
-            number: phone,
-            name: metaTemplateName,
-            language: metaTemplateLanguage,
-            components,
-          }));
+          const pixBody = pixCode
+            ? `${messageBody}\n\nCódigo PIX Copia e Cola:\n${pixCode}`
+            : messageBody;
+
+          const buttons: { type: "url" | "reply"; displayText: string; url?: string; id?: string }[] = [];
+
+          if (invoiceUrl) {
+            buttons.push({ type: "url", displayText: "Ver Fatura", url: invoiceUrl });
+          }
+
+          if (buttons.length > 0) {
+            ({ response, responseJson } = await sendButtonsViaWhatsAppProvider(providerConfig, {
+              number: phone,
+              title: "Lembrete de Pagamento 💳",
+              description: pixBody,
+              ...(companyName && { footer: companyName }),
+              buttons,
+            }));
+          } else {
+            // No app_url configured — fall back to plain text
+            ({ response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
+              number: phone,
+              text: pixBody,
+            }));
+          }
         } else {
-          // Fallback: plain text message
+          // No PIX code — send plain text
           ({ response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
             number: phone,
             text: messageBody,
