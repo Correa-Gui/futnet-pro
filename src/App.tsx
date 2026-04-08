@@ -30,6 +30,7 @@ import StudentHome from "./pages/student/Home";
 import StudentClasses from "./pages/student/Classes";
 import StudentProfile from "./pages/student/Profile";
 import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
+import StudentPlanSelection from "./pages/student/PlanSelection";
 
 import TeacherLayout from "./layouts/TeacherLayout";
 import TeacherHome from "./pages/teacher/Home";
@@ -107,6 +108,13 @@ const App = () => (
               <Route path="roles" element={<AdminRoles />} />
               <Route path="system-users" element={<AdminSystemUsers />} />
             </Route>
+
+            {/* Student plan selection (outside layout, shown before dashboard) */}
+            <Route path="/aluno/escolher-plano" element={
+              <ProtectedRoute allowedRoles={['student']}>
+                <StudentPlanSelection />
+              </ProtectedRoute>
+            } />
 
             {/* Student routes */}
             <Route path="/aluno" element={

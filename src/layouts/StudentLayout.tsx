@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { CalendarDays, Receipt, User, Home, History, Search, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -172,6 +172,13 @@ function MobileBottomNav() {
 }
 
 export default function StudentLayout() {
+  const { studentProfile } = useAuth();
+
+  // Guard: student must have a plan before accessing the main area
+  if (studentProfile !== undefined && studentProfile !== null && studentProfile.plan_id === null) {
+    return <Navigate to="/aluno/escolher-plano" replace />;
+  }
+
   return (
     <div className="flex min-h-screen w-full bg-background">
       <StudentSidebar />

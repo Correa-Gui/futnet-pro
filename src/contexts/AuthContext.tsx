@@ -10,6 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole | null;
   profile: Database['public']['Tables']['profiles']['Row'] | null;
+  studentProfile: { id: string; plan_id: string | null } | null;
   /** null = super admin (no menu restriction); string[] = allowed menu keys */
   allowedMenus: string[] | null;
   loading: boolean;
@@ -17,6 +18,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
+  refreshStudentProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,6 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
+  const [studentProfile, setStudentProfile] = useState<{ id: string; plan_id: string | null } | null>(null);
   const [allowedMenus, setAllowedMenus] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   // Guard against double-setting loading from both getSession and onAuthStateChange
@@ -51,6 +54,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setRole(fetchedRole);
       setProfile(fetchedProfile);
 
+      // Fetch student profile to check if plan is assigned
+      if (fetchedRole === 'student') {
+        const { data: sp } = await supabase
+          .from('student_profiles')
+          .select('id, plan_id')
+          .eq('user_id', userId)
+          .single();
+        setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null } : null);
+      } else {
+        setStudentProfile(null);
+      }
+
       // Fetch allowed menus for admins that have a specific admin_role assigned.
       // admin_role_id = null means super admin → no restrictions (allowedMenus = null).
       if (fetchedRole === 'admin' && fetchedProfile?.admin_role_id) {
@@ -67,6 +82,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Unexpected error fetching user data:', err);
       setRole(null);
       setProfile(null);
+      setStudentProfile(null);
       setAllowedMenus(null);
     }
   }, []);
@@ -138,12 +154,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: error as Error | null };
   };
 
+  const refreshStudentProfile = useCallback(async () => {
+    if (!user) return;
+    const { data: sp } = await supabase
+      .from('student_profiles')
+      .select('id, plan_id')
+      .eq('user_id', user.id)
+      .single();
+    setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null } : null);
+  }, [user]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
     setRole(null);
     setProfile(null);
+    setStudentProfile(null);
   };
 
   const resetPassword = async (email: string) => {
@@ -154,7 +181,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, allowedMenus, loading, signIn, signUp, signOut, resetPassword }}>
+    <AuthContext.Provider value={{ user, session, role, profile, studentProfile, allowedMenus, loading, signIn, signUp, signOut, resetPassword, refreshStudentProfile }}>
       {children}
     </AuthContext.Provider>
   );

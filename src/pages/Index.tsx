@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
-  const { user, role, loading, profile } = useAuth();
+  const { user, role, loading, profile, studentProfile } = useAuth();
 
   if (loading) {
     return (
@@ -21,6 +21,12 @@ const Index = () => {
 
   if (role === 'admin') return <Navigate to="/admin" replace />;
   if (role === 'teacher') return <Navigate to="/professor" replace />;
+
+  // Students without a plan go to plan selection first
+  if (role === 'student' && studentProfile && studentProfile.plan_id === null) {
+    return <Navigate to="/aluno/escolher-plano" replace />;
+  }
+
   return <Navigate to="/aluno" replace />;
 };
 
