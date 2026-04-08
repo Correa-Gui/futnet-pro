@@ -16,7 +16,7 @@ export default function ChangePassword() {
   const navigate = useNavigate();
 
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login?redirect=/change-password" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,9 +51,9 @@ export default function ChangePassword() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle>Defina sua senha</CardTitle>
+          <CardTitle>Crie sua senha</CardTitle>
           <CardDescription>
-            Este é seu primeiro acesso. Crie uma senha para continuar.
+            Você entrou com uma senha temporária. Defina sua senha pessoal para continuar.
           </CardDescription>
         </CardHeader>
         <form onSubmit={handleSubmit}>

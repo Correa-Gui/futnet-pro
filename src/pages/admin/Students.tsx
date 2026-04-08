@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Plus, Trash2, Search, Pencil, LayoutGrid, List, GraduationCap, Phone, Mail, CreditCard } from 'lucide-react';
+import { Plus, Trash2, Search, Pencil, LayoutGrid, List, GraduationCap, Phone, Mail, CreditCard, KeyRound } from 'lucide-react';
 import { toast } from 'sonner';
 import { useNavigate } from 'react-router-dom';
 import type { Database } from '@/integrations/supabase/types';
@@ -61,7 +61,6 @@ type StudentRow = {
 interface StudentForm {
   full_name: string;
   email: string;
-  password: string;
   phone: string;
   cpf: string;
   skill_level: SkillLevel;
@@ -70,7 +69,7 @@ interface StudentForm {
 }
 
 const EMPTY_FORM: StudentForm = {
-  full_name: '', email: '', password: '', phone: '', cpf: '',
+  full_name: '', email: '', phone: '', cpf: '',
   skill_level: 'beginner', plan_id: '', class_ids: [],
 };
 
@@ -140,12 +139,32 @@ export default function Students() {
     },
   });
 
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
+
+  const handleResetPassword = async () => {
+    if (!editingStudent) return;
+    if (!confirm('Gerar nova senha e enviar por WhatsApp?')) return;
+    setIsResettingPassword(true);
+    const { error } = await supabase.functions.invoke('reset-student-password', {
+      body: { user_id: editingStudent.user_id },
+    });
+    setIsResettingPassword(false);
+    if (error) {
+      toast.error('Erro ao redefinir senha', { description: error.message });
+    } else {
+      toast.success('Senha redefinida!', {
+        description: editingStudent.profile.phone
+          ? 'Nova senha enviada por WhatsApp.'
+          : 'Sem telefone cadastrado — a senha foi redefinida mas não foi enviada por WhatsApp.',
+      });
+    }
+  };
+
   const createMutation = useMutation({
     mutationFn: async (data: StudentForm) => {
       const { data: result, error } = await supabase.functions.invoke('create-user', {
         body: {
           email: data.email,
-          password: data.password,
           full_name: data.full_name,
           phone: data.phone || undefined,
           cpf: data.cpf || undefined,
@@ -168,6 +187,8 @@ export default function Students() {
       if (result.classCount > 0) parts.push(`Matriculado em ${result.classCount} turma(s).`);
       if (result.hasPlan) parts.push('Fatura gerada automaticamente.');
 
+      if (form.phone) parts.push('Senha temporária enviada por WhatsApp.');
+
       toast.success(parts[0], {
         description: parts.slice(1).join(' '),
         action: result.hasPlan ? {
@@ -175,36 +196,6 @@ export default function Students() {
           onClick: () => navigate('/admin/faturas'),
         } : undefined,
       });
-
-      // Fire-and-forget: auto-send "Novo Aluno" WhatsApp if phone provided
-      if (form.phone) {
-        (async () => {
-          const { data: cfg } = await supabase
-            .from('system_config')
-            .select('value')
-            .eq('key', 'app_url')
-            .maybeSingle();
-          const appUrl = (cfg as any)?.value || window.location.origin;
-          const { data: tpl } = await (supabase as any)
-            .from('whatsapp_templates')
-            .select('id, body')
-            .eq('category', 'welcome')
-            .eq('is_active', true)
-            .limit(1)
-            .maybeSingle();
-          let messageBody: string;
-          if (tpl?.body) {
-            messageBody = tpl.body
-              .replace(/\{\{nome\}\}/g, form.full_name)
-              .replace(/\{\{app_url\}\}/g, appUrl);
-          } else {
-            messageBody = `Bem-vindo(a), ${form.full_name}! 🏐🎉\n\nSua conta foi criada. Acesse: ${appUrl}`;
-          }
-          supabase.functions.invoke('send-whatsapp', {
-            body: { recipients: [{ phone: form.phone, name: form.full_name }], message_body: messageBody },
-          }).catch(() => {});
-        })();
-      }
 
       handleClose();
     },
@@ -278,7 +269,6 @@ export default function Students() {
     setForm({
       full_name: s.profile?.full_name || '',
       email: s.profile?.email || '',
-      password: '',
       phone: s.profile?.phone || '',
       cpf: s.profile?.cpf || '',
       skill_level: s.skill_level,
@@ -486,16 +476,31 @@ export default function Students() {
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Maria Santos" required />
             </div>
-            {!editingStudent && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>E-mail *</Label>
-                  <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" required />
+            {!editingStudent ? (
+              <div className="space-y-2">
+                <Label>E-mail *</Label>
+                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" required />
+                <p className="text-xs text-muted-foreground">Uma senha temporária de 6 dígitos será gerada e enviada por WhatsApp.</p>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium">{editingStudent.profile.email}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {editingStudent.profile.phone ? `WhatsApp: ${editingStudent.profile.phone}` : 'Sem telefone cadastrado'}
+                  </p>
                 </div>
-                <div className="space-y-2">
-                  <Label>Senha *</Label>
-                  <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" required minLength={6} />
-                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 shrink-0"
+                  disabled={isResettingPassword}
+                  onClick={handleResetPassword}
+                >
+                  <KeyRound className="h-3.5 w-3.5" />
+                  {isResettingPassword ? 'Redefinindo...' : 'Redefinir senha'}
+                </Button>
               </div>
             )}
             <div className="grid grid-cols-2 gap-4">

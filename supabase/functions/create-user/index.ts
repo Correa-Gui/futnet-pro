@@ -53,17 +53,22 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      email, password, full_name, phone, cpf, birth_date,
+      email, full_name, phone, cpf, birth_date,
       role, rate_per_class, skill_level, plan_id,
       class_ids, admin_role_id,
     } = body;
 
-    if (!email || !password || !full_name || !role) {
-      return new Response(JSON.stringify({ error: "Campos obrigatórios: email, password, full_name, role" }), {
+    if (!email || !full_name || !role) {
+      return new Response(JSON.stringify({ error: "Campos obrigatórios: email, full_name, role" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // For students, always generate a random 6-digit password so the admin never sets one manually.
+    // For admin/teacher, a password may be passed in; fall back to a random one.
+    const generatedPassword = Math.floor(100000 + Math.random() * 900000).toString();
+    const password: string = (role === "student") ? generatedPassword : (body.password || generatedPassword);
 
     if (!["admin", "teacher", "student"].includes(role)) {
       return new Response(JSON.stringify({ error: "Role deve ser 'admin', 'teacher' ou 'student'" }), {
@@ -218,7 +223,41 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ user_id: userId, email }), {
+    // Send WhatsApp welcome message with temporary password if student has phone
+    if (role === "student" && phone) {
+      try {
+        const { data: cfg } = await adminClient
+          .from("system_config")
+          .select("key, value")
+          .in("key", ["app_url"])
+          .maybeSingle();
+        const appUrl = (cfg as any)?.value || supabaseUrl.replace("supabase.co", "vercel.app");
+
+        const { data: tpl } = await adminClient
+          .from("whatsapp_templates")
+          .select("body")
+          .eq("category", "welcome")
+          .eq("name", "Novo Aluno")
+          .eq("is_active", true)
+          .maybeSingle();
+
+        const body = tpl?.body
+          ? tpl.body
+              .replace(/\{\{nome\}\}/g, full_name)
+              .replace(/\{\{email\}\}/g, email)
+              .replace(/\{\{senha\}\}/g, generatedPassword)
+              .replace(/\{\{app_url\}\}/g, appUrl)
+          : `Bem-vindo(a), ${full_name}!\n\nE-mail: ${email}\nSenha temporária: ${generatedPassword}\nAcesse: ${appUrl}`;
+
+        await adminClient.functions.invoke("send-whatsapp", {
+          body: { recipients: [{ phone, name: full_name }], message_body: body },
+        });
+      } catch (e) {
+        console.error("WhatsApp welcome error:", e);
+      }
+    }
+
+    return new Response(JSON.stringify({ user_id: userId, email, generated_password: role === "student" ? generatedPassword : undefined }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
