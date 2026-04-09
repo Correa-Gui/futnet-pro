@@ -235,6 +235,7 @@ export type Database = {
           is_active: boolean
           location: string | null
           name: string
+          photo_url: string | null
           surface_type: string | null
           updated_at: string
         }
@@ -244,6 +245,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name: string
+          photo_url?: string | null
           surface_type?: string | null
           updated_at?: string
         }
@@ -253,6 +255,7 @@ export type Database = {
           is_active?: boolean
           location?: string | null
           name?: string
+          photo_url?: string | null
           surface_type?: string | null
           updated_at?: string
         }

@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
         .select("start_time, end_time")
         .eq("court_id", courtId)
         .eq("date", date)
-        .in("status", ["confirmed", "paid"]);
+        .in("status", ["requested", "confirmed", "paid"]);
 
       // Busca sessões de aula agendadas no dia (qualquer quadra que seja esta quadra)
       const { data: classSessions } = await supabase
@@ -137,8 +137,10 @@ Deno.serve(async (req) => {
     if (req.method === "POST") {
       const body = await req.json();
       const { court_id, date, start_time, end_time, requester_name, requester_phone, price } = body;
+      const normalizedPhone = String(requester_phone || "").replace(/\D/g, "");
+      const normalizedName = String(requester_name || "").trim();
 
-      if (!court_id || !date || !start_time || !end_time || !requester_name || !requester_phone) {
+      if (!court_id || !date || !start_time || !end_time || !normalizedName || !normalizedPhone) {
         return new Response(
           JSON.stringify({ error: "Campos obrigatórios: court_id, date, start_time, end_time, requester_name, requester_phone" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -190,8 +192,8 @@ Deno.serve(async (req) => {
           date,
           start_time,
           end_time,
-          requester_name,
-          requester_phone,
+          requester_name: normalizedName,
+          requester_phone: normalizedPhone,
           price: price ?? null,
           status: "requested",
         })
@@ -203,18 +205,22 @@ Deno.serve(async (req) => {
       }
 
       // Salva/atualiza o usuário na tabela booking_users (via service role)
-      const normalizedPhone = String(requester_phone).replace(/\D/g, "");
-      await adminSupabase
+      const { error: bookingUserError } = await adminSupabase
         .from("booking_users")
         .upsert(
-          { name: requester_name, phone: normalizedPhone, updated_at: new Date().toISOString() },
+          { name: normalizedName, phone: normalizedPhone, updated_at: new Date().toISOString() },
           { onConflict: "phone" }
         );
+
+      if (bookingUserError) {
+        console.error("Falha ao sincronizar booking_users após reserva", bookingUserError);
+      }
 
       return new Response(
         JSON.stringify({
           booking_id: booking.id,
           status: booking.status,
+          booking_user_synced: !bookingUserError,
           message: "Reserva solicitada com sucesso. Aguarde confirmação.",
         }),
         { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }

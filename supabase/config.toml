@@ -3,10 +3,37 @@ project_id = "opcchxsnuhlvfxvuaofb"
 [functions.create-user]
 verify_jwt = false
 
+[functions.booking-user]
+verify_jwt = false
+
+[functions.booking-calendar-image]
+verify_jwt = false
+
+[functions.cancel-booking]
+verify_jwt = false
+
+[functions.court-availability]
+verify_jwt = false
+
+[functions.court-availability-grouped]
+verify_jwt = false
+
+[functions.courts]
+verify_jwt = false
+
 [functions.create-pix-payment]
 verify_jwt = false
 
+[functions.get-user-info]
+verify_jwt = false
+
 [functions.mercadopago-webhook]
+verify_jwt = false
+
+[functions.list-bookings]
+verify_jwt = false
+
+[functions.list-upcoming-bookings]
 verify_jwt = false
 
 [functions.generate-sessions]
