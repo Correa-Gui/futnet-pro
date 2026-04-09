@@ -10,7 +10,7 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole | null;
   profile: Database['public']['Tables']['profiles']['Row'] | null;
-  studentProfile: { id: string; plan_id: string | null } | null;
+  studentProfile: { id: string; plan_id: string | null; invoice_due_day: number | null } | null;
   /** null = super admin (no menu restriction); string[] = allowed menu keys */
   allowedMenus: string[] | null;
   loading: boolean;
@@ -28,7 +28,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [profile, setProfile] = useState<Database['public']['Tables']['profiles']['Row'] | null>(null);
-  const [studentProfile, setStudentProfile] = useState<{ id: string; plan_id: string | null } | null>(null);
+  const [studentProfile, setStudentProfile] = useState<{ id: string; plan_id: string | null; invoice_due_day: number | null } | null>(null);
   const [allowedMenus, setAllowedMenus] = useState<string[] | null>(null);
   const [loading, setLoading] = useState(true);
   // Guard against double-setting loading from both getSession and onAuthStateChange
@@ -58,10 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (fetchedRole === 'student') {
         const { data: sp } = await supabase
           .from('student_profiles')
-          .select('id, plan_id')
+          .select('id, plan_id, invoice_due_day')
           .eq('user_id', userId)
           .single();
-        setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null } : null);
+        setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null, invoice_due_day: sp.invoice_due_day ?? null } : null);
       } else {
         setStudentProfile(null);
       }
@@ -158,10 +158,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const { data: sp } = await supabase
       .from('student_profiles')
-      .select('id, plan_id')
+      .select('id, plan_id, invoice_due_day')
       .eq('user_id', user.id)
       .single();
-    setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null } : null);
+    setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null, invoice_due_day: sp.invoice_due_day ?? null } : null);
   }, [user]);
 
   const signOut = async () => {

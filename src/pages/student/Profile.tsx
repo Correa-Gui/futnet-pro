@@ -214,6 +214,14 @@ export default function StudentProfile() {
               </span>
             </div>
           )}
+          <div className="flex items-center justify-between">
+            <span className="text-muted-foreground">Dia de vencimento</span>
+            <span className="font-medium">
+              {studentProfile?.invoice_due_day
+                ? `Todo dia ${String(studentProfile.invoice_due_day).padStart(2, '0')}`
+                : 'Definido no primeiro pagamento'}
+            </span>
+          </div>
         </CardContent>
       </Card>
 
