@@ -4,6 +4,7 @@ import {
   errorResponse,
   jsonResponse,
   normalizePhone,
+  phoneLookupKey,
   phoneMatches,
 } from "../_shared/booking.ts";
 
@@ -24,22 +25,19 @@ Deno.serve(async (req) => {
       }
 
       const normalizedPhone = normalizePhone(phone);
-      const last11 = normalizedPhone.slice(-11);
+      const lookupKey = phoneLookupKey(phone);
 
-      const { data: bookingUsers, error: bookingUserError } = await supabase
+      const { data: bookingUser, error: bookingUserError } = await supabase
         .from("booking_users")
-        .select("id, name, phone")
-        .or(`phone.eq.${normalizedPhone},phone.eq.${last11}`);
+        .select("id, name, phone, normalized_phone")
+        .eq("normalized_phone", lookupKey)
+        .maybeSingle();
 
       if (bookingUserError) {
         throw bookingUserError;
       }
 
-      const bookingUser = (bookingUsers || []).find((user: any) =>
-        phoneMatches(user.phone, normalizedPhone)
-      );
-
-      if (bookingUser) {
+      if (bookingUser && phoneMatches(bookingUser.phone, normalizedPhone)) {
         return jsonResponse({
           found: true,
           is_student: false,
@@ -54,7 +52,7 @@ Deno.serve(async (req) => {
       const { data: profiles, error: profilesError } = await supabase
         .from("profiles")
         .select("id, full_name, phone, user_id")
-        .or(`phone.ilike.%${last11},phone.eq.${normalizedPhone}`)
+        .or(`phone.ilike.%${lookupKey},phone.eq.${normalizedPhone}`)
         .limit(5);
 
       if (profilesError) {
@@ -95,6 +93,7 @@ Deno.serve(async (req) => {
     if (req.method === "POST" && pathname.endsWith("/booking-user/upsert")) {
       const body = await req.json();
       const phone = normalizePhone(body?.phone || "");
+      const normalizedPhone = phoneLookupKey(phone);
       const name = String(body?.name || "").trim();
 
       if (!phone || !name) {
@@ -104,10 +103,15 @@ Deno.serve(async (req) => {
       const { data, error } = await supabase
         .from("booking_users")
         .upsert(
-          { phone, name, updated_at: new Date().toISOString() },
-          { onConflict: "phone" },
+          {
+            phone,
+            normalized_phone: normalizedPhone,
+            name,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "normalized_phone" },
         )
-        .select("id, name, phone")
+        .select("id, name, phone, normalized_phone")
         .single();
 
       if (error) {

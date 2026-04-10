@@ -1,5 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
+import { phoneLookupKey } from "../_shared/booking.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -138,6 +140,7 @@ Deno.serve(async (req) => {
       const body = await req.json();
       const { court_id, date, start_time, end_time, requester_name, requester_phone, price } = body;
       const normalizedPhone = String(requester_phone || "").replace(/\D/g, "");
+      const normalizedLookupPhone = phoneLookupKey(normalizedPhone);
       const normalizedName = String(requester_name || "").trim();
 
       if (!court_id || !date || !start_time || !end_time || !normalizedName || !normalizedPhone) {
@@ -208,8 +211,13 @@ Deno.serve(async (req) => {
       const { error: bookingUserError } = await adminSupabase
         .from("booking_users")
         .upsert(
-          { name: normalizedName, phone: normalizedPhone, updated_at: new Date().toISOString() },
-          { onConflict: "phone" }
+          {
+            name: normalizedName,
+            phone: normalizedPhone,
+            normalized_phone: normalizedLookupPhone,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "normalized_phone" }
         );
 
       if (bookingUserError) {

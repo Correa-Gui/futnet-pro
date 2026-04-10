@@ -1,19 +1,30 @@
 -- Create admin_roles table for configurable menu permissions
 CREATE TABLE IF NOT EXISTS public.admin_roles (
-  id          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
-  name        TEXT        NOT NULL,
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT NOT NULL,
   description TEXT,
-  allowed_menus TEXT[]    NOT NULL DEFAULT '{}',
-  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+  allowed_menus TEXT[] NOT NULL DEFAULT '{}',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 ALTER TABLE public.admin_roles ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "admins_manage_admin_roles" ON public.admin_roles
-  FOR ALL TO authenticated
-  USING  (public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'admin_roles'
+      AND policyname = 'admins_manage_admin_roles'
+  ) THEN
+    CREATE POLICY "admins_manage_admin_roles" ON public.admin_roles
+      FOR ALL TO authenticated
+      USING (public.has_role(auth.uid(), 'admin'))
+      WITH CHECK (public.has_role(auth.uid(), 'admin'));
+  END IF;
+END $$;
 
 -- Add admin_role_id to profiles (null = super admin, unrestricted)
 ALTER TABLE public.profiles
@@ -21,13 +32,17 @@ ALTER TABLE public.profiles
 
 -- Seed a default "Administrador" role with common menus
 INSERT INTO public.admin_roles (name, description, allowed_menus)
-VALUES (
+SELECT
   'Administrador',
-  'Acesso completo exceto configurações avançadas de sistema',
+  'Acesso completo exceto configuracoes avancadas de sistema',
   ARRAY[
     'dashboard', 'analytics', 'aulas-teste',
     'quadras', 'turmas', 'alunos', 'professores', 'usuarios-reservas', 'agendamentos',
     'planos', 'presenca', 'faturas', 'pagamentos-professores',
     'landing-page', 'whatsapp', 'configuracoes'
   ]
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.admin_roles
+  WHERE name = 'Administrador'
 );

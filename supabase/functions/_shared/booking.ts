@@ -21,9 +21,14 @@ export function normalizePhone(phone: string) {
   return String(phone || "").replace(/\D/g, "");
 }
 
+export function phoneLookupKey(phone: string) {
+  const normalized = normalizePhone(phone);
+  return normalized.length >= 11 ? normalized.slice(-11) : normalized;
+}
+
 export function phoneMatches(a: string, b: string) {
-  const normalizedA = normalizePhone(a);
-  const normalizedB = normalizePhone(b);
+  const normalizedA = phoneLookupKey(a);
+  const normalizedB = phoneLookupKey(b);
   return (
     normalizedA === normalizedB ||
     normalizedA.slice(-11) === normalizedB.slice(-11)

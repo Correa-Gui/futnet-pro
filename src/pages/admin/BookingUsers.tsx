@@ -18,9 +18,15 @@ type BookingUser = {
   id: string;
   name: string;
   phone: string;
+  normalized_phone: string;
   created_at: string;
   booking_count: number;
 };
+
+function phoneLookupKey(phone: string) {
+  const normalized = String(phone || "").replace(/\D/g, "");
+  return normalized.length >= 11 ? normalized.slice(-11) : normalized;
+}
 
 export default function BookingUsers() {
   const { data: users = [], isLoading } = useQuery({
@@ -29,7 +35,7 @@ export default function BookingUsers() {
       // Busca usuários e conta reservas por telefone
       const { data: bookingUsers, error } = await supabase
         .from("booking_users" as any)
-        .select("id, name, phone, created_at")
+        .select("id, name, phone, normalized_phone, created_at")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -42,13 +48,13 @@ export default function BookingUsers() {
 
       const countMap: Record<string, number> = {};
       for (const b of bookings ?? []) {
-        const phone = String(b.requester_phone).replace(/\D/g, "");
+        const phone = phoneLookupKey(String(b.requester_phone));
         countMap[phone] = (countMap[phone] ?? 0) + 1;
       }
 
       return (bookingUsers ?? []).map((u: any) => ({
         ...u,
-        booking_count: countMap[String(u.phone).replace(/\D/g, "")] ?? 0,
+        booking_count: countMap[u.normalized_phone || phoneLookupKey(String(u.phone))] ?? 0,
       })) as BookingUser[];
     },
   });

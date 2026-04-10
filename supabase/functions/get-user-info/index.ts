@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { normalizePhone, phoneLookupKey } from "../_shared/booking.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,15 +35,15 @@ Deno.serve(async (req) => {
   );
 
   // Normaliza o telefone: apenas dígitos, últimos 11 (DDD + número)
-  const normalized = phone.replace(/\D/g, "");
-  const last11 = normalized.slice(-11);
+  const normalized = normalizePhone(phone);
+  const lookupKey = phoneLookupKey(phone);
 
   try {
     // 1. Verifica se é aluno: busca em profiles pelo telefone
     const { data: profiles } = await adminClient
       .from("profiles")
       .select("full_name, user_id")
-      .or(`phone.ilike.%${last11},phone.eq.${normalized}`)
+      .or(`phone.ilike.%${lookupKey},phone.eq.${normalized}`)
       .limit(5);
 
     if (profiles && profiles.length > 0) {
@@ -67,7 +68,7 @@ Deno.serve(async (req) => {
     const { data: bookingUser } = await adminClient
       .from("booking_users")
       .select("name")
-      .or(`phone.eq.${normalized},phone.eq.${last11}`)
+      .eq("normalized_phone", lookupKey)
       .maybeSingle();
 
     return new Response(
