@@ -7,6 +7,23 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const BILLING_TIME_ZONE = "America/Sao_Paulo";
+
+function getDatePartsInTimeZone(dateInput: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: BILLING_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(dateInput));
+
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    isoDate: `${map.year}-${map.month}-${map.day}`,
+    day: Number(map.day),
+  };
+}
+
 function verifyWebhookSignature(
   req: Request,
   body: string,
@@ -121,19 +138,57 @@ Deno.serve(async (req) => {
       // Try invoice first
       const { data: invoice } = await adminClient
         .from("invoices")
-        .select("id")
+        .select("id, student_id")
         .eq("payment_id", String(paymentId))
         .maybeSingle();
 
       if (invoice) {
+        const approvedAt = mpData.date_approved || new Date().toISOString();
         const { error: updateError } = await adminClient
           .from("invoices")
-          .update({ status: "paid", paid_at: new Date().toISOString() })
+          .update({ status: "paid", paid_at: approvedAt })
           .eq("id", invoice.id);
         if (updateError) {
           console.error("Invoice update error:", updateError);
           throw new Error("Falha ao atualizar fatura");
         }
+
+        try {
+          const { data: studentProfile, error: studentProfileError } = await adminClient
+            .from("student_profiles")
+            .select("invoice_due_day, billing_started_at")
+            .eq("id", invoice.student_id)
+            .maybeSingle();
+
+          if (studentProfileError) {
+            console.error("Student billing anchor lookup error:", studentProfileError);
+          } else if (studentProfile) {
+            const paidInfo = getDatePartsInTimeZone(approvedAt);
+            const updates: Record<string, string | number> = {};
+
+            if (!studentProfile.invoice_due_day) {
+              updates.invoice_due_day = paidInfo.day;
+            }
+
+            if (!studentProfile.billing_started_at) {
+              updates.billing_started_at = paidInfo.isoDate;
+            }
+
+            if (Object.keys(updates).length > 0) {
+              const { error: studentUpdateError } = await adminClient
+                .from("student_profiles")
+                .update(updates)
+                .eq("id", invoice.student_id);
+
+              if (studentUpdateError) {
+                console.error("Student billing anchor update error:", studentUpdateError);
+              }
+            }
+          }
+        } catch (billingAnchorError) {
+          console.error("Billing anchor error:", billingAnchorError);
+        }
+
         console.log("Invoice", invoice.id, "marked as paid");
       } else {
         // Try court_bookings

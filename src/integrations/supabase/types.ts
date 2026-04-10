@@ -555,24 +555,30 @@ export type Database = {
       }
       student_profiles: {
         Row: {
+          billing_started_at: string | null
           created_at: string
           id: string
+          invoice_due_day: number | null
           plan_id: string | null
           skill_level: Database["public"]["Enums"]["skill_level"]
           updated_at: string
           user_id: string
         }
         Insert: {
+          billing_started_at?: string | null
           created_at?: string
           id?: string
+          invoice_due_day?: number | null
           plan_id?: string | null
           skill_level?: Database["public"]["Enums"]["skill_level"]
           updated_at?: string
           user_id: string
         }
         Update: {
+          billing_started_at?: string | null
           created_at?: string
           id?: string
+          invoice_due_day?: number | null
           plan_id?: string | null
           skill_level?: Database["public"]["Enums"]["skill_level"]
           updated_at?: string
@@ -893,6 +899,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      create_invoice_for_student: {
+        Args: {
+          p_due_date: string
+          p_reference_month?: string | null
+          p_student_id: string
+        }
+        Returns: string
+      }
+      generate_automatic_invoices: {
+        Args: { p_run_date?: string }
+        Returns: number
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -903,6 +921,14 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      invoice_due_date_for_month: {
+        Args: { p_due_day: number; p_month: number; p_year: number }
+        Returns: string
+      }
+      select_student_plan: {
+        Args: { p_plan_id: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -54,9 +54,15 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       email, full_name, phone, cpf, birth_date,
-      role, rate_per_class, skill_level, plan_id,
+      role, rate_per_class, skill_level, plan_id, invoice_due_day,
       class_ids, admin_role_id,
     } = body;
+    const normalizedInvoiceDueDay =
+      typeof invoice_due_day === "number"
+        ? invoice_due_day
+        : typeof invoice_due_day === "string" && invoice_due_day.trim()
+          ? Number(invoice_due_day)
+          : null;
 
     if (!email || !full_name || !role) {
       return new Response(JSON.stringify({ error: "Campos obrigatórios: email, full_name, role" }), {
@@ -72,6 +78,13 @@ Deno.serve(async (req) => {
 
     if (!["admin", "teacher", "student"].includes(role)) {
       return new Response(JSON.stringify({ error: "Role deve ser 'admin', 'teacher' ou 'student'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (normalizedInvoiceDueDay !== null && (!Number.isInteger(normalizedInvoiceDueDay) || normalizedInvoiceDueDay < 1 || normalizedInvoiceDueDay > 31)) {
+      return new Response(JSON.stringify({ error: "invoice_due_day deve estar entre 1 e 31" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -149,13 +162,14 @@ Deno.serve(async (req) => {
         .delete()
         .eq("user_id", userId);
     } else if (role === "student") {
-      // Update student profile with skill_level and plan
-      if (skill_level || plan_id) {
+      // Update student profile with skill_level, plan and billing preferences
+      if (skill_level || plan_id || normalizedInvoiceDueDay !== null) {
         await adminClient
           .from("student_profiles")
           .update({
             ...(skill_level && { skill_level }),
             ...(plan_id && { plan_id }),
+            ...(normalizedInvoiceDueDay !== null && { invoice_due_day: normalizedInvoiceDueDay }),
           })
           .eq("user_id", userId);
       }
@@ -184,40 +198,17 @@ Deno.serve(async (req) => {
 
         // Auto-generate first invoice if student has a plan
         if (plan_id) {
-          const { data: planData } = await adminClient
-            .from("plans")
-            .select("monthly_price, name")
-            .eq("id", plan_id)
-            .single();
+          const now = new Date();
+          const refMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
-          if (planData) {
-            // Check for duplicate invoice (same student + month with active status)
-            const now = new Date();
-            const refMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-            const dueDate = new Date(now);
-            dueDate.setDate(dueDate.getDate() + 30);
+          const { error: invoiceError } = await adminClient.rpc("create_invoice_for_student", {
+            p_student_id: sp.id,
+            p_due_date: now.toISOString().split("T")[0],
+            p_reference_month: refMonth,
+          });
 
-            const { data: existing } = await adminClient
-              .from("invoices")
-              .select("id")
-              .eq("student_id", sp.id)
-              .eq("reference_month", refMonth)
-              .in("status", ["pending", "paid", "overdue"])
-              .maybeSingle();
-
-            if (!existing) {
-              const { error: invoiceError } = await adminClient.from("invoices").insert({
-                student_id: sp.id,
-                amount: planData.monthly_price,
-                discount: 0,
-                due_date: dueDate.toISOString().split("T")[0],
-                reference_month: refMonth,
-                status: "pending",
-              });
-              if (invoiceError) {
-                console.error("Invoice creation error:", invoiceError);
-              }
-            }
+          if (invoiceError) {
+            console.error("Invoice creation error:", invoiceError);
           }
         }
       }

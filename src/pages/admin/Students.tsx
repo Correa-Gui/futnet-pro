@@ -53,6 +53,8 @@ type StudentRow = {
   user_id: string;
   skill_level: SkillLevel;
   plan_id: string | null;
+  invoice_due_day: number | null;
+  billing_started_at: string | null;
   profile: { full_name: string; email: string | null; phone: string | null; cpf: string | null; status: UserStatus };
   plan: { name: string } | null;
   enrolledClassIds: string[];
@@ -65,12 +67,13 @@ interface StudentForm {
   cpf: string;
   skill_level: SkillLevel;
   plan_id: string;
+  invoice_due_day: string;
   class_ids: string[];
 }
 
 const EMPTY_FORM: StudentForm = {
   full_name: '', email: '', phone: '', cpf: '',
-  skill_level: 'beginner', plan_id: '', class_ids: [],
+  skill_level: 'beginner', plan_id: '', invoice_due_day: '', class_ids: [],
 };
 
 function getInitials(name: string) {
@@ -91,7 +94,7 @@ export default function Students() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('student_profiles')
-        .select('id, user_id, skill_level, plan_id, plans(name)')
+        .select('id, user_id, skill_level, plan_id, invoice_due_day, billing_started_at, plans(name)')
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) return [] as StudentRow[];
@@ -116,6 +119,8 @@ export default function Students() {
         user_id: s.user_id,
         skill_level: s.skill_level,
         plan_id: s.plan_id,
+        invoice_due_day: s.invoice_due_day,
+        billing_started_at: s.billing_started_at,
         profile: profileMap[s.user_id] || { full_name: '—', email: null, phone: null, cpf: null, status: 'active' as UserStatus },
         plan: s.plans,
         enrolledClassIds: enrollMap[s.id] || [],
@@ -171,6 +176,7 @@ export default function Students() {
           role: 'student',
           skill_level: data.skill_level,
           plan_id: data.plan_id || undefined,
+          invoice_due_day: data.invoice_due_day ? Number(data.invoice_due_day) : undefined,
           class_ids: data.class_ids.length > 0 ? data.class_ids : undefined,
         },
       });
@@ -212,7 +218,11 @@ export default function Students() {
 
       const { error: studentError } = await supabase
         .from('student_profiles')
-        .update({ skill_level: data.skill_level, plan_id: data.plan_id || null })
+        .update({
+          skill_level: data.skill_level,
+          plan_id: data.plan_id || null,
+          invoice_due_day: data.invoice_due_day ? Number(data.invoice_due_day) : null,
+        })
         .eq('id', student.id);
       if (studentError) throw studentError;
 
@@ -273,6 +283,7 @@ export default function Students() {
       cpf: s.profile?.cpf || '',
       skill_level: s.skill_level,
       plan_id: s.plan_id || '',
+      invoice_due_day: s.invoice_due_day ? String(s.invoice_due_day) : '',
       class_ids: s.enrolledClassIds,
     });
     setOpen(true);
@@ -402,6 +413,10 @@ export default function Students() {
                       <GraduationCap className="h-3 w-3" />{s.enrolledClassIds.length} turma{s.enrolledClassIds.length > 1 ? 's' : ''}
                     </span>
                   )}
+                  <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700">
+                    <CreditCard className="h-3 w-3" />
+                    {s.invoice_due_day ? `Vence dia ${String(s.invoice_due_day).padStart(2, '0')}` : 'Vencimento no 1º pagamento'}
+                  </span>
                 </div>
               </CardContent>
             </Card>
@@ -419,6 +434,7 @@ export default function Students() {
                   <TableHead>Telefone</TableHead>
                   <TableHead>Nível</TableHead>
                   <TableHead>Plano</TableHead>
+                  <TableHead>Vencimento</TableHead>
                   <TableHead>Turmas</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-16">Ações</TableHead>
@@ -445,6 +461,7 @@ export default function Students() {
                       </span>
                     </TableCell>
                     <TableCell>{s.plan?.name || <span className="text-muted-foreground">—</span>}</TableCell>
+                    <TableCell>{s.invoice_due_day ? `Dia ${String(s.invoice_due_day).padStart(2, '0')}` : '1º pagamento'}</TableCell>
                     <TableCell>
                       {s.enrolledClassIds.length > 0 ? (
                         <Badge variant="secondary">{s.enrolledClassIds.length}</Badge>
@@ -532,6 +549,21 @@ export default function Students() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Dia de vencimento</Label>
+              <Input
+                type="number"
+                min="1"
+                max="31"
+                value={form.invoice_due_day}
+                onChange={(e) => setForm({ ...form, invoice_due_day: e.target.value })}
+                placeholder="Ex: 3"
+              />
+              <p className="text-xs text-muted-foreground">
+                Se ficar vazio, o sistema aprende esse dia quando a primeira mensalidade for paga.
+              </p>
             </div>
 
             <div className="space-y-2">
