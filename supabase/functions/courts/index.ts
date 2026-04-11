@@ -6,6 +6,8 @@ import {
   fetchBusinessHours,
   generateHourSlots,
   getDurationHours,
+  isBusinessDayOpen,
+  isWithinBusinessHours,
   isFutureWindow,
   jsonResponse,
   overlaps,
@@ -87,14 +89,14 @@ Deno.serve(async (req) => {
 
     let { data: courts, error: courtsError } = await supabase
       .from("courts")
-      .select("id, name, photo_url")
+      .select("id, name, photo_url, surface_type")
       .eq("is_active", true)
       .order("name", { ascending: true });
 
     if (courtsError) {
       const fallback = await supabase
         .from("courts")
-        .select("id, name")
+        .select("id, name, surface_type")
         .eq("is_active", true)
         .order("name", { ascending: true });
       if (fallback.error) {
@@ -115,6 +117,16 @@ Deno.serve(async (req) => {
     }
 
     const businessHours = await fetchBusinessHours(supabase);
+    if (!isBusinessDayOpen(targetDate, businessHours) || !isWithinBusinessHours(startTime, endTime, businessHours)) {
+      return jsonResponse({
+        date: targetDate,
+        start_time: startTime,
+        end_time: endTime,
+        available_courts: [],
+        suggested_slots: [],
+        business_hours: businessHours,
+      });
+    }
     const occupancy = await loadOccupancyMap(supabase, targetDate);
     const durationHours = getDurationHours(startTime, endTime);
 

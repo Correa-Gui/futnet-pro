@@ -1,10 +1,20 @@
 ALTER TABLE public.student_profiles
-ADD COLUMN invoice_due_day INTEGER,
-ADD COLUMN billing_started_at DATE;
+ADD COLUMN IF NOT EXISTS invoice_due_day INTEGER,
+ADD COLUMN IF NOT EXISTS billing_started_at DATE;
 
-ALTER TABLE public.student_profiles
-ADD CONSTRAINT student_profiles_invoice_due_day_check
-CHECK (invoice_due_day IS NULL OR invoice_due_day BETWEEN 1 AND 31);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint
+    WHERE conname = 'student_profiles_invoice_due_day_check'
+  ) THEN
+    ALTER TABLE public.student_profiles
+    ADD CONSTRAINT student_profiles_invoice_due_day_check
+    CHECK (invoice_due_day IS NULL OR invoice_due_day BETWEEN 1 AND 31);
+  END IF;
+END
+$$;
 
 CREATE OR REPLACE FUNCTION public.invoice_due_date_for_month(
   p_year INTEGER,

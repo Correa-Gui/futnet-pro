@@ -35,6 +35,14 @@ export function phoneMatches(a: string, b: string) {
   );
 }
 
+export interface NormalizedBusinessHours {
+  open_days: number[];
+  open_hour: number;
+  close_hour: number;
+  start: string;
+  end: string;
+}
+
 export function generateHourSlots(dayStart: string, dayEnd: string) {
   const slots: { start: string; end: string }[] = [];
   const [startH] = dayStart.split(":").map(Number);
@@ -135,6 +143,61 @@ export function isFutureWindow(date: string, endTime: string, now = new Date()) 
   return new Date(toSaoPauloIso(date, endTime)).getTime() > now.getTime();
 }
 
+export function isBusinessDayOpen(targetDate: string, businessHours: NormalizedBusinessHours) {
+  const weekday = new Date(`${targetDate}T12:00:00-03:00`).getDay();
+  return businessHours.open_days.includes(weekday);
+}
+
+export function isWithinBusinessHours(
+  startTime: string,
+  endTime: string,
+  businessHours: NormalizedBusinessHours,
+) {
+  return startTime >= businessHours.start && endTime <= businessHours.end;
+}
+
+export function normalizeBusinessHours(rawValue: unknown): NormalizedBusinessHours {
+  const defaults: NormalizedBusinessHours = {
+    open_days: [1, 2, 3, 4, 5, 6],
+    open_hour: 6,
+    close_hour: 22,
+    start: "06:00",
+    end: "22:00",
+  };
+
+  if (!rawValue || typeof rawValue !== "object") {
+    return defaults;
+  }
+
+  const candidate = rawValue as Record<string, unknown>;
+  const openDays = Array.isArray(candidate.open_days)
+    ? candidate.open_days.map((value) => Number(value)).filter((value) => Number.isInteger(value) && value >= 0 && value <= 6)
+    : defaults.open_days;
+
+  const openHour = Number.isFinite(Number(candidate.open_hour))
+    ? Number(candidate.open_hour)
+    : Number.isFinite(Number(candidate.start?.toString().slice(0, 2)))
+      ? Number(candidate.start?.toString().slice(0, 2))
+      : defaults.open_hour;
+
+  const closeHour = Number.isFinite(Number(candidate.close_hour))
+    ? Number(candidate.close_hour)
+    : Number.isFinite(Number(candidate.end?.toString().slice(0, 2)))
+      ? Number(candidate.end?.toString().slice(0, 2))
+      : defaults.close_hour;
+
+  const safeOpenHour = Math.max(0, Math.min(23, openHour));
+  const safeCloseHour = Math.max(safeOpenHour + 1, Math.min(24, closeHour));
+
+  return {
+    open_days: openDays.length ? [...new Set(openDays)].sort((a, b) => a - b) : defaults.open_days,
+    open_hour: safeOpenHour,
+    close_hour: safeCloseHour,
+    start: `${String(safeOpenHour).padStart(2, "0")}:00`,
+    end: `${String(safeCloseHour).padStart(2, "0")}:00`,
+  };
+}
+
 export async function fetchBusinessHours(supabase: any) {
   const { data } = await supabase
     .from("system_config")
@@ -142,9 +205,11 @@ export async function fetchBusinessHours(supabase: any) {
     .eq("key", "business_hours")
     .single();
 
-  return data?.value
-    ? JSON.parse(data.value as string)
-    : { start: "08:00", end: "22:00" };
+  try {
+    return normalizeBusinessHours(data?.value ? JSON.parse(data.value as string) : null);
+  } catch {
+    return normalizeBusinessHours(null);
+  }
 }
 
 export function createAnonClient() {

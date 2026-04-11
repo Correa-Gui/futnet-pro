@@ -4,6 +4,7 @@ import {
   errorResponse,
   fetchBusinessHours,
   generateHourSlots,
+  isBusinessDayOpen,
   isFutureWindow,
   jsonResponse,
   overlaps,
@@ -79,6 +80,17 @@ Deno.serve(async (req) => {
     if (courtsError) throw courtsError;
 
     const businessHours = await fetchBusinessHours(supabase);
+    if (!isBusinessDayOpen(targetDate, businessHours)) {
+      return jsonResponse({
+        date: targetDate,
+        periods: {
+          morning: [],
+          afternoon: [],
+          night: [],
+        },
+        business_hours: businessHours,
+      });
+    }
     const occupancy = await loadOccupancyMap(supabase, targetDate);
     const uniqueSlots = new Map<string, { start: string; end: string }>();
     const daySlots = generateHourSlots(businessHours.start, businessHours.end);

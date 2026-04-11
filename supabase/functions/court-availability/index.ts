@@ -1,6 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-import { phoneLookupKey } from "../_shared/booking.ts";
+import {
+  fetchBusinessHours,
+  getDurationHours,
+  isBusinessDayOpen,
+  isWithinBusinessHours,
+  phoneLookupKey,
+} from "../_shared/booking.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -8,33 +14,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-/**
- * Gera slots de 1 hora entre start e end (ex: "08:00" a "22:00").
- */
 function generateHourSlots(
   dayStart: string,
-  dayEnd: string
+  dayEnd: string,
 ): { start: string; end: string }[] {
   const slots: { start: string; end: string }[] = [];
-  const [startH] = dayStart.split(":").map(Number);
-  const [endH] = dayEnd.split(":").map(Number);
-  for (let h = startH; h < endH; h++) {
+  const [startHour] = dayStart.split(":").map(Number);
+  const [endHour] = dayEnd.split(":").map(Number);
+
+  for (let hour = startHour; hour < endHour; hour += 1) {
     slots.push({
-      start: `${String(h).padStart(2, "0")}:00`,
-      end: `${String(h + 1).padStart(2, "0")}:00`,
+      start: `${String(hour).padStart(2, "0")}:00`,
+      end: `${String(hour + 1).padStart(2, "0")}:00`,
     });
   }
+
   return slots;
 }
 
-/**
- * Retorna true se dois intervalos de tempo se sobrepõem.
- */
 function overlaps(
   aStart: string,
   aEnd: string,
   bStart: string,
-  bEnd: string
+  bEnd: string,
 ): boolean {
   return aStart < bEnd && aEnd > bStart;
 }
@@ -46,29 +48,27 @@ Deno.serve(async (req) => {
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!
+    Deno.env.get("SUPABASE_ANON_KEY")!,
   );
 
   const adminSupabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
   );
 
   try {
-    // ── GET: consultar disponibilidade ──────────────────────────────────────
     if (req.method === "GET") {
       const url = new URL(req.url);
       const courtId = url.searchParams.get("court_id");
-      const date = url.searchParams.get("date");
+      const targetDate = url.searchParams.get("date");
 
-      if (!courtId || !date) {
+      if (!courtId || !targetDate) {
         return new Response(
-          JSON.stringify({ error: "court_id e date são obrigatórios" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "court_id e date sao obrigatorios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // Verifica se a quadra existe e está ativa
       const { data: court, error: courtError } = await supabase
         .from("courts")
         .select("id, name")
@@ -78,98 +78,133 @@ Deno.serve(async (req) => {
 
       if (courtError || !court) {
         return new Response(
-          JSON.stringify({ error: "Quadra não encontrada ou inativa" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Quadra nao encontrada ou inativa" }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // Busca horário de funcionamento do system_config
-      const { data: configRow } = await supabase
-        .from("system_config")
-        .select("value")
-        .eq("key", "business_hours")
-        .single();
+      const businessHours = await fetchBusinessHours(supabase);
+      if (!isBusinessDayOpen(targetDate, businessHours)) {
+        return new Response(
+          JSON.stringify({
+            date: targetDate,
+            court_id: courtId,
+            court_name: court.name,
+            available_slots: [],
+            business_hours: businessHours,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
 
-      const businessHours = configRow?.value
-        ? JSON.parse(configRow.value as string)
-        : { start: "08:00", end: "22:00" };
-
-      // Busca reservas confirmadas/pagas no dia
       const { data: bookings } = await supabase
         .from("court_bookings")
         .select("start_time, end_time")
         .eq("court_id", courtId)
-        .eq("date", date)
+        .eq("date", targetDate)
         .in("status", ["requested", "confirmed", "paid"]);
 
-      // Busca sessões de aula agendadas no dia (qualquer quadra que seja esta quadra)
       const { data: classSessions } = await supabase
         .from("class_sessions")
         .select("classes(court_id, start_time, end_time)")
-        .eq("date", date)
+        .eq("date", targetDate)
         .eq("status", "scheduled");
 
       const occupiedByClasses = (classSessions ?? [])
-        .map((s: any) => s.classes)
-        .filter((c: any) => c?.court_id === courtId);
+        .map((session: any) => session.classes)
+        .filter((classData: any) => classData?.court_id === courtId);
 
-      const allOccupied = [
-        ...(bookings ?? []).map((b: any) => ({ start: b.start_time, end: b.end_time })),
-        ...occupiedByClasses.map((c: any) => ({ start: c.start_time, end: c.end_time })),
+      const occupiedSlots = [
+        ...(bookings ?? []).map((booking: any) => ({
+          start: booking.start_time,
+          end: booking.end_time,
+        })),
+        ...occupiedByClasses.map((classData: any) => ({
+          start: classData.start_time,
+          end: classData.end_time,
+        })),
       ];
 
       const allSlots = generateHourSlots(businessHours.start, businessHours.end);
-
       const availableSlots = allSlots.filter(
-        (slot) => !allOccupied.some((occ) => overlaps(slot.start, slot.end, occ.start, occ.end))
+        (slot) => !occupiedSlots.some((occupied) => overlaps(slot.start, slot.end, occupied.start, occupied.end)),
       );
 
       return new Response(
         JSON.stringify({
-          date,
+          date: targetDate,
           court_id: courtId,
           court_name: court.name,
           available_slots: availableSlots,
+          business_hours: businessHours,
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    // ── POST: criar reserva ─────────────────────────────────────────────────
     if (req.method === "POST") {
       const body = await req.json();
-      const { court_id, date, start_time, end_time, requester_name, requester_phone, price } = body;
+      const {
+        court_id,
+        date,
+        start_time,
+        end_time,
+        requester_name,
+        requester_phone,
+        price,
+        booking_type,
+      } = body;
+
       const normalizedPhone = String(requester_phone || "").replace(/\D/g, "");
       const normalizedLookupPhone = phoneLookupKey(normalizedPhone);
       const normalizedName = String(requester_name || "").trim();
+      const normalizedBookingType = booking_type === "day_use" ? "day_use" : "rental";
 
       if (!court_id || !date || !start_time || !end_time || !normalizedName || !normalizedPhone) {
         return new Response(
-          JSON.stringify({ error: "Campos obrigatórios: court_id, date, start_time, end_time, requester_name, requester_phone" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({
+            error: "Campos obrigatorios: court_id, date, start_time, end_time, requester_name, requester_phone",
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
       if (start_time >= end_time) {
         return new Response(
           JSON.stringify({ error: "start_time deve ser anterior a end_time" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      // Verifica conflito com reservas existentes
+      const businessHours = await fetchBusinessHours(supabase);
+      if (!isBusinessDayOpen(date, businessHours)) {
+        return new Response(
+          JSON.stringify({ error: "A arena nao funciona neste dia." }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (!isWithinBusinessHours(start_time, end_time, businessHours)) {
+        return new Response(
+          JSON.stringify({
+            error: "Horario fora do funcionamento da arena.",
+            business_hours: businessHours,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
       const { data: conflictBookings } = await supabase
         .from("court_bookings")
-        .select("id")
+        .select("start_time, end_time")
         .eq("court_id", court_id)
         .eq("date", date)
         .in("status", ["requested", "confirmed", "paid"]);
 
-      const hasBookingConflict = (conflictBookings ?? []).some((b: any) =>
-        overlaps(start_time, end_time, b.start_time, b.end_time)
+      const hasBookingConflict = (conflictBookings ?? []).some((booking: any) =>
+        overlaps(start_time, end_time, booking.start_time, booking.end_time),
       );
 
-      // Verifica conflito com sessões de aula
       const { data: classSessions } = await supabase
         .from("class_sessions")
         .select("classes(court_id, start_time, end_time)")
@@ -177,16 +212,30 @@ Deno.serve(async (req) => {
         .eq("status", "scheduled");
 
       const hasClassConflict = (classSessions ?? [])
-        .map((s: any) => s.classes)
-        .filter((c: any) => c?.court_id === court_id)
-        .some((c: any) => overlaps(start_time, end_time, c.start_time, c.end_time));
+        .map((session: any) => session.classes)
+        .filter((classData: any) => classData?.court_id === court_id)
+        .some((classData: any) => overlaps(start_time, end_time, classData.start_time, classData.end_time));
 
       if (hasBookingConflict || hasClassConflict) {
         return new Response(
-          JSON.stringify({ error: "Horário não disponível para esta data" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          JSON.stringify({ error: "Horario nao disponivel para esta data" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+
+      const { data: pricingRows } = await supabase
+        .from("system_config")
+        .select("key, value")
+        .in("key", ["court_rental_price", "day_use_price"]);
+
+      const pricingMap = Object.fromEntries((pricingRows ?? []).map((row: any) => [row.key, row.value]));
+      const durationHours = Math.max(1, getDurationHours(start_time, end_time));
+      const resolvedPrice =
+        Number(price) > 0
+          ? Number(price)
+          : normalizedBookingType === "day_use"
+            ? Number(pricingMap.day_use_price || 0)
+            : Number(pricingMap.court_rental_price || 0) * durationHours;
 
       const { data: booking, error: insertError } = await supabase
         .from("court_bookings")
@@ -197,17 +246,17 @@ Deno.serve(async (req) => {
           end_time,
           requester_name: normalizedName,
           requester_phone: normalizedPhone,
-          price: price ?? null,
+          price: resolvedPrice,
+          booking_type: normalizedBookingType,
           status: "requested",
         })
-        .select("id, status")
+        .select("id, status, booking_type, price")
         .single();
 
       if (insertError) {
         throw insertError;
       }
 
-      // Salva/atualiza o usuário na tabela booking_users (via service role)
       const { error: bookingUserError } = await adminSupabase
         .from("booking_users")
         .upsert(
@@ -217,25 +266,27 @@ Deno.serve(async (req) => {
             normalized_phone: normalizedLookupPhone,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "normalized_phone" }
+          { onConflict: "normalized_phone" },
         );
 
       if (bookingUserError) {
-        console.error("Falha ao sincronizar booking_users após reserva", bookingUserError);
+        console.error("Falha ao sincronizar booking_users apos reserva", bookingUserError);
       }
 
       return new Response(
         JSON.stringify({
           booking_id: booking.id,
           status: booking.status,
+          booking_type: booking.booking_type,
+          price: booking.price,
           booking_user_synced: !bookingUserError,
-          message: "Reserva solicitada com sucesso. Aguarde confirmação.",
+          message: "Reserva solicitada com sucesso. Aguarde confirmacao.",
         }),
-        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 201, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
-    return new Response(JSON.stringify({ error: "Método não permitido" }), {
+    return new Response(JSON.stringify({ error: "Metodo nao permitido" }), {
       status: 405,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
