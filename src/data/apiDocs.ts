@@ -565,7 +565,10 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
       },
     ],
     curl: `curl -X GET "${FUTPRO_BASE_URL}/chatbot-settings" -H "apikey: SUA_ANON_KEY"`,
-    notes: ["Usado pelo chatbot para menu inicial, day use, valor total e validação do horário de funcionamento."],
+    notes: [
+      "Usado pelo chatbot para menu inicial, day use, valor total e validação do horário de funcionamento.",
+      "Lê as configurações reais do FutPro no backend e entrega um payload já normalizado para o chatbot.",
+    ],
     usedByChatbot: true,
     recommendedForNewFlow: true,
   },
@@ -603,6 +606,7 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     curl: `curl -X GET "${FUTPRO_BASE_URL}/institutional-info?category=pagamentos" -H "apikey: SUA_ANON_KEY"`,
     notes: [
       "Consumido pelo chatbot para dúvidas institucionais e operacionais estáveis.",
+      "Também aceita question para inferir categoria quando a pergunta vier em linguagem natural.",
       "Não deve ser usado para disponibilidade em tempo real ou criação de reservas.",
     ],
     usedByChatbot: true,

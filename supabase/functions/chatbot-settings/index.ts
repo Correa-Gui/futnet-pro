@@ -1,6 +1,6 @@
 import {
   corsHeaders,
-  createAnonClient,
+  createServiceClient,
   errorResponse,
   fetchBusinessHours,
   jsonResponse,
@@ -44,7 +44,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createAnonClient();
+    const supabase = createServiceClient();
     const businessHours = await fetchBusinessHours(supabase);
 
     const { data, error } = await supabase
