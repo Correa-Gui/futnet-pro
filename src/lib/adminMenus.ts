@@ -38,10 +38,16 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
     label: 'Sistema',
     items: [
       { key: 'landing-page',  title: 'Landing Page' },
-      { key: 'whatsapp',      title: 'WhatsApp' },
       { key: 'apresentacao',  title: 'Apresentação' },
       { key: 'api-docs',      title: 'API Docs' },
       { key: 'configuracoes', title: 'Configurações' },
+    ],
+  },
+  {
+    label: 'Chatbot',
+    items: [
+      { key: 'whatsapp', title: 'WhatsApp' },
+      { key: 'chatbot-intents', title: 'IA' },
     ],
   },
 ];

@@ -4,6 +4,7 @@ import {
   Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck,
   BarChart3, CalendarCheck, MessageCircle, Search, Bell, Monitor, BookOpen,
   ShieldCheck, UserCog,
+  Bot,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useAuth } from '@/contexts/AuthContext';
@@ -38,6 +39,7 @@ const iconMap: Record<string, React.ElementType> = {
   faturas:                Receipt,
   'pagamentos-professores': Receipt,
   'landing-page':         Settings,
+  'chatbot-intents':      Bot,
   whatsapp:               MessageCircle,
   apresentacao:           Monitor,
   'api-docs':             BookOpen,
@@ -59,6 +61,7 @@ const urlMap: Record<string, string> = {
   faturas:                '/admin/faturas',
   'pagamentos-professores': '/admin/pagamentos-professores',
   'landing-page':         '/admin/landing-page',
+  'chatbot-intents':      '/admin/chatbot-intents',
   whatsapp:               '/admin/whatsapp',
   apresentacao:           '/admin/apresentacao',
   'api-docs':             '/admin/api-docs',

@@ -44,6 +44,7 @@ import AdminBookings from "./pages/admin/Bookings";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
+import ChatbotIntents from "./pages/admin/ChatbotIntents";
 import AdminWhatsApp from "./pages/admin/WhatsApp";
 import AdminPresentation from "./pages/admin/Presentation";
 import AdminApiDocs from "./pages/admin/ApiDocs";
@@ -97,6 +98,7 @@ const App = () => (
               <Route path="presenca" element={<AdminAttendance />} />
               <Route path="faturas" element={<AdminInvoices />} />
               <Route path="landing-page" element={<LandingPageEditor />} />
+              <Route path="chatbot-intents" element={<ChatbotIntents />} />
               <Route path="agendamentos" element={<AdminBookings />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="pagamentos-professores" element={<AdminTeacherPayments />} />

@@ -547,12 +547,20 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
       {
         status: 200,
         label: "OK",
-        body: `{
+    body: `{
   "company_name": "FutVolei Arena",
+  "company_logo_url": "https://cdn.example.com/logo.png",
   "app_url": "https://futnetpro.app",
   "pricing": {
     "court_rental_price": 140,
     "day_use_price": 650
+  },
+  "reservation_deposit_percentage": 30,
+  "ai": {
+    "intent_prompt_id": "pmpt_intent_xyz",
+    "institutional_prompt_id": "pmpt_institutional_xyz",
+    "vector_store_id": "vs_abc123",
+    "api_key_reference": "openai-project-prod"
   },
   "business_hours": {
     "open_days": [1, 2, 3, 4, 5, 6],
@@ -568,6 +576,46 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     notes: [
       "Usado pelo chatbot para menu inicial, day use, valor total e validação do horário de funcionamento.",
       "Lê as configurações reais do FutPro no backend e entrega um payload já normalizado para o chatbot.",
+      "Fonte oficial de nome da empresa, logo, app_url, preços, configuração operacional e identificadores da OpenAI.",
+    ],
+    usedByChatbot: true,
+    recommendedForNewFlow: true,
+  },
+  {
+    id: "futpro-chatbot-intents",
+    method: "GET",
+    path: "/chatbot-intents",
+    title: "Categorias e exemplos do classificador local",
+    description: "Retorna as categorias ativas e exemplos ativos usados pelo classificador local do chatbot para intenções simples e previsíveis.",
+    application: "FutPro",
+    domain: "Configuração",
+    audience: "Público",
+    lifecycle: "Novo",
+    authType: "apikey anon",
+    baseUrlKey: "futproFunctions",
+    headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
+    responses: [
+      {
+        status: 200,
+        label: "OK",
+        body: `{
+  "generated_at": "2026-04-13T12:00:00Z",
+    "categories": [
+    {
+      "key": "greeting",
+      "route_class": "controle",
+      "title": "Saudacao",
+      "description": "Mensagens de cumprimento e abertura da conversa.",
+      "examples": ["oi", "olá", "bom dia"]
+    }
+  ]
+}`,
+      },
+    ],
+    curl: `curl -X GET "${FUTPRO_BASE_URL}/chatbot-intents" -H "apikey: SUA_ANON_KEY"`,
+    notes: [
+      "Consumido pelo chatbot para classificacao local antes do fallback de IA.",
+      "Retorna apenas categorias e exemplos ativos em formato simples.",
     ],
     usedByChatbot: true,
     recommendedForNewFlow: true,
@@ -608,6 +656,68 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
       "Consumido pelo chatbot para dúvidas institucionais e operacionais estáveis.",
       "Também aceita question para inferir categoria quando a pergunta vier em linguagem natural.",
       "Não deve ser usado para disponibilidade em tempo real ou criação de reservas.",
+    ],
+    usedByChatbot: true,
+    recommendedForNewFlow: true,
+  },
+  {
+    id: "futpro-institutional-export",
+    method: "GET",
+    path: "/institutional-export",
+    title: "Export institucional limpo para vector store",
+    description: "Retorna blocos organizados e documentos achatados para alimentar bases vetoriais, RAG ou buscas institucionais do chatbot.",
+    application: "FutPro",
+    domain: "Institucional",
+    audience: "Público",
+    lifecycle: "Novo",
+    authType: "apikey anon",
+    baseUrlKey: "futproFunctions",
+    headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
+    responses: [
+      {
+        status: 200,
+        label: "OK",
+        body: `{
+  "generated_at": "2026-04-13T12:00:00Z",
+  "company_name": "FutVolei Arena",
+  "operational_config": {
+    "company_name": "FutVolei Arena",
+    "company_logo_url": "https://cdn.example.com/logo.png",
+    "app_url": "https://futnetpro.app",
+    "pricing": {
+      "court_rental_price": 140,
+      "day_use_price": 650
+    },
+    "reservation_deposit_percentage": 30,
+    "business_hours": {
+      "open_days": [1, 2, 3, 4, 5, 6],
+      "open_hour": 8,
+      "close_hour": 22,
+      "start": "08:00",
+      "end": "22:00"
+    }
+  },
+  "blocks": {
+    "professores": [],
+    "aulas": [],
+    "planos": [],
+    "pagamentos": [],
+    "regras": [],
+    "localizacao": [],
+    "contato": [],
+    "faq": [],
+    "valores": [],
+    "reservas": [],
+    "cancelamento": []
+  },
+  "documents": []
+}`,
+      },
+    ],
+    curl: `curl -X GET "${FUTPRO_BASE_URL}/institutional-export" -H "apikey: SUA_ANON_KEY"`,
+    notes: [
+      "Pensado para exportacao limpa de conhecimento institucional.",
+      "Estrutura amigavel para vector store, RAG e indexacao por blocos.",
     ],
     usedByChatbot: true,
     recommendedForNewFlow: true,
@@ -920,6 +1030,7 @@ export const API_SECTIONS: ApiDocSection[] = [
         description: "Contratos institucionais e operacionais usados pelo chatbot e por outros fluxos digitais.",
         endpointIds: [
           "futpro-chatbot-settings",
+          "futpro-chatbot-intents",
         ],
       },
       {
@@ -928,6 +1039,7 @@ export const API_SECTIONS: ApiDocSection[] = [
         description: "Informações estáveis da arena e do funcionamento operacional consumidas pelo chatbot.",
         endpointIds: [
           "futpro-institutional-info",
+          "futpro-institutional-export",
         ],
       },
       {
@@ -1001,7 +1113,9 @@ export const API_SECTIONS: ApiDocSection[] = [
           "system-chatbot-webhook",
           "futpro-booking-user",
           "futpro-chatbot-settings",
+          "futpro-chatbot-intents",
           "futpro-institutional-info",
+          "futpro-institutional-export",
           "futpro-courts-availability-by-range",
           "futpro-court-availability-grouped",
           "futpro-court-availability-post",
