@@ -12,11 +12,10 @@ verify_jwt = false
 [functions.chatbot-intents]
 verify_jwt = false
 
-[functions.institutional-info]
+
+[functions.chatbot-availability-next]
 verify_jwt = false
 
-[functions.institutional-export]
-verify_jwt = false
 
 [functions.booking-calendar-image]
 verify_jwt = false

@@ -50,8 +50,6 @@ type ExampleForm = {
 
 type AIConfigForm = {
   intentPromptId: string;
-  institutionalPromptId: string;
-  vectorStoreId: string;
   apiKeyReference: string;
 };
 
@@ -71,8 +69,6 @@ const EMPTY_EXAMPLE_FORM: ExampleForm = {
 
 const EMPTY_AI_CONFIG_FORM: AIConfigForm = {
   intentPromptId: "",
-  institutionalPromptId: "",
-  vectorStoreId: "",
   apiKeyReference: "",
 };
 
@@ -105,6 +101,7 @@ export default function ChatbotIntents() {
       const { data: categoryRows, error: categoryError } = await supabase
         .from("chatbot_intent_categories" as any)
         .select("id, key, title, description, is_active, sort_order, updated_at")
+        .neq("key", "institutional")
         .order("sort_order", { ascending: true })
         .order("title", { ascending: true });
 
@@ -140,8 +137,6 @@ export default function ChatbotIntents() {
         .select("key, value")
         .in("key", [
           "chatbot_openai_intent_prompt_id",
-          "chatbot_openai_institutional_prompt_id",
-          "chatbot_openai_vector_store_id",
           "chatbot_openai_api_key_reference",
         ]);
 
@@ -150,8 +145,6 @@ export default function ChatbotIntents() {
       const map = Object.fromEntries((data || []).map((row: any) => [row.key, row.value]));
       return {
         intentPromptId: map.chatbot_openai_intent_prompt_id || "",
-        institutionalPromptId: map.chatbot_openai_institutional_prompt_id || "",
-        vectorStoreId: map.chatbot_openai_vector_store_id || "",
         apiKeyReference: map.chatbot_openai_api_key_reference || "",
       } satisfies AIConfigForm;
     },
@@ -256,8 +249,6 @@ export default function ChatbotIntents() {
     mutationFn: async () => {
       const entries = [
         { key: "chatbot_openai_intent_prompt_id", value: aiConfigForm.intentPromptId.trim() },
-        { key: "chatbot_openai_institutional_prompt_id", value: aiConfigForm.institutionalPromptId.trim() },
-        { key: "chatbot_openai_vector_store_id", value: aiConfigForm.vectorStoreId.trim() },
         { key: "chatbot_openai_api_key_reference", value: aiConfigForm.apiKeyReference.trim() },
       ];
 
@@ -552,7 +543,7 @@ export default function ChatbotIntents() {
               <div>
                 <CardTitle className="text-base">Configuracao da IA</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  IDs de prompt/agente e `vector_store_id` consumidos pelo chatbot via `chatbot-settings`.
+                  IDs de prompt/agente consumidos pelo chatbot via `chatbot-settings`.
                 </p>
               </div>
             </CardHeader>
@@ -568,30 +559,10 @@ export default function ChatbotIntents() {
                     disabled={aiConfigLoading || saveAiConfigMutation.isPending}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="institutional-prompt-id">Prompt/Agent ID - institucional</Label>
-                  <Input
-                    id="institutional-prompt-id"
-                    value={aiConfigForm.institutionalPromptId}
-                    onChange={(event) => setAiConfigForm({ ...aiConfigForm, institutionalPromptId: event.target.value })}
-                    placeholder="pmpt_..."
-                    disabled={aiConfigLoading || saveAiConfigMutation.isPending}
-                  />
-                </div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="vector-store-id">Vector Store ID</Label>
-                  <Input
-                    id="vector-store-id"
-                    value={aiConfigForm.vectorStoreId}
-                    onChange={(event) => setAiConfigForm({ ...aiConfigForm, vectorStoreId: event.target.value })}
-                    placeholder="vs_..."
-                    disabled={aiConfigLoading || saveAiConfigMutation.isPending}
-                  />
-                </div>
-                <div className="space-y-2">
+                <div className="space-y-2 md:col-span-2">
                   <Label htmlFor="api-key-reference">Referencia da chave OpenAI</Label>
                   <Input
                     id="api-key-reference"

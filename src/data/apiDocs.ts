@@ -534,7 +534,7 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     id: "futpro-chatbot-settings",
     method: "GET",
     path: "/chatbot-settings",
-    title: "Configurações institucionais consumidas pelo chatbot",
+    title: "Configurações operacionais consumidas pelo chatbot",
     description: "Expõe nome da empresa, preços e horário de funcionamento configurados no FutPro para o fluxo padrão do WhatsApp.",
     application: "FutPro",
     domain: "Configuração",
@@ -558,8 +558,6 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
   "reservation_deposit_percentage": 30,
   "ai": {
     "intent_prompt_id": "pmpt_intent_xyz",
-    "institutional_prompt_id": "pmpt_institutional_xyz",
-    "vector_store_id": "vs_abc123",
     "api_key_reference": "openai-project-prod"
   },
   "business_hours": {
@@ -568,6 +566,22 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     "close_hour": 22,
     "start": "08:00",
     "end": "22:00"
+  },
+  "flow": {
+    "subjects": ["court", "day_use"],
+    "availability_periods": ["morning", "afternoon", "night"],
+    "confirmation_aliases": ["confirmar", "pode confirmar", "pode reservar", "pode ser", "fechado"],
+    "day_use_rules": {
+      "booking_type": "day_use",
+      "requires_full_business_window": true,
+      "start_time": "08:00",
+      "end_time": "22:00"
+    },
+    "endpoints": {
+      "next_availability": "/functions/v1/chatbot-availability-next",
+      "grouped_availability": "/functions/v1/court-availability-grouped",
+      "range_availability": "/functions/v1/courts/availability-by-range"
+    }
   }
 }`,
       },
@@ -576,7 +590,8 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     notes: [
       "Usado pelo chatbot para menu inicial, day use, valor total e validação do horário de funcionamento.",
       "Lê as configurações reais do FutPro no backend e entrega um payload já normalizado para o chatbot.",
-      "Fonte oficial de nome da empresa, logo, app_url, preços, configuração operacional e identificadores da OpenAI.",
+      "Fonte oficial de nome da empresa, logo, app_url, preços, configuração operacional e identificação da OpenAI.",
+      "Agora também expõe hints de fluxo para day use, aliases de confirmação e os endpoints recomendados de disponibilidade.",
     ],
     usedByChatbot: true,
     recommendedForNewFlow: true,
@@ -616,108 +631,7 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     notes: [
       "Consumido pelo chatbot para classificacao local antes do fallback de IA.",
       "Retorna apenas categorias e exemplos ativos em formato simples.",
-    ],
-    usedByChatbot: true,
-    recommendedForNewFlow: true,
-  },
-  {
-    id: "futpro-institutional-info",
-    method: "GET",
-    path: "/institutional-info?category={categoria}&slug={slug?}&question={pergunta?}",
-    title: "Informações institucionais da arena",
-    description: "Retorna informações estruturadas da arena para dúvidas sobre contato, pagamentos, horários, regras, planos, aulas, professores, localização e FAQ.",
-    application: "FutPro",
-    domain: "Institucional",
-    audience: "Público",
-    lifecycle: "Novo",
-    authType: "apikey anon",
-    baseUrlKey: "futproFunctions",
-    headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
-    responses: [
-      {
-        status: 200,
-        label: "OK",
-        body: `{
-  "found": true,
-  "category": "pagamentos",
-  "slug": "pagamentos-geral",
-  "title": "Formas de pagamento",
-  "content": {
-    "accepted_methods": ["pix", "cartao", "dinheiro"],
-    "rules": ["O pagamento deve ser realizado conforme orientação da arena."]
-  },
-  "updated_at": "2026-04-10T13:00:00Z"
-}`,
-      },
-      { status: 200, label: "Não encontrado", body: `{"found":false,"category":"pagamentos","item":null,"items":[]}` },
-    ],
-    curl: `curl -X GET "${FUTPRO_BASE_URL}/institutional-info?category=pagamentos" -H "apikey: SUA_ANON_KEY"`,
-    notes: [
-      "Consumido pelo chatbot para dúvidas institucionais e operacionais estáveis.",
-      "Também aceita question para inferir categoria quando a pergunta vier em linguagem natural.",
-      "Não deve ser usado para disponibilidade em tempo real ou criação de reservas.",
-    ],
-    usedByChatbot: true,
-    recommendedForNewFlow: true,
-  },
-  {
-    id: "futpro-institutional-export",
-    method: "GET",
-    path: "/institutional-export",
-    title: "Export institucional limpo para vector store",
-    description: "Retorna blocos organizados e documentos achatados para alimentar bases vetoriais, RAG ou buscas institucionais do chatbot.",
-    application: "FutPro",
-    domain: "Institucional",
-    audience: "Público",
-    lifecycle: "Novo",
-    authType: "apikey anon",
-    baseUrlKey: "futproFunctions",
-    headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
-    responses: [
-      {
-        status: 200,
-        label: "OK",
-        body: `{
-  "generated_at": "2026-04-13T12:00:00Z",
-  "company_name": "FutVolei Arena",
-  "operational_config": {
-    "company_name": "FutVolei Arena",
-    "company_logo_url": "https://cdn.example.com/logo.png",
-    "app_url": "https://futnetpro.app",
-    "pricing": {
-      "court_rental_price": 140,
-      "day_use_price": 650
-    },
-    "reservation_deposit_percentage": 30,
-    "business_hours": {
-      "open_days": [1, 2, 3, 4, 5, 6],
-      "open_hour": 8,
-      "close_hour": 22,
-      "start": "08:00",
-      "end": "22:00"
-    }
-  },
-  "blocks": {
-    "professores": [],
-    "aulas": [],
-    "planos": [],
-    "pagamentos": [],
-    "regras": [],
-    "localizacao": [],
-    "contato": [],
-    "faq": [],
-    "valores": [],
-    "reservas": [],
-    "cancelamento": []
-  },
-  "documents": []
-}`,
-      },
-    ],
-    curl: `curl -X GET "${FUTPRO_BASE_URL}/institutional-export" -H "apikey: SUA_ANON_KEY"`,
-    notes: [
-      "Pensado para exportacao limpa de conhecimento institucional.",
-      "Estrutura amigavel para vector store, RAG e indexacao por blocos.",
+      "Passa a incluir metadados leves de fluxo, etapa e subject_hint para facilitar futuras integrações do backend.",
     ],
     usedByChatbot: true,
     recommendedForNewFlow: true,
@@ -819,6 +733,64 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     recommendedForNewFlow: true,
   },
   {
+    id: "futpro-chatbot-availability-next",
+    method: "GET",
+    path: "/chatbot-availability-next?subject={court|day_use}&period={morning|afternoon|night}&from_date={YYYY-MM-DD}&max_days={n}&max_results={n}",
+    title: "Próximo dia disponível para o fluxo do chatbot",
+    description: "Resolve o próximo dia útil com disponibilidade real para quadra ou day use, já considerando regra de negócio e horário de funcionamento.",
+    application: "FutPro",
+    domain: "Quadra",
+    audience: "Público",
+    lifecycle: "Novo",
+    authType: "apikey anon",
+    baseUrlKey: "futproFunctions",
+    headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
+    responses: [{ status: 200, label: "OK", body: `{
+  "generated_at": "2026-04-15T13:00:00Z",
+  "mode": "day_use",
+  "subject": "day_use",
+  "from_date": "2026-04-15",
+  "next_available_date": "2026-04-17",
+  "business_hours": {"start": "08:00", "end": "22:00"},
+  "is_requested_date_available": false,
+  "available_dates": [
+    "2026-04-17",
+    "2026-04-18"
+  ],
+  "availability_dates_detailed": [
+    {
+      "date": "2026-04-17",
+      "day_use": {
+        "booking_type": "day_use",
+        "start_time": "08:00",
+        "end_time": "22:00",
+        "available_courts_count": 2,
+        "available_courts": [{"id":"uuid-1","name":"Quadra 1"}]
+      }
+    }
+  ],
+  "availability": {
+    "date": "2026-04-17",
+    "day_use": {
+      "booking_type": "day_use",
+      "start_time": "08:00",
+      "end_time": "22:00",
+      "available_courts_count": 2,
+      "available_courts": [{"id":"uuid-1","name":"Quadra 1"}]
+    }
+  }
+}` }],
+    curl: `curl -X GET "${FUTPRO_BASE_URL}/chatbot-availability-next?subject=day_use&from_date=2026-04-15" -H "apikey: SUA_ANON_KEY"`,
+    notes: [
+      "Novo endpoint pensado especificamente para o fluxo conversacional do chatbot.",
+      "Evita que o backend precise varrer dias e reinterpretar day use como grade genérica de horários.",
+      "Também suporta consultas de quadra com filtro opcional por período.",
+      "Quando max_results=1, ainda retorna is_requested_date_available e available_dates para manter contrato semântico estável.",
+    ],
+    usedByChatbot: true,
+    recommendedForNewFlow: true,
+  },
+  {
     id: "futpro-list-bookings",
     method: "GET",
     path: "/list-bookings?phone={phone}",
@@ -889,9 +861,9 @@ const FUTPRO_ENDPOINTS: ApiEndpointDoc[] = [
     authType: "apikey anon",
     baseUrlKey: "futproFunctions",
     headers: [{ name: "apikey", value: "{anon_key}", required: true, description: "Chave pública do projeto Supabase." }],
-    responses: [{ status: 501, label: "Stub/TODO", body: `{"implemented":false,"image_url":null,"view":"daily","date":"2026-04-08","todo":"Implementar geração ou publicação da imagem do calendário de reservas."}` }],
+    responses: [{ status: 200, label: "OK / sem preview", body: `{"implemented":false,"image_url":null,"view":"daily","date":"2026-04-08","status":"unavailable","note":"Preview de calendário ainda não publicado no FutPro."}` }],
     curl: `curl -X GET "${FUTPRO_BASE_URL}/booking-calendar-image?date=2026-04-08&view=daily" -H "apikey: SUA_ANON_KEY"`,
-    notes: ["Stub atual, retorna 501.", "Dependente de backend de mídia/calendário."],
+    notes: ["Stub atual, mas agora responde 200 com image_url=null para não poluir o fluxo do chatbot.", "Dependente de backend de mídia/calendário."],
     usedByChatbot: true,
     recommendedForNewFlow: true,
   },
@@ -1027,19 +999,10 @@ export const API_SECTIONS: ApiDocSection[] = [
       {
         id: "futpro-settings",
         title: "Configurações",
-        description: "Contratos institucionais e operacionais usados pelo chatbot e por outros fluxos digitais.",
+        description: "Contratos operacionais usados pelo chatbot e por outros fluxos digitais.",
         endpointIds: [
           "futpro-chatbot-settings",
           "futpro-chatbot-intents",
-        ],
-      },
-      {
-        id: "futpro-institutional",
-        title: "Institucional",
-        description: "Informações estáveis da arena e do funcionamento operacional consumidas pelo chatbot.",
-        endpointIds: [
-          "futpro-institutional-info",
-          "futpro-institutional-export",
         ],
       },
       {
@@ -1051,6 +1014,7 @@ export const API_SECTIONS: ApiDocSection[] = [
           "futpro-court-availability-post",
           "futpro-courts-availability-by-range",
           "futpro-court-availability-grouped",
+          "futpro-chatbot-availability-next",
           "futpro-list-bookings",
           "futpro-list-upcoming-bookings",
           "futpro-cancel-booking",
@@ -1114,8 +1078,7 @@ export const API_SECTIONS: ApiDocSection[] = [
           "futpro-booking-user",
           "futpro-chatbot-settings",
           "futpro-chatbot-intents",
-          "futpro-institutional-info",
-          "futpro-institutional-export",
+          "futpro-chatbot-availability-next",
           "futpro-courts-availability-by-range",
           "futpro-court-availability-grouped",
           "futpro-court-availability-post",

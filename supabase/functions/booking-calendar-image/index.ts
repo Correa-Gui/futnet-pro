@@ -17,15 +17,12 @@ Deno.serve(async (req) => {
     return errorResponse("date é obrigatório", 400);
   }
 
-  return jsonResponse(
-    {
-      implemented: false,
-      image_url: null,
-      view,
-      date,
-      todo:
-        "Implementar geração ou publicação de imagem diária/semanal do calendário de reservas para uso no chatbot.",
-    },
-    501,
-  );
+  return jsonResponse({
+    implemented: false,
+    image_url: null,
+    view,
+    date,
+    status: "unavailable",
+    note: "Preview de calendario ainda nao publicado no FutPro. O chatbot pode seguir sem essa visualizacao.",
+  });
 });

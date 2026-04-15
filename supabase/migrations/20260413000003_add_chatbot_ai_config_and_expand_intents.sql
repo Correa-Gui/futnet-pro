@@ -1,8 +1,6 @@
 INSERT INTO public.system_config (key, value)
 VALUES
   ('chatbot_openai_intent_prompt_id', ''),
-  ('chatbot_openai_institutional_prompt_id', ''),
-  ('chatbot_openai_vector_store_id', ''),
   ('chatbot_openai_api_key_reference', '')
 ON CONFLICT (key) DO NOTHING;
 
@@ -78,10 +76,6 @@ JOIN (
     ('operational', 'quanto custa o day use', 50),
     ('operational', 'qual horario voces abrem', 60),
     ('operational', 'qual o valor por hora', 70),
-    ('institutional', 'como funciona o cancelamento', 40),
-    ('institutional', 'qual o endereco da arena', 50),
-    ('institutional', 'vocês oferecem aulas', 60),
-    ('institutional', 'como entro em contato', 70),
     ('cancel_booking', 'cancelar minha reserva', 10),
     ('cancel_booking', 'quero cancelar meu agendamento', 20),
     ('cancel_booking', 'nao vou mais hoje', 30),

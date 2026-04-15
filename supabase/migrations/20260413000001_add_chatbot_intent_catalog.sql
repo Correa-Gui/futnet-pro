@@ -134,8 +134,7 @@ VALUES
   ('confirm', 'Confirmar', 'Respostas de confirmação ou aceite.', 110, true),
   ('deny', 'Negar', 'Respostas de recusa ou cancelamento da etapa atual.', 120, true),
   ('change_time', 'Alterar horário', 'Pedidos para ajustar horário ou intervalo.', 130, true),
-  ('operational', 'Operacional', 'Perguntas operacionais ligadas ao funcionamento do atendimento.', 140, true),
-  ('institutional', 'Institucional', 'Perguntas institucionais sobre a arena e seus serviços.', 150, true)
+  ('operational', 'Operacional', 'Perguntas operacionais ligadas ao funcionamento do atendimento.', 140, true)
 ON CONFLICT (key) DO UPDATE
 SET
   title = EXCLUDED.title,
@@ -190,10 +189,7 @@ JOIN (
     ('change_time', 'trocar para 20h', 30),
     ('operational', 'como funciona a reserva', 10),
     ('operational', 'horário de funcionamento', 20),
-    ('operational', 'qual o valor da quadra', 30),
-    ('institutional', 'quem são os professores', 10),
-    ('institutional', 'quais formas de pagamento vocês aceitam', 20),
-    ('institutional', 'onde fica a arena', 30)
+    ('operational', 'qual o valor da quadra', 30)
 ) AS v(category_key, example_text, sort_order)
 ON c.key = v.category_key
 ON CONFLICT (category_id, example_text) DO UPDATE
