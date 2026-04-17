@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const {
       email, full_name, phone, cpf, birth_date,
-      role, rate_per_class, skill_level, plan_id, invoice_due_day,
+      role, rate_per_class, pix_key, skill_level, plan_id, invoice_due_day,
       class_ids, admin_role_id,
     } = body;
     const normalizedInvoiceDueDay =
@@ -154,6 +154,7 @@ Deno.serve(async (req) => {
         .insert({
           user_id: userId,
           rate_per_class: rate_per_class || 0,
+          ...(pix_key && { pix_key }),
         });
 
       // Delete the auto-created student profile
@@ -240,7 +241,7 @@ Deno.serve(async (req) => {
               .replace(/\{\{app_url\}\}/g, appUrl)
           : `Bem-vindo(a), ${full_name}!\n\nE-mail: ${email}\nSenha temporária: ${generatedPassword}\nAcesse: ${appUrl}`;
 
-        await adminClient.functions.invoke("send-whatsapp", {
+        await callerClient.functions.invoke("send-whatsapp", {
           body: { recipients: [{ phone, name: full_name }], message_body: body },
         });
       } catch (e) {

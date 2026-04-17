@@ -261,11 +261,14 @@ export default function Students() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('student_profiles').delete().eq('id', id);
+    mutationFn: async ({ user_id }: { user_id: string }) => {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { user_id },
+      });
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['students'] }); toast.success('Aluno removido!'); },
+    onError: (e: Error) => toast.error('Erro ao remover aluno', { description: e.message }),
   });
 
   const handleClose = () => {
@@ -376,7 +379,7 @@ export default function Students() {
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleEdit(s)}>
                           <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate({ user_id: s.user_id }); }}>
                           <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       </div>
@@ -472,7 +475,7 @@ export default function Students() {
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(s)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate(s.id); }}>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este aluno?')) deleteMutation.mutate({ user_id: s.user_id }); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </TableCell>
