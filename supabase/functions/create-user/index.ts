@@ -25,11 +25,13 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // Verify caller is admin using their token
+    const token = authHeader.replace(/^Bearer\s+/i, "");
     const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const { data: { user: caller } } = await callerClient.auth.getUser();
-    if (!caller) {
+    // Pass token explicitly — Deno has no localStorage so getUser() without args returns null
+    const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser(token);
+    if (callerError || !caller) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
