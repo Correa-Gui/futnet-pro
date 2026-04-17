@@ -34,7 +34,7 @@ export default function Login() {
     setIsLoading(false);
 
     if (error) {
-      toast.error('Erro ao entrar', { description: 'Telefone/e-mail ou senha inválidos.' });
+      toast.error('Erro ao entrar', { description: 'Telefone ou senha inválidos.' });
       return;
     }
 
@@ -111,7 +111,7 @@ export default function Login() {
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="loginInput">Telefone ou E-mail</Label>
+                  <Label htmlFor="loginInput">Telefone</Label>
                   <Input
                     id="loginInput"
                     type="text"

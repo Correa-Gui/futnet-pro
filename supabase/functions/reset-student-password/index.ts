@@ -108,7 +108,7 @@ Deno.serve(async (req) => {
               .replace(/\{\{app_url\}\}/g, appUrl)
           : `Olá ${profile.full_name}!\n\nSua nova senha temporária é: ${newPassword}\nAcesse: ${appUrl}`;
 
-        await adminClient.functions.invoke("send-whatsapp", {
+        await callerClient.functions.invoke("send-whatsapp", {
           body: { recipients: [{ phone: profile.phone, name: profile.full_name }], message_body: body },
         });
       } catch (e) {
