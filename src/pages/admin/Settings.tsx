@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, DollarSign, Percent, Clock, MessageCircle } from 'lucide-react';
+import { Building2, DollarSign, Percent, Clock } from 'lucide-react';
 import { useBusinessHours, type BusinessHours, DEFAULT_BUSINESS_HOURS } from '@/hooks/useBusinessHours';
 import { toast } from 'sonner';
 
@@ -65,31 +65,6 @@ export default function Settings() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['system-config'] });
       toast.success('Identidade da empresa salva.');
-    },
-    onError: (e: Error) => toast.error('Erro ao salvar', { description: e.message }),
-  });
-
-  // --- WhatsApp ---
-  const { data: whatsappConfig, isLoading: whatsappLoading } = useSystemConfig([
-    'whatsapp_welcome_image_url',
-  ]);
-  const [welcomeImageUrl, setWelcomeImageUrl] = useState('');
-
-  useEffect(() => {
-    if (!whatsappConfig) return;
-    setWelcomeImageUrl(whatsappConfig.whatsapp_welcome_image_url || '');
-  }, [whatsappConfig]);
-
-  const whatsappMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await saveConfigs([
-        { key: 'whatsapp_welcome_image_url', value: welcomeImageUrl.trim() },
-      ]);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['system-config'] });
-      toast.success('Configuração WhatsApp salva.');
     },
     onError: (e: Error) => toast.error('Erro ao salvar', { description: e.message }),
   });
@@ -196,38 +171,6 @@ export default function Settings() {
           </div>
           <Button onClick={() => identityMutation.mutate()} disabled={identityMutation.isPending}>
             {identityMutation.isPending ? 'Salvando...' : 'Salvar identidade'}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* WhatsApp */}
-      <Card>
-        <CardHeader className="flex flex-row items-start gap-3">
-          <MessageCircle className="mt-0.5 h-5 w-5 text-primary" />
-          <div>
-            <CardTitle className="text-base">WhatsApp</CardTitle>
-            <CardDescription>Imagem enviada junto com a mensagem de boas-vindas ao novo aluno</CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="welcome-image-url">URL da imagem de boas-vindas</Label>
-            <Input
-              id="welcome-image-url"
-              value={welcomeImageUrl}
-              onChange={(e) => setWelcomeImageUrl(e.target.value)}
-              placeholder="https://exemplo.com/imagem-boas-vindas.jpg"
-              disabled={whatsappLoading || whatsappMutation.isPending}
-            />
-            <p className="text-xs text-muted-foreground">
-              Deixe vazio para enviar somente texto. Recomendado: JPG/PNG, proporção 16:9.
-            </p>
-          </div>
-          {welcomeImageUrl && (
-            <img src={welcomeImageUrl} alt="Preview" className="h-32 w-auto rounded-md border object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
-          )}
-          <Button onClick={() => whatsappMutation.mutate()} disabled={whatsappMutation.isPending}>
-            {whatsappMutation.isPending ? 'Salvando...' : 'Salvar configuração WhatsApp'}
           </Button>
         </CardContent>
       </Card>

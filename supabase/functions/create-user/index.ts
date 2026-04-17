@@ -231,10 +231,9 @@ Deno.serve(async (req) => {
         const { data: cfgRows } = await adminClient
           .from("system_config")
           .select("key, value")
-          .in("key", ["app_url", "whatsapp_welcome_image_url"]);
+          .in("key", ["app_url"]);
         const cfgMap = Object.fromEntries((cfgRows || []).map((r: any) => [r.key, r.value || ""]));
         const appUrl = cfgMap["app_url"] || supabaseUrl.replace("supabase.co", "vercel.app");
-        const welcomeImageUrl = cfgMap["whatsapp_welcome_image_url"] || "";
 
         const { data: tpl } = await adminClient
           .from("whatsapp_templates")
@@ -257,7 +256,6 @@ Deno.serve(async (req) => {
           body: {
             recipients: [{ phone, name: full_name }],
             message_body: messageBody,
-            ...(welcomeImageUrl ? { image_url: welcomeImageUrl } : {}),
           },
         });
       } catch (e) {
