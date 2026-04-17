@@ -19,6 +19,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
   refreshStudentProfile: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -164,6 +165,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setStudentProfile(sp ? { id: sp.id, plan_id: sp.plan_id ?? null, invoice_due_day: sp.invoice_due_day ?? null } : null);
   }, [user]);
 
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    await fetchUserData(user.id);
+  }, [user, fetchUserData]);
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -181,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, profile, studentProfile, allowedMenus, loading, signIn, signUp, signOut, resetPassword, refreshStudentProfile }}>
+    <AuthContext.Provider value={{ user, session, role, profile, studentProfile, allowedMenus, loading, signIn, signUp, signOut, resetPassword, refreshStudentProfile, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

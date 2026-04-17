@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { toast } from 'sonner';
 
 export default function ChangePassword() {
-  const { user, role, loading } = useAuth();
+  const { user, role, loading, refreshProfile } = useAuth();
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,6 +40,10 @@ export default function ChangePassword() {
     // Use SECURITY DEFINER RPC so the update bypasses RLS (students cannot
     // update their own profile directly due to policy restrictions).
     await supabase.rpc('mark_password_changed');
+
+    // Refresh profile in memory so force_password_change = false takes effect
+    // immediately without requiring a full re-login.
+    await refreshProfile();
 
     setIsLoading(false);
     toast.success('Senha definida com sucesso!');
