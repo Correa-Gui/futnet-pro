@@ -37,10 +37,9 @@ export default function ChangePassword() {
       return;
     }
 
-    await supabase
-      .from('profiles')
-      .update({ force_password_change: false } as any)
-      .eq('user_id', user.id);
+    // Use SECURITY DEFINER RPC so the update bypasses RLS (students cannot
+    // update their own profile directly due to policy restrictions).
+    await supabase.rpc('mark_password_changed');
 
     setIsLoading(false);
     toast.success('Senha definida com sucesso!');

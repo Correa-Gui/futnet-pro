@@ -7,8 +7,18 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 
+function phoneToEmail(input: string): string {
+  const digits = input.replace(/\D/g, '');
+  const normalized = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`;
+  return `${normalized}@aluno.futnet.app`;
+}
+
+function isPhoneInput(input: string): boolean {
+  return !input.includes('@') && input.replace(/\D/g, '').length >= 8;
+}
+
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [loginInput, setLoginInput] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useAuth();
@@ -19,11 +29,12 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    const email = isPhoneInput(loginInput) ? phoneToEmail(loginInput) : loginInput;
     const { error } = await signIn(email, password);
     setIsLoading(false);
 
     if (error) {
-      toast.error('Erro ao entrar', { description: 'E-mail ou senha inválidos.' });
+      toast.error('Erro ao entrar', { description: 'Telefone/e-mail ou senha inválidos.' });
       return;
     }
 
@@ -100,13 +111,13 @@ export default function Login() {
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
+                  <Label htmlFor="loginInput">Telefone ou E-mail</Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="seu@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="loginInput"
+                    type="text"
+                    placeholder="(11) 99999-9999 ou seu@email.com"
+                    value={loginInput}
+                    onChange={(e) => setLoginInput(e.target.value)}
                     required
                     className="h-11"
                   />

@@ -7,6 +7,7 @@ export interface WhatsAppRecipient {
 export interface SendWhatsAppRequestPayload {
   recipients: WhatsAppRecipient[];
   message_body?: string;
+  image_url?: string;
   template_id?: string | null;
   template_name?: string;
   template_language?: string;
@@ -77,6 +78,9 @@ export function parseSendWhatsAppPayload(payload: unknown): SendWhatsAppRequestP
       typedPayload.template_variables && typeof typedPayload.template_variables === "object"
         ? (typedPayload.template_variables as Record<string, string>)
         : undefined,
+    image_url: typeof typedPayload.image_url === "string" && typedPayload.image_url.trim()
+      ? typedPayload.image_url.trim()
+      : undefined,
   };
 }
 

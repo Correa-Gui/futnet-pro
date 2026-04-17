@@ -8,30 +8,31 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Pencil } from 'lucide-react';
+import { Plus, Trash2, Pencil, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 
 type TeacherRow = {
   id: string;
   user_id: string;
   rate_per_class: number;
+  pix_key: string | null;
   profile: { full_name: string; email: string | null; phone: string | null; status: string };
 };
 
 export default function Teachers() {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ full_name: '', email: '', password: '', phone: '', rate_per_class: 50 });
+  const [form, setForm] = useState({ full_name: '', email: '', password: '', phone: '', rate_per_class: 50, pix_key: '' });
   const [editOpen, setEditOpen] = useState(false);
   const [editingTeacher, setEditingTeacher] = useState<TeacherRow | null>(null);
-  const [editForm, setEditForm] = useState({ full_name: '', phone: '', rate_per_class: 0 });
+  const [editForm, setEditForm] = useState({ full_name: '', phone: '', rate_per_class: 0, pix_key: '' });
 
   const { data: teachers = [], isLoading } = useQuery({
     queryKey: ['teachers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teacher_profiles')
-        .select('id, user_id, rate_per_class')
+        .select('id, user_id, rate_per_class, pix_key')
         .order('created_at', { ascending: false });
       if (error) throw error;
       if (!data || data.length === 0) return [] as TeacherRow[];
@@ -42,6 +43,7 @@ export default function Teachers() {
         id: t.id,
         user_id: t.user_id,
         rate_per_class: t.rate_per_class,
+        pix_key: t.pix_key ?? null,
         profile: profileMap[t.user_id] || { full_name: '—', email: null, phone: null, status: 'active' },
       })) as TeacherRow[];
     },
@@ -57,6 +59,7 @@ export default function Teachers() {
           phone: data.phone || undefined,
           role: 'teacher',
           rate_per_class: data.rate_per_class,
+          pix_key: data.pix_key || undefined,
         },
       });
       if (error) throw error;
@@ -76,7 +79,7 @@ export default function Teachers() {
       if (profileError) throw profileError;
       const { error: teacherError } = await supabase
         .from('teacher_profiles')
-        .update({ rate_per_class: data.rate_per_class })
+        .update({ rate_per_class: data.rate_per_class, pix_key: data.pix_key || null })
         .eq('id', teacher.id);
       if (teacherError) throw teacherError;
     },
@@ -90,15 +93,27 @@ export default function Teachers() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('teacher_profiles').delete().eq('id', id);
+    mutationFn: async ({ id, user_id }: { id: string; user_id: string }) => {
+      // Check if this teacher still has active classes before deleting
+      const { data: classes } = await supabase
+        .from('classes')
+        .select('id, name')
+        .eq('teacher_id', id)
+        .eq('status', 'active')
+        .limit(1);
+
+      if (classes && classes.length > 0) {
+        throw new Error(`Este professor possui turmas ativas. Remova ou reatribua as turmas antes de excluir o professor.`);
+      }
+
+      const { error } = await supabase.functions.invoke('delete-user', { body: { user_id } });
       if (error) throw error;
     },
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['teachers'] }); toast.success('Professor removido!'); },
-    onError: (e: Error) => toast.error('Erro', { description: e.message }),
+    onError: (e: Error) => toast.error('Não foi possível remover', { description: e.message }),
   });
 
-  const handleClose = () => { setOpen(false); setForm({ full_name: '', email: '', password: '', phone: '', rate_per_class: 50 }); };
+  const handleClose = () => { setOpen(false); setForm({ full_name: '', email: '', password: '', phone: '', rate_per_class: 50, pix_key: '' }); };
 
   const formatCurrency = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
 
@@ -121,32 +136,43 @@ export default function Teachers() {
                 <TableHead>E-mail</TableHead>
                 <TableHead>Telefone</TableHead>
                 <TableHead>Valor/Aula</TableHead>
+                <TableHead>Chave PIX</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-16">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Carregando...</TableCell></TableRow>
               ) : teachers.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Nenhum professor cadastrado</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">Nenhum professor cadastrado</TableCell></TableRow>
               ) : teachers.map((t) => (
                 <TableRow key={t.id}>
                   <TableCell className="font-medium">{t.profile?.full_name}</TableCell>
                   <TableCell>{t.profile?.email || '—'}</TableCell>
                   <TableCell>{t.profile?.phone || '—'}</TableCell>
                   <TableCell>{formatCurrency(t.rate_per_class)}</TableCell>
+                  <TableCell>
+                    {t.pix_key ? (
+                      <div className="flex items-center gap-1">
+                        <span className="text-xs font-mono truncate max-w-[140px]">{t.pix_key}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { navigator.clipboard.writeText(t.pix_key!); toast.success('Chave PIX copiada!'); }}>
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                  </TableCell>
                   <TableCell><Badge variant={t.profile?.status === 'active' ? 'default' : 'secondary'}>{t.profile?.status === 'active' ? 'Ativo' : 'Inativo'}</Badge></TableCell>
                   <TableCell>
                     <div className="flex gap-1">
                       <Button variant="ghost" size="icon" onClick={() => {
                         setEditingTeacher(t);
-                        setEditForm({ full_name: t.profile.full_name, phone: t.profile.phone || '', rate_per_class: t.rate_per_class });
+                        setEditForm({ full_name: t.profile.full_name, phone: t.profile.phone || '', rate_per_class: t.rate_per_class, pix_key: t.pix_key || '' });
                         setEditOpen(true);
                       }}>
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este professor?')) deleteMutation.mutate(t.id); }}>
+                      <Button variant="ghost" size="icon" onClick={() => { if (confirm('Remover este professor? Esta ação não pode ser desfeita.')) deleteMutation.mutate({ id: t.id, user_id: t.user_id }); }}>
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>
@@ -175,6 +201,10 @@ export default function Teachers() {
                 <Label>Valor por aula (R$) *</Label>
                 <Input type="number" min={0} step={0.01} value={editForm.rate_per_class} onChange={(e) => setEditForm({ ...editForm, rate_per_class: parseFloat(e.target.value) || 0 })} required />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Chave PIX</Label>
+              <Input value={editForm.pix_key} onChange={(e) => setEditForm({ ...editForm, pix_key: e.target.value })} placeholder="CPF, e-mail, telefone ou chave aleatória" />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => { setEditOpen(false); setEditingTeacher(null); }}>Cancelar</Button>
@@ -209,6 +239,10 @@ export default function Teachers() {
                 <Label>Valor por aula (R$) *</Label>
                 <Input type="number" min={0} step={0.01} value={form.rate_per_class} onChange={(e) => setForm({ ...form, rate_per_class: parseFloat(e.target.value) || 0 })} required />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Chave PIX</Label>
+              <Input value={form.pix_key} onChange={(e) => setForm({ ...form, pix_key: e.target.value })} placeholder="CPF, e-mail, telefone ou chave aleatória" />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={handleClose}>Cancelar</Button>

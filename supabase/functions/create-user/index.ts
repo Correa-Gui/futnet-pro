@@ -53,10 +53,18 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      email, full_name, phone, cpf, birth_date,
+      full_name, phone, cpf, birth_date,
       role, rate_per_class, pix_key, skill_level, plan_id, invoice_due_day,
       class_ids, admin_role_id,
     } = body;
+
+    // For students, email is optional — derive it from phone if not provided
+    let email: string | undefined = body.email;
+    if (!email && role === "student" && phone) {
+      const digits = phone.replace(/\D/g, "");
+      const normalized = digits.startsWith("55") && digits.length >= 12 ? digits : `55${digits}`;
+      email = `${normalized}@aluno.futnet.app`;
+    }
     const normalizedInvoiceDueDay =
       typeof invoice_due_day === "number"
         ? invoice_due_day
@@ -65,7 +73,7 @@ Deno.serve(async (req) => {
           : null;
 
     if (!email || !full_name || !role) {
-      return new Response(JSON.stringify({ error: "Campos obrigatórios: email, full_name, role" }), {
+      return new Response(JSON.stringify({ error: "Campos obrigatórios: email (ou telefone para alunos), full_name, role" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -218,12 +226,13 @@ Deno.serve(async (req) => {
     // Send WhatsApp welcome message with temporary password if student has phone
     if (role === "student" && phone) {
       try {
-        const { data: cfg } = await adminClient
+        const { data: cfgRows } = await adminClient
           .from("system_config")
           .select("key, value")
-          .in("key", ["app_url"])
-          .maybeSingle();
-        const appUrl = (cfg as any)?.value || supabaseUrl.replace("supabase.co", "vercel.app");
+          .in("key", ["app_url", "whatsapp_welcome_image_url"]);
+        const cfgMap = Object.fromEntries((cfgRows || []).map((r: any) => [r.key, r.value || ""]));
+        const appUrl = cfgMap["app_url"] || supabaseUrl.replace("supabase.co", "vercel.app");
+        const welcomeImageUrl = cfgMap["whatsapp_welcome_image_url"] || "";
 
         const { data: tpl } = await adminClient
           .from("whatsapp_templates")
@@ -233,16 +242,21 @@ Deno.serve(async (req) => {
           .eq("is_active", true)
           .maybeSingle();
 
-        const body = tpl?.body
+        const messageBody = tpl?.body
           ? tpl.body
               .replace(/\{\{nome\}\}/g, full_name)
-              .replace(/\{\{email\}\}/g, email)
+              .replace(/\{\{telefone\}\}/g, phone)
+              .replace(/\{\{email\}\}/g, email!)
               .replace(/\{\{senha\}\}/g, generatedPassword)
               .replace(/\{\{app_url\}\}/g, appUrl)
-          : `Bem-vindo(a), ${full_name}!\n\nE-mail: ${email}\nSenha temporária: ${generatedPassword}\nAcesse: ${appUrl}`;
+          : `Bem-vindo(a), ${full_name}!\n\n📱 Telefone: ${phone}\n🔑 Senha temporária: ${generatedPassword}\n👉 ${appUrl}\n\nNo primeiro acesso você será solicitado(a) a criar uma nova senha.`;
 
         await callerClient.functions.invoke("send-whatsapp", {
-          body: { recipients: [{ phone, name: full_name }], message_body: body },
+          body: {
+            recipients: [{ phone, name: full_name }],
+            message_body: messageBody,
+            ...(welcomeImageUrl ? { image_url: welcomeImageUrl } : {}),
+          },
         });
       } catch (e) {
         console.error("WhatsApp welcome error:", e);

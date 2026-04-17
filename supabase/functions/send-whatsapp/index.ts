@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
         const { response, responseJson } = await sendViaWhatsAppProvider(providerConfig, {
           number: fullPhone,
           text: finalMessage,
+          imageUrl: requestPayload.image_url,
         });
         const typedResponse = responseJson as Record<string, unknown> | null;
 

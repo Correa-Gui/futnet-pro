@@ -90,8 +90,32 @@ export async function loadWhatsAppProviderConfig(serviceClient: any): Promise<Wh
 
 export async function sendViaWhatsAppProvider(
   config: WhatsAppProviderConfig,
-  payload: { number: string; text: string }
+  payload: { number: string; text: string; imageUrl?: string }
 ) {
+  // If an image URL is provided, attempt to send a media message first
+  if (payload.imageUrl) {
+    try {
+      const mediaEndpoint = `${config.baseUrl.replace(/\/$/, "")}/messages/send-media`;
+      const mediaResponse = await fetch(mediaEndpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          number: payload.number,
+          instance_name: config.instanceName,
+          image_url: payload.imageUrl,
+          caption: payload.text,
+        }),
+      });
+      if (mediaResponse.ok) {
+        let responseJson: unknown = null;
+        try { responseJson = await mediaResponse.json(); } catch { responseJson = null; }
+        return { response: mediaResponse, responseJson };
+      }
+    } catch {
+      // fall through to plain text
+    }
+  }
+
   const response = await fetch(buildMessagesSendEndpoint(config.baseUrl), {
     method: "POST",
     headers: {

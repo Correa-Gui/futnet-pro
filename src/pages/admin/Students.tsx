@@ -62,7 +62,6 @@ type StudentRow = {
 
 interface StudentForm {
   full_name: string;
-  email: string;
   phone: string;
   cpf: string;
   skill_level: SkillLevel;
@@ -72,7 +71,7 @@ interface StudentForm {
 }
 
 const EMPTY_FORM: StudentForm = {
-  full_name: '', email: '', phone: '', cpf: '',
+  full_name: '', phone: '', cpf: '',
   skill_level: 'beginner', plan_id: '', invoice_due_day: '', class_ids: [],
 };
 
@@ -169,9 +168,8 @@ export default function Students() {
     mutationFn: async (data: StudentForm) => {
       const { data: result, error } = await supabase.functions.invoke('create-user', {
         body: {
-          email: data.email,
           full_name: data.full_name,
-          phone: data.phone || undefined,
+          phone: data.phone,
           cpf: data.cpf || undefined,
           role: 'student',
           skill_level: data.skill_level,
@@ -192,8 +190,7 @@ export default function Students() {
       const parts: string[] = ['Aluno criado com sucesso!'];
       if (result.classCount > 0) parts.push(`Matriculado em ${result.classCount} turma(s).`);
       if (result.hasPlan) parts.push('Fatura gerada automaticamente.');
-
-      if (form.phone) parts.push('Senha temporária enviada por WhatsApp.');
+      parts.push('Senha temporária enviada por WhatsApp.');
 
       toast.success(parts[0], {
         description: parts.slice(1).join(' '),
@@ -281,7 +278,6 @@ export default function Students() {
     setEditingStudent(s);
     setForm({
       full_name: s.profile?.full_name || '',
-      email: s.profile?.email || '',
       phone: s.profile?.phone || '',
       cpf: s.profile?.cpf || '',
       skill_level: s.skill_level,
@@ -496,37 +492,31 @@ export default function Students() {
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Maria Santos" required />
             </div>
-            {!editingStudent ? (
-              <div className="space-y-2">
-                <Label>E-mail *</Label>
-                <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" required />
-                <p className="text-xs text-muted-foreground">Uma senha temporária de 6 dígitos será gerada e enviada por WhatsApp.</p>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between rounded-lg border px-3 py-2.5">
-                <div>
-                  <p className="text-sm font-medium">{editingStudent.profile.email}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {editingStudent.profile.phone ? `WhatsApp: ${editingStudent.profile.phone}` : 'Sem telefone cadastrado'}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5 shrink-0"
-                  disabled={isResettingPassword}
-                  onClick={handleResetPassword}
-                >
-                  <KeyRound className="h-3.5 w-3.5" />
-                  {isResettingPassword ? 'Redefinindo...' : 'Redefinir senha'}
-                </Button>
-              </div>
-            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Telefone</Label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-9999" />
+                <Label>Telefone {!editingStudent && '*'}</Label>
+                <Input
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  placeholder="(11) 99999-9999"
+                  required={!editingStudent}
+                />
+                {!editingStudent && (
+                  <p className="text-xs text-muted-foreground">Usado como login. Senha temporária enviada por WhatsApp.</p>
+                )}
+                {editingStudent && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5 w-full mt-1"
+                    disabled={isResettingPassword}
+                    onClick={handleResetPassword}
+                  >
+                    <KeyRound className="h-3.5 w-3.5" />
+                    {isResettingPassword ? 'Redefinindo...' : 'Redefinir senha'}
+                  </Button>
+                )}
               </div>
               <div className="space-y-2">
                 <Label>CPF</Label>
