@@ -485,7 +485,7 @@ export function CourtBookingSection() {
                           selected={selectedDate}
                           onSelect={(date) => {
                             setSelectedDate(date);
-                            setSelectedSlot(null);
+                            setSelectedSlots([]);
                           }}
                           disabled={(date) =>
                             isBefore(date, today) ||
