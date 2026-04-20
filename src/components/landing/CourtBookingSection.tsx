@@ -36,6 +36,7 @@ type Court = {
 
 type ExistingBooking = {
   start_time: string | null;
+  end_time: string | null;
   status: string;
 };
 
@@ -44,8 +45,35 @@ type ClassSessionRow = {
   classes: {
     court_id: string;
     start_time: string;
+    end_time: string;
   } | null;
 };
+
+function addMinutes(time: string, mins: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function expandToHalfHourSlots(start: string, end: string): string[] {
+  const slots: string[] = [];
+  let cur = start;
+  while (cur < end) {
+    slots.push(cur);
+    cur = addMinutes(cur, 30);
+  }
+  return slots;
+}
+
+function slotsBetween(start: string, end: string): string[] {
+  return expandToHalfHourSlots(start, end);
+}
+
+function calcDurationMinutes(start: string, end: string): number {
+  const [sh, sm] = start.split(":").map(Number);
+  const [eh, em] = end.split(":").map(Number);
+  return (eh * 60 + em) - (sh * 60 + sm);
+}
 
 function CourtCard({
   court,
@@ -113,15 +141,20 @@ export function CourtBookingSection() {
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
   const openHour = businessHours?.open_hour ?? 6;
   const closeHour = businessHours?.close_hour ?? 22;
-  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
-    const h = i + openHour;
-    return `${String(h).padStart(2, "0")}:00`;
-  });
+  const TIME_SLOTS = useMemo(() => {
+    const slots: string[] = [];
+    for (let h = openHour; h < closeHour; h++) {
+      slots.push(`${String(h).padStart(2, "0")}:00`);
+      slots.push(`${String(h).padStart(2, "0")}:30`);
+    }
+    return slots;
+  }, [openHour, closeHour]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedStart, setSelectedStart] = useState<string | null>(null);
+  const [selectedEnd, setSelectedEnd] = useState<string | null>(null);
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -162,7 +195,7 @@ export function CourtBookingSection() {
       if (!selectedCourt || !dateStr) return [];
       const { data, error } = await supabase
         .from("court_bookings")
-        .select("start_time, status")
+        .select("start_time, end_time, status")
         .eq("court_id", selectedCourt.id)
         .eq("date", dateStr)
         .in("status", ["requested", "confirmed", "paid"]);
@@ -178,7 +211,7 @@ export function CourtBookingSection() {
       if (!selectedCourt || !dateStr) return [];
       const { data, error } = await supabase
         .from("class_sessions")
-        .select("id, classes!inner(court_id, start_time)")
+        .select("id, classes!inner(court_id, start_time, end_time)")
         .eq("date", dateStr)
         .neq("status", "cancelled");
       if (error) throw error;
@@ -193,16 +226,71 @@ export function CourtBookingSection() {
     const blocked = new Set<string>();
     existingBookings.forEach((b) => {
       const start = b.start_time?.slice(0, 5);
-      if (start) blocked.add(start);
+      const end = b.end_time?.slice(0, 5);
+      if (start && end) {
+        expandToHalfHourSlots(start, end).forEach((s) => blocked.add(s));
+      } else if (start) {
+        blocked.add(start);
+      }
     });
     classSessions.forEach((session) => {
       const start = session.classes?.start_time?.slice(0, 5);
-      if (start) blocked.add(start);
+      const end = session.classes?.end_time?.slice(0, 5);
+      if (start && end) {
+        expandToHalfHourSlots(start, end).forEach((s) => blocked.add(s));
+      } else if (start) {
+        blocked.add(start);
+      }
     });
     return blocked;
   }, [existingBookings, classSessions]);
 
   const availableCount = TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).length;
+
+  const bookingEndTime = selectedStart
+    ? addMinutes(selectedEnd ?? selectedStart, 30)
+    : null;
+
+  const durationMinutes = selectedStart && bookingEndTime
+    ? calcDurationMinutes(selectedStart, bookingEndTime)
+    : 0;
+
+  const totalPrice = rentalPrice != null && durationMinutes > 0
+    ? rentalPrice * (durationMinutes / 60)
+    : null;
+
+  const totalPriceDisplay = totalPrice != null
+    ? `R$ ${totalPrice.toFixed(2).replace(".", ",")}`
+    : "—";
+
+  const durationLabel = durationMinutes >= 60
+    ? `${durationMinutes / 60}h`
+    : `${durationMinutes}min`;
+
+  const handleSlotClick = (slot: string) => {
+    if (!selectedStart) {
+      setSelectedStart(slot);
+      setSelectedEnd(null);
+      return;
+    }
+    if (slot === selectedStart && !selectedEnd) {
+      setSelectedStart(null);
+      return;
+    }
+    if (slot > selectedStart) {
+      const range = slotsBetween(selectedStart, slot);
+      const hasConflict = range.some((s) => unavailableSlots.has(s));
+      if (hasConflict) {
+        setSelectedStart(slot);
+        setSelectedEnd(null);
+      } else {
+        setSelectedEnd(slot);
+      }
+      return;
+    }
+    setSelectedStart(slot);
+    setSelectedEnd(null);
+  };
 
   const createBooking = useMutation({
     mutationFn: async () => {
@@ -213,18 +301,17 @@ export function CourtBookingSection() {
       });
 
       if (!validation.success) throw new Error(validation.error.errors[0].message);
-      if (!selectedCourt || !dateStr || !selectedSlot) throw new Error("Selecione quadra, data e horário");
-
-      const startHour = parseInt(selectedSlot.split(":")[0]);
-      const endTime = `${String(startHour + 1).padStart(2, "0")}:00`;
+      if (!selectedCourt || !dateStr || !selectedStart || !bookingEndTime) {
+        throw new Error("Selecione quadra, data e horário");
+      }
 
       const { error, data } = await supabase.functions.invoke("court-availability", {
         method: "POST",
         body: {
           court_id: selectedCourt.id,
           date: dateStr,
-          start_time: selectedSlot,
-          end_time: endTime,
+          start_time: selectedStart,
+          end_time: bookingEndTime,
           requester_name: validation.data.requester_name,
           requester_phone: rawPhone,
         },
@@ -242,7 +329,8 @@ export function CourtBookingSection() {
   const handleSelectCourt = (court: Court) => {
     setSelectedCourt(court);
     setSelectedDate(undefined);
-    setSelectedSlot(null);
+    setSelectedStart(null);
+    setSelectedEnd(null);
     setStep(2);
   };
 
@@ -251,7 +339,8 @@ export function CourtBookingSection() {
     setStep(1);
     setSelectedCourt(null);
     setSelectedDate(undefined);
-    setSelectedSlot(null);
+    setSelectedStart(null);
+    setSelectedEnd(null);
     setForm({ requester_name: "", requester_phone: "" });
   };
 
@@ -301,8 +390,13 @@ export function CourtBookingSection() {
                   {[
                     { label: "Quadra", value: selectedCourt?.name || "-" },
                     { label: "Data", value: selectedDate ? format(selectedDate, "dd/MM/yyyy") : "-" },
-                    { label: "Horário", value: selectedSlot || "-" },
-                    { label: "Valor", value: priceDisplay },
+                    {
+                      label: "Horário",
+                      value: selectedStart && bookingEndTime
+                        ? `${selectedStart} – ${bookingEndTime} (${durationLabel})`
+                        : "-",
+                    },
+                    { label: "Valor total", value: totalPriceDisplay },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-[#FAF7F2] px-5 py-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">
@@ -468,6 +562,9 @@ export function CourtBookingSection() {
                         </div>
                       ) : (
                         <div className="mt-6">
+                          <p className="mb-3 text-[11px] text-[#9B8770]">
+                            Clique no início e depois no fim do período desejado.
+                          </p>
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                             {availableCount === 0 && (
                               <p className="col-span-full text-sm text-[#9B8770]">
@@ -475,16 +572,20 @@ export function CourtBookingSection() {
                               </p>
                             )}
                             {TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).map((slot) => {
-                              const isSelected = selectedSlot === slot;
+                              const isStart = selectedStart === slot && !selectedEnd;
+                              const isInRange = selectedStart && selectedEnd
+                                ? slot >= selectedStart && slot <= selectedEnd
+                                : selectedStart === slot;
                               return (
                                 <button
                                   key={slot}
-                                  onClick={() => setSelectedSlot(slot)}
+                                  onClick={() => handleSlotClick(slot)}
                                   className={cn(
                                     "rounded-xl border px-3 py-3 text-sm font-semibold transition-all",
-                                    isSelected
-                                      ? "border-[#F97316] bg-[#F97316] text-white shadow-[0_8px_24px_rgba(249,115,22,0.2)]"
-                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6"
+                                    isInRange
+                                      ? "border-[#F97316] bg-[#F97316] text-white shadow-[0_4px_16px_rgba(249,115,22,0.2)]"
+                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6",
+                                    isStart && !selectedEnd && "ring-2 ring-[#F97316]/40"
                                   )}
                                 >
                                   {slot}
@@ -493,10 +594,26 @@ export function CourtBookingSection() {
                             })}
                           </div>
 
-                          {selectedSlot && (
+                          {selectedStart && (
+                            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#F97316]/30 bg-[#F97316]/6 px-4 py-3">
+                              <div className="text-sm font-semibold text-[#C2550A]">
+                                {selectedStart} – {bookingEndTime}
+                                {durationMinutes > 0 && (
+                                  <span className="ml-2 font-normal text-[#9B8770]">({durationLabel})</span>
+                                )}
+                              </div>
+                              {totalPrice != null && (
+                                <span className="text-base font-extrabold text-[#C2550A]">
+                                  {totalPriceDisplay}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {selectedStart && (
                             <button
                               onClick={() => setStep(3)}
-                              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F97316] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#EA6C0A]"
+                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F97316] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#EA6C0A]"
                             >
                               Continuar
                               <ChevronRight className="h-4 w-4" />
@@ -537,11 +654,11 @@ export function CourtBookingSection() {
                           },
                           {
                             label: "Horário",
-                            value: selectedSlot
-                              ? `${selectedSlot} – ${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
+                            value: selectedStart && bookingEndTime
+                              ? `${selectedStart} – ${bookingEndTime} (${durationLabel})`
                               : "-",
                           },
-                          { label: "Valor", value: priceDisplay },
+                          { label: "Valor total", value: totalPriceDisplay },
                         ].map((item) => (
                           <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-white px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">
