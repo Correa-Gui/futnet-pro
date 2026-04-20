@@ -92,8 +92,8 @@ export default function LandingPageEditor() {
   // Gallery images
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [savingGallery, setSavingGallery] = useState(false);
-  const [newGalleryUrl, setNewGalleryUrl] = useState("");
   const [newGalleryLabel, setNewGalleryLabel] = useState("");
+  const [uploadingGallery, setUploadingGallery] = useState(false);
 
   const [hoursLoaded, setHoursLoaded] = useState(false);
   if (fetchedHours && !hoursLoaded) {
@@ -177,13 +177,33 @@ export default function LandingPageEditor() {
     }
   };
 
-  const addGalleryImage = async () => {
-    if (!newGalleryUrl.trim()) return;
-    const updated = [...galleryImages, { url: newGalleryUrl.trim(), label: newGalleryLabel.trim() || "Imagem" }];
+  const uploadGalleryImage = async (file: File) => {
+    setUploadingGallery(true);
+    const ext = file.name.split(".").pop();
+    const path = `gallery/${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage.from("landing-images").upload(path, file, { upsert: true });
+    if (uploadError) {
+      toast({ title: "Erro no upload", description: uploadError.message, variant: "destructive" });
+      setUploadingGallery(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("landing-images").getPublicUrl(path);
+    const updated = [...galleryImages, { url: urlData.publicUrl, label: newGalleryLabel.trim() || "Imagem" }];
     setGalleryImages(updated);
-    setNewGalleryUrl("");
     setNewGalleryLabel("");
+    setUploadingGallery(false);
     await saveGalleryImages(updated);
+  };
+
+  const handleGalleryFileInput = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) uploadGalleryImage(file);
+    };
+    input.click();
   };
 
   const removeGalleryImage = async (index: number) => {
@@ -290,7 +310,6 @@ export default function LandingPageEditor() {
       <Tabs defaultValue="geral">
         <TabsList>
           <TabsTrigger value="geral">Configurações Gerais</TabsTrigger>
-          <TabsTrigger value="galeria">Galeria</TabsTrigger>
           <TabsTrigger value="secoes">Seções</TabsTrigger>
         </TabsList>
 
@@ -503,13 +522,13 @@ export default function LandingPageEditor() {
           )}
         </TabsContent>
 
-        {/* ── TAB: Gallery ── */}
-        <TabsContent value="galeria" className="space-y-6">
+        {/* ── TAB: Sections ── */}
+        <TabsContent value="secoes" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Imagens da Galeria — O Espaço</CardTitle>
+              <CardTitle className="text-lg">Galeria — O Espaço</CardTitle>
               <CardDescription>
-                Imagens exibidas na seção "O Espaço". A primeira sempre ocupa o espaço maior (2×2). Se vazio, usa as imagens padrão.
+                Imagens exibidas na seção "O Espaço". A primeira ocupa o espaço maior (2×2). Se vazio, usa imagens padrão.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -528,71 +547,26 @@ export default function LandingPageEditor() {
                     <p className="text-xs text-muted-foreground truncate">{img.url}</p>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      disabled={i === 0}
-                      onClick={() => moveGalleryImage(i, i - 1)}
-                      title="Mover para cima"
-                    >
-                      ↑
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      disabled={i === galleryImages.length - 1}
-                      onClick={() => moveGalleryImage(i, i + 1)}
-                      title="Mover para baixo"
-                    >
-                      ↓
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => removeGalleryImage(i)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === 0} onClick={() => moveGalleryImage(i, i - 1)} title="Mover para cima">↑</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" disabled={i === galleryImages.length - 1} onClick={() => moveGalleryImage(i, i + 1)} title="Mover para baixo">↓</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeGalleryImage(i)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
               ))}
 
               <div className="rounded-lg border border-dashed p-4 space-y-3">
-                <p className="text-sm font-medium">Adicionar imagem</p>
+                <p className="text-sm font-medium">Adicionar foto</p>
                 <div className="space-y-2">
-                  <Label className="text-xs">URL da imagem</Label>
-                  <Input
-                    value={newGalleryUrl}
-                    onChange={(e) => setNewGalleryUrl(e.target.value)}
-                    placeholder="https://..."
-                  />
+                  <Label className="text-xs">Legenda (opcional)</Label>
+                  <Input value={newGalleryLabel} onChange={(e) => setNewGalleryLabel(e.target.value)} placeholder="Quadras premium" />
                 </div>
-                <div className="space-y-2">
-                  <Label className="text-xs">Legenda</Label>
-                  <Input
-                    value={newGalleryLabel}
-                    onChange={(e) => setNewGalleryLabel(e.target.value)}
-                    placeholder="Quadras premium"
-                  />
-                </div>
-                <Button
-                  size="sm"
-                  onClick={addGalleryImage}
-                  disabled={!newGalleryUrl.trim() || savingGallery}
-                >
-                  {savingGallery ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-                  Adicionar
+                <Button size="sm" onClick={handleGalleryFileInput} disabled={uploadingGallery || savingGallery}>
+                  {uploadingGallery || savingGallery ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                  Enviar foto
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* ── TAB: Sections ── */}
-        <TabsContent value="secoes" className="space-y-4">
           {sections.map((section) => (
             <Card key={section.id}>
               <CardContent className="flex items-center justify-between gap-4 py-4">
