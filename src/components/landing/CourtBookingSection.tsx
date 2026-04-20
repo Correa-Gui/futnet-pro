@@ -218,7 +218,7 @@ export function CourtBookingSection() {
       const startHour = parseInt(selectedSlot.split(":")[0]);
       const endTime = `${String(startHour + 1).padStart(2, "0")}:00`;
 
-      const { error } = await supabase.functions.invoke("court-availability", {
+      const { error, data } = await supabase.functions.invoke("court-availability", {
         method: "POST",
         body: {
           court_id: selectedCourt.id,
@@ -230,7 +230,10 @@ export function CourtBookingSection() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const message = (data as any)?.error || error.message;
+        throw new Error(message);
+      }
     },
     onSuccess: () => setSubmitted(true),
     onError: (e: Error) => toast.error(e.message),
