@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { DollarSign, CheckCircle, Clock, Users, TrendingUp } from 'lucide-react';
+import { DollarSign, CheckCircle, Clock, Users, TrendingUp, Copy, QrCode } from 'lucide-react';
 import { format, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { motion } from 'framer-motion';
@@ -27,9 +28,20 @@ const monthOptions = () => {
   return opts;
 };
 
+type PaymentRow = {
+  id: string;
+  status: string;
+  total_amount: number;
+  total_classes: number;
+  rate_per_class: number;
+  teacher_name: string;
+  pix_key: string | null;
+};
+
 export default function TeacherPayments() {
   const queryClient = useQueryClient();
   const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+  const [payingPayment, setPayingPayment] = useState<PaymentRow | null>(null);
   const months = monthOptions();
 
   const { data: payments = [], isLoading } = useQuery({
@@ -37,12 +49,11 @@ export default function TeacherPayments() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('teacher_payments')
-        .select('*, teacher_profiles(id, user_id, rate_per_class)')
+        .select('*, teacher_profiles(id, user_id, rate_per_class, pix_key)')
         .eq('reference_month', selectedMonth)
         .order('created_at', { ascending: false });
       if (error) throw error;
 
-      // Get teacher names from profiles
       const userIds = [...new Set((data || []).map((p: any) => p.teacher_profiles?.user_id).filter(Boolean))];
       if (userIds.length === 0) return data || [];
 
@@ -56,6 +67,7 @@ export default function TeacherPayments() {
       return (data || []).map((p: any) => ({
         ...p,
         teacher_name: nameMap[p.teacher_profiles?.user_id] || 'Professor',
+        pix_key: p.teacher_profiles?.pix_key ?? null,
       }));
     },
   });
@@ -71,6 +83,7 @@ export default function TeacherPayments() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-teacher-payments'] });
       toast.success('Pagamento marcado como pago!');
+      setPayingPayment(null);
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -159,6 +172,15 @@ export default function TeacherPayments() {
                         <span>{payment.total_classes || 0} aulas</span>
                         <span>·</span>
                         <span>{formatCurrency(Number(payment.rate_per_class))}/aula</span>
+                        {payment.pix_key && (
+                          <>
+                            <span>·</span>
+                            <span className="flex items-center gap-1">
+                              <QrCode className="h-3 w-3" />
+                              PIX cadastrado
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -172,10 +194,9 @@ export default function TeacherPayments() {
                     {payment.status === 'pending' && (
                       <Button
                         size="sm"
-                        onClick={() => markPaid.mutate(payment.id)}
-                        disabled={markPaid.isPending}
+                        onClick={() => setPayingPayment(payment)}
                       >
-                        <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
+                        <DollarSign className="mr-1.5 h-3.5 w-3.5" />
                         Pagar
                       </Button>
                     )}
@@ -186,6 +207,80 @@ export default function TeacherPayments() {
           )}
         </CardContent>
       </Card>
+
+      {/* Payment confirmation dialog */}
+      <Dialog open={!!payingPayment} onOpenChange={(v) => { if (!v) setPayingPayment(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Pagar Professor</DialogTitle>
+            <DialogDescription>
+              Realize a transferência e confirme o pagamento.
+            </DialogDescription>
+          </DialogHeader>
+
+          {payingPayment && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-muted/50 p-4 space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Professor</span>
+                  <span className="font-medium">{payingPayment.teacher_name}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Aulas</span>
+                  <span className="font-medium">{payingPayment.total_classes} aulas × {formatCurrency(Number(payingPayment.rate_per_class))}</span>
+                </div>
+                <div className="flex justify-between text-sm border-t pt-2 mt-1">
+                  <span className="text-muted-foreground font-medium">Total</span>
+                  <span className="font-bold text-lg">{formatCurrency(Number(payingPayment.total_amount))}</span>
+                </div>
+              </div>
+
+              {payingPayment.pix_key ? (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium flex items-center gap-2">
+                    <QrCode className="h-4 w-4 text-primary" />
+                    Chave PIX
+                  </p>
+                  <div className="flex items-center gap-2 rounded-lg border bg-background px-3 py-2">
+                    <span className="flex-1 text-sm font-mono break-all">{payingPayment.pix_key}</span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 shrink-0"
+                      onClick={() => {
+                        navigator.clipboard.writeText(payingPayment.pix_key!);
+                        toast.success('Chave PIX copiada!');
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Copie a chave PIX, realize a transferência no seu banco e confirme abaixo.
+                  </p>
+                </div>
+              ) : (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800 px-3 py-3">
+                  <p className="text-sm text-amber-700 dark:text-amber-400">
+                    Este professor não tem chave PIX cadastrada. Cadastre a chave na aba de Professores antes de pagar.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setPayingPayment(null)}>Cancelar</Button>
+            <Button
+              onClick={() => payingPayment && markPaid.mutate(payingPayment.id)}
+              disabled={markPaid.isPending}
+            >
+              <CheckCircle className="mr-1.5 h-4 w-4" />
+              {markPaid.isPending ? 'Confirmando...' : 'Confirmar Pagamento'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

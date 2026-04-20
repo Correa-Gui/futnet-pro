@@ -1,0 +1,641 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manual do Gestor - Uso do Sistema</title>
+  <style>
+    :root {
+      --bg: #f6f4ee;
+      --card: #fffdf8;
+      --ink: #1f1a17;
+      --muted: #6a625c;
+      --line: #e6ddd2;
+      --brand: #204b57;
+      --accent: #d98943;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: linear-gradient(180deg, #efe8dc 0%, var(--bg) 220px);
+      color: var(--ink);
+      font-family: Georgia, 'Times New Roman', serif;
+      line-height: 1.65;
+    }
+    .wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 40px 24px 80px;
+    }
+    .doc {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(31, 26, 23, 0.08);
+      overflow: hidden;
+    }
+    .hero {
+      padding: 40px 48px 28px;
+      background: radial-gradient(circle at top right, rgba(217,137,67,0.14), transparent 28%), linear-gradient(135deg, #204b57, #2a626f);
+      color: white;
+    }
+    .hero h1 {
+      margin: 0 0 10px;
+      font-size: 42px;
+      line-height: 1.05;
+    }
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      color: rgba(255,255,255,0.9);
+      font-size: 18px;
+    }
+    .content {
+      padding: 36px 48px 56px;
+    }
+    h1, h2, h3 { line-height: 1.2; }
+    h1 { font-size: 38px; margin: 0 0 14px; }
+    h2 {
+      margin: 42px 0 16px;
+      font-size: 30px;
+      color: var(--brand);
+      border-top: 1px solid var(--line);
+      padding-top: 24px;
+    }
+    h3 {
+      margin: 28px 0 10px;
+      font-size: 22px;
+      color: #2f2925;
+    }
+    p { margin: 10px 0; }
+    ul {
+      margin: 8px 0 16px 22px;
+      padding: 0;
+    }
+    li { margin: 6px 0; }
+    hr {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 30px 0;
+    }
+    blockquote {
+      margin: 18px 0;
+      padding: 14px 16px;
+      border-left: 4px solid var(--accent);
+      background: #fbf4ea;
+      color: #5b524c;
+      border-radius: 0 12px 12px 0;
+    }
+    code {
+      font-family: 'Courier New', monospace;
+      background: #f4eee5;
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 0.95em;
+    }
+    .image-block {
+      margin: 18px 0 26px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: #fff;
+    }
+    .image-block img {
+      width: 100%;
+      height: auto;
+      display: block;
+      border-radius: 10px;
+      border: 1px solid #eadfce;
+      background: #faf7f2;
+    }
+    .image-block .caption {
+      margin-top: 10px;
+      font-size: 14px;
+      color: var(--muted);
+    }
+    .checklist {
+      background: #f8f3eb;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin: 16px 0 24px;
+    }
+    @media print {
+      body { background: white; }
+      .wrap { max-width: none; padding: 0; }
+      .doc { box-shadow: none; border: 0; border-radius: 0; }
+      .hero { border-radius: 0; }
+      .image-block { break-inside: avoid; page-break-inside: avoid; }
+      h2, h3 { break-after: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <article class="doc">
+      <section class="hero">
+        <h1>Manual do Gestor - Uso do Sistema</h1>
+        <p>Guia visual, em linguagem simples, para quem vai usar o sistema na gestao do negocio, acompanhar a rotina e tomar decisoes com mais seguranca.</p>
+      </section>
+      <section class="content">
+<p>Este material foi feito para quem vai receber o login e usar o sistema para cuidar da operacao do negocio.</p>
+<p>Nao e um guia tecnico.</p>
+<p>A ideia aqui e mostrar, de forma simples, o que cada area do sistema faz, quando usar e como uma decisao impacta a outra.</p>
+<hr />
+<h2>Antes de comecar</h2>
+<p>Ao entrar no sistema, pense nele como um painel de gestao da sua arena ou escola.</p>
+<p>Ele ajuda voce a controlar cinco partes principais do negocio:</p>
+<ul>
+<li>organizacao da estrutura</li>
+<li>cadastro de alunos e professores</li>
+<li>agenda das aulas e reservas</li>
+<li>cobranca e pagamentos</li>
+<li>comunicacao com clientes e alunos</li>
+</ul>
+<p>Se voce entender essas cinco partes, o sistema fica facil de usar no dia a dia.</p>
+<hr />
+<h2>1. Dashboard</h2>
+<h3>Para que serve</h3>
+<p>O Dashboard e a tela para abrir todo dia.</p>
+<p>Ele mostra um resumo rapido do negocio e ajuda voce a entender onde precisa agir primeiro.</p>
+<h3>O que voce acompanha aqui</h3>
+<ul>
+<li>quantidade de alunos</li>
+<li>quantidade de turmas ativas</li>
+<li>receita geral</li>
+<li>day use do dia</li>
+<li>proximas aulas</li>
+<li>proximas reservas</li>
+</ul>
+<h3>Quando usar</h3>
+<ul>
+<li>no inicio da manha</li>
+<li>antes de abrir atendimento</li>
+<li>sempre que quiser uma visao geral rapida</li>
+</ul>
+<h3>O que essa tela influencia</h3>
+<p>O Dashboard nao altera nada sozinho, mas mostra para onde voce deve ir em seguida.</p>
+<p>Normalmente ele leva para:</p>
+<ul>
+<li><code>Agendamentos</code></li>
+<li><code>Presenca</code></li>
+<li><code>Faturas</code></li>
+<li><code>Aulas Teste</code></li>
+</ul>
+<p>Imagem: Dashboard</p>
+<figure class="image-block"><img src="./images/admin/day-4/dashboard-visao-geral.png" alt="Dashboard - Visao Geral" /><figcaption class="caption">Dashboard - Visao Geral</figcaption></figure>
+<hr />
+<h2>2. Configuracoes do negocio</h2>
+<h3>Para que serve</h3>
+<p>Essa area guarda as informacoes basicas que o sistema usa em varios lugares.</p>
+<h3>O que configurar aqui</h3>
+<ul>
+<li>nome da empresa</li>
+<li>logo</li>
+<li>link do app</li>
+<li>preco do aluguel de quadra</li>
+<li>preco do day use</li>
+<li>percentual do sinal da reserva</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Se os valores aqui estiverem errados, o restante da operacao pode ficar errado tambem.</p>
+<p>Por exemplo:</p>
+<ul>
+<li>reserva pode sair com preco incorreto</li>
+<li>mensagens podem usar link errado</li>
+<li>day use pode aparecer com valor desatualizado</li>
+</ul>
+<h3>Quando usar</h3>
+<ul>
+<li>na implantacao inicial</li>
+<li>sempre que mudar preco ou identidade da empresa</li>
+<li>quando o link do sistema mudar</li>
+</ul>
+<p>Imagem: Identidade da empresa</p>
+<figure class="image-block"><img src="./images/admin/day-1/settings-identidade.png" alt="Configuracoes - Identidade da Empresa" /><figcaption class="caption">Configuracoes - Identidade da Empresa</figcaption></figure>
+<p>Imagem: Precos</p>
+<figure class="image-block"><img src="./images/admin/day-1/settings-precos.png" alt="Configuracoes - Precos" /><figcaption class="caption">Configuracoes - Precos</figcaption></figure>
+<hr />
+<h2>3. Landing Page</h2>
+<h3>Para que serve</h3>
+<p>E a parte publica do negocio.</p>
+<p>Em outras palavras: e a vitrine digital da arena ou escola.</p>
+<h3>O que voce controla aqui</h3>
+<ul>
+<li>imagem principal</li>
+<li>texto do botao principal</li>
+<li>link do botao principal</li>
+<li>redes sociais</li>
+<li>modo do negocio: aulas, reservas ou os dois</li>
+<li>horario de funcionamento</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>A Landing Page influencia a forma como novos interessados chegam no negocio.</p>
+<p>Se ela estiver desatualizada, voce pode atrair pessoas para um servico que nem esta mais sendo vendido.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>quando mudar servicos, preco, campanha ou posicionamento</li>
+<li>quando quiser atualizar a forma de captar clientes</li>
+</ul>
+<p>Imagem: Landing Page</p>
+<figure class="image-block"><img src="./images/admin/day-1/landing-geral.png" alt="Landing Page - Configuracoes Gerais" /><figcaption class="caption">Landing Page - Configuracoes Gerais</figcaption></figure>
+<hr />
+<h2>4. Quadras</h2>
+<h3>Para que serve</h3>
+<p>Aqui voce cadastra os espacos fisicos que o sistema vai administrar.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>criar quadras</li>
+<li>ativar ou desativar quadras</li>
+<li>organizar nome e identificacao de cada espaco</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Sem quadras cadastradas, voce nao consegue organizar direito:</p>
+<ul>
+<li>turmas</li>
+<li>agenda</li>
+<li>reservas</li>
+<li>ocupacao da operacao</li>
+</ul>
+<h3>Quando usar</h3>
+<ul>
+<li>na configuracao inicial</li>
+<li>quando abrir, fechar ou renomear uma quadra</li>
+</ul>
+<p>Imagem: Lista de quadras</p>
+<figure class="image-block"><img src="./images/admin/day-2/quadras-lista.png" alt="Quadras - Lista" /><figcaption class="caption">Quadras - Lista</figcaption></figure>
+<p>Imagem: Cadastro de quadra</p>
+<figure class="image-block"><img src="./images/admin/day-2/quadras-modal.png" alt="Quadras - Nova Quadra" /><figcaption class="caption">Quadras - Nova Quadra</figcaption></figure>
+<hr />
+<h2>5. Professores</h2>
+<h3>Para que serve</h3>
+<p>Aqui voce controla quem da aula no negocio.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>cadastrar professores</li>
+<li>atualizar telefone e dados</li>
+<li>definir valor por aula</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>O valor por aula cadastrado aqui impacta os pagamentos do professor depois.</p>
+<p>Entao essa informacao precisa estar correta.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>quando um professor entra</li>
+<li>quando mudar valor por aula</li>
+<li>quando precisar atualizar cadastro</li>
+</ul>
+<p>Imagem: Lista de professores</p>
+<figure class="image-block"><img src="./images/admin/day-2/professores-lista.png" alt="Professores - Lista" /><figcaption class="caption">Professores - Lista</figcaption></figure>
+<p>Imagem: Cadastro de professor</p>
+<figure class="image-block"><img src="./images/admin/day-2/professores-modal.png" alt="Professores - Novo Professor" /><figcaption class="caption">Professores - Novo Professor</figcaption></figure>
+<hr />
+<h2>6. Planos</h2>
+<h3>Para que serve</h3>
+<p>Os planos representam a forma como voce vende a mensalidade para os alunos.</p>
+<h3>O que voce define aqui</h3>
+<ul>
+<li>nome do plano</li>
+<li>quantidade de aulas por semana</li>
+<li>valor mensal</li>
+<li>se o plano esta ativo ou nao</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>O plano afeta diretamente:</p>
+<ul>
+<li>o cadastro do aluno</li>
+<li>a geracao de faturas</li>
+<li>a jornada do aluno dentro do sistema</li>
+</ul>
+<p>Se o plano estiver errado, a cobranca tambem pode ficar errada.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>quando criar ou mudar um plano comercial</li>
+<li>quando deixar de vender um plano antigo</li>
+</ul>
+<p>Imagem: Lista de planos</p>
+<figure class="image-block"><img src="./images/admin/day-2/planos-lista.png" alt="Planos - Lista" /><figcaption class="caption">Planos - Lista</figcaption></figure>
+<p>Imagem: Cadastro de plano</p>
+<figure class="image-block"><img src="./images/admin/day-2/planos-modal.png" alt="Planos - Novo Plano" /><figcaption class="caption">Planos - Novo Plano</figcaption></figure>
+<hr />
+<h2>7. Turmas</h2>
+<h3>Para que serve</h3>
+<p>As turmas organizam a operacao das aulas.</p>
+<p>Elas ligam professor, quadra, horario e alunos.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>criar turmas</li>
+<li>definir dias e horarios</li>
+<li>escolher a quadra</li>
+<li>escolher o professor</li>
+<li>definir limite de alunos</li>
+<li>acompanhar lotacao</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>A turma e o centro da operacao das aulas.</p>
+<p>Ela impacta:</p>
+<ul>
+<li>presenca</li>
+<li>agenda</li>
+<li>matriculas</li>
+<li>comunicacao com os alunos</li>
+</ul>
+<p>Se uma turma estiver com horario, professor ou quadra errados, esse erro aparece em varias partes do sistema.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>ao montar a grade de aulas</li>
+<li>quando abrir nova turma</li>
+<li>quando mudar professor, horario ou lotacao</li>
+</ul>
+<p>Imagem: Lista de turmas</p>
+<figure class="image-block"><img src="./images/admin/day-2/turmas-lista.png" alt="Turmas - Lista" /><figcaption class="caption">Turmas - Lista</figcaption></figure>
+<p>Imagem: Cadastro de turma</p>
+<figure class="image-block"><img src="./images/admin/day-2/turmas-modal.png" alt="Turmas - Nova Turma" /><figcaption class="caption">Turmas - Nova Turma</figcaption></figure>
+<hr />
+<h2>8. Alunos</h2>
+<h3>Para que serve</h3>
+<p>Essa area organiza a base de clientes que fazem aula com voce.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>cadastrar novo aluno</li>
+<li>atualizar dados</li>
+<li>definir nivel</li>
+<li>vincular plano</li>
+<li>matricular em turma</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Quando voce cadastra um aluno, tres areas passam a se conectar:</p>
+<ul>
+<li>aulas</li>
+<li>financeiro</li>
+<li>comunicacao</li>
+</ul>
+<p>Por isso, o cadastro precisa estar completo, principalmente:</p>
+<ul>
+<li>nome</li>
+<li>telefone</li>
+<li>plano</li>
+<li>turma</li>
+</ul>
+<h3>Quando usar</h3>
+<ul>
+<li>na entrada de um novo aluno</li>
+<li>quando houver mudanca de plano ou turma</li>
+<li>quando precisar corrigir dados</li>
+</ul>
+<p>Imagem: Lista de alunos</p>
+<figure class="image-block"><img src="./images/admin/day-3/alunos-lista.png" alt="Alunos - Lista" /><figcaption class="caption">Alunos - Lista</figcaption></figure>
+<p>Imagem: Cadastro de aluno</p>
+<figure class="image-block"><img src="./images/admin/day-3/alunos-modal.png" alt="Alunos - Novo Aluno" /><figcaption class="caption">Alunos - Novo Aluno</figcaption></figure>
+<hr />
+<h2>9. Aulas Teste</h2>
+<h3>Para que serve</h3>
+<p>Essa tela ajuda a transformar interessados em alunos pagantes.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>ver pedidos de aula teste</li>
+<li>aprovar ou rejeitar</li>
+<li>confirmar comparecimento</li>
+<li>marcar se a aula foi realizada</li>
+<li>usar o WhatsApp para dar continuidade no atendimento</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Aula teste nao e so agenda. Ela faz parte do processo comercial.</p>
+<p>O ideal e acompanhar sempre, porque cada pedido parado significa uma oportunidade perdida.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>todos os dias</li>
+<li>principalmente no inicio e no fim do expediente</li>
+</ul>
+<p>Imagem: Solicitacao pendente</p>
+<figure class="image-block"><img src="./images/admin/day-3/aulas-teste-pendente.png" alt="Aulas Teste - Pendente" /><figcaption class="caption">Aulas Teste - Pendente</figcaption></figure>
+<p>Imagem: Solicitacao aprovada</p>
+<figure class="image-block"><img src="./images/admin/day-3/aulas-teste-aprovada.png" alt="Aulas Teste - Aprovada" /><figcaption class="caption">Aulas Teste - Aprovada</figcaption></figure>
+<hr />
+<h2>10. Agendamentos</h2>
+<h3>Para que serve</h3>
+<p>Essa tela controla o uso real da estrutura: aulas, reservas e day use.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>ver a agenda semanal</li>
+<li>ver a agenda por quadra</li>
+<li>identificar horarios livres e ocupados</li>
+<li>confirmar reservas</li>
+<li>acompanhar reservas pagas</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Essa tela ajuda a evitar conflito operacional.</p>
+<p>Ela mostra tudo o que esta ocupando a quadra, entao deve ser consultada com frequencia.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>varias vezes ao dia</li>
+<li>antes de confirmar reservas</li>
+<li>para planejar ocupacao e encaixes</li>
+</ul>
+<p>Imagem: Visao semanal</p>
+<figure class="image-block"><img src="./images/admin/day-4/agendamentos-semana.png" alt="Agendamentos - Semana" /><figcaption class="caption">Agendamentos - Semana</figcaption></figure>
+<p>Imagem: Visao por quadra</p>
+<figure class="image-block"><img src="./images/admin/day-4/agendamentos-quadra.png" alt="Agendamentos - Por Quadra" /><figcaption class="caption">Agendamentos - Por Quadra</figcaption></figure>
+<hr />
+<h2>11. Presenca</h2>
+<h3>Para que serve</h3>
+<p>Ajuda voce a acompanhar a rotina das aulas e o compromisso dos alunos com a turma.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>gerar sessoes futuras</li>
+<li>ver aulas agendadas</li>
+<li>acompanhar confirmados, presentes e ausentes</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>A presenca e um sinal de saude da turma.</p>
+<p>Quando a frequencia comeca a cair, normalmente aparece um problema de engajamento, horario, nivel da turma ou risco de cancelamento.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>durante a semana</li>
+<li>no acompanhamento de turmas ativas</li>
+<li>para apoiar decisao de gestao</li>
+</ul>
+<p>Imagem: Presenca</p>
+<figure class="image-block"><img src="./images/admin/day-4/presenca-sessoes.png" alt="Presenca - Sessoes" /><figcaption class="caption">Presenca - Sessoes</figcaption></figure>
+<hr />
+<h2>12. Faturas</h2>
+<h3>Para que serve</h3>
+<p>E a area de cobranca dos alunos.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>ver faturas pendentes, pagas e vencidas</li>
+<li>criar cobranca manual</li>
+<li>gerar faturas em lote</li>
+<li>marcar pagamento</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Essa tela representa o dinheiro que entra no negocio.</p>
+<p>Se voce nao acompanha essa parte com frequencia, a inadimplencia cresce sem perceber.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>no inicio do mes, para gerar cobrancas</li>
+<li>ao longo do mes, para acompanhar recebimentos</li>
+<li>sempre que precisar confirmar pagamento</li>
+</ul>
+<p>Imagem: Lista de faturas</p>
+<figure class="image-block"><img src="./images/admin/day-5/faturas-lista.png" alt="Faturas - Lista" /><figcaption class="caption">Faturas - Lista</figcaption></figure>
+<p>Imagem: Geracao em lote</p>
+<figure class="image-block"><img src="./images/admin/day-5/faturas-lote.png" alt="Faturas - Gerar em Lote" /><figcaption class="caption">Faturas - Gerar em Lote</figcaption></figure>
+<hr />
+<h2>13. Pagamentos de Professores</h2>
+<h3>Para que serve</h3>
+<p>Mostra o que deve ser pago para os professores conforme a operacao do periodo.</p>
+<h3>O que voce faz aqui</h3>
+<ul>
+<li>filtrar por mes</li>
+<li>ver total por professor</li>
+<li>marcar pagamento realizado</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Essa tela ajuda no fechamento financeiro e evita erro no repasse.</p>
+<p>O ideal e revisar sempre junto com a realidade da operacao do mes.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>no fechamento mensal</li>
+<li>na preparacao de pagamentos</li>
+</ul>
+<p>Imagem: Pagamentos de professores</p>
+<figure class="image-block"><img src="./images/admin/day-5/pagamentos-professores.png" alt="Pagamentos de Professores" /><figcaption class="caption">Pagamentos de Professores</figcaption></figure>
+<hr />
+<h2>14. WhatsApp</h2>
+<h3>Para que serve</h3>
+<p>E a area de comunicacao com alunos, interessados e clientes.</p>
+<h3>O que voce pode fazer aqui</h3>
+<ul>
+<li>enviar mensagem individual</li>
+<li>enviar mensagem por turma</li>
+<li>usar templates prontos</li>
+<li>programar comunicacoes automaticas</li>
+<li>acompanhar historico</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>O WhatsApp ajuda em tres frentes do negocio:</p>
+<ul>
+<li>relacionamento</li>
+<li>comparecimento</li>
+<li>cobranca</li>
+</ul>
+<p>Quando bem usado, ele reduz faltas, melhora a conversao e ajuda a cobrar com mais agilidade.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>diariamente para comunicacao ativa</li>
+<li>em cobrancas</li>
+<li>em confirmacao de aulas ou reservas</li>
+</ul>
+<p>Imagem: Envio de mensagens</p>
+<figure class="image-block"><img src="./images/admin/day-6/whatsapp-enviar.png" alt="WhatsApp - Enviar" /><figcaption class="caption">WhatsApp - Enviar</figcaption></figure>
+<p>Imagem: Templates</p>
+<figure class="image-block"><img src="./images/admin/day-6/whatsapp-templates.png" alt="WhatsApp - Templates" /><figcaption class="caption">WhatsApp - Templates</figcaption></figure>
+<p>Imagem: Agendamentos automaticos</p>
+<figure class="image-block"><img src="./images/admin/day-6/whatsapp-agendamentos.png" alt="WhatsApp - Agendamentos" /><figcaption class="caption">WhatsApp - Agendamentos</figcaption></figure>
+<hr />
+<h2>15. Analytics</h2>
+<h3>Para que serve</h3>
+<p>Essa e a area para olhar o negocio com mais estrategia.</p>
+<h3>O que voce analisa aqui</h3>
+<ul>
+<li>crescimento de alunos</li>
+<li>receita recebida e pendente</li>
+<li>presenca por turma</li>
+<li>ocupacao das quadras</li>
+<li>retencao de alunos</li>
+<li>churn</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Analytics nao e para olhar a toda hora.</p>
+<p>E para parar, observar e decidir melhor.</p>
+<p>Essa tela ajuda voce a responder perguntas como:</p>
+<ul>
+<li>qual turma esta forte e qual esta fraca</li>
+<li>qual horario tem melhor ocupacao</li>
+<li>onde esta a inadimplencia</li>
+<li>onde o negocio esta crescendo ou travando</li>
+</ul>
+<h3>Quando usar</h3>
+<ul>
+<li>semanalmente</li>
+<li>no fechamento do mes</li>
+<li>antes de tomar decisao comercial ou operacional importante</li>
+</ul>
+<p>Imagem: Analytics</p>
+<figure class="image-block"><img src="./images/admin/day-7/analytics.png" alt="Analytics" /><figcaption class="caption">Analytics</figcaption></figure>
+<hr />
+<h2>16. Permissoes e Usuarios do Sistema</h2>
+<h3>Para que serve</h3>
+<p>Essa area existe para quem divide a operacao com outras pessoas.</p>
+<h3>O que voce controla aqui</h3>
+<ul>
+<li>quem pode acessar o painel</li>
+<li>quais telas cada pessoa pode ver</li>
+<li>quem tem acesso total e quem tem acesso limitado</li>
+</ul>
+<h3>Regra de negocio importante</h3>
+<p>Nem todo mundo precisa ver tudo.</p>
+<p>Controlar permissao protege o negocio e evita erros operacionais.</p>
+<h3>Quando usar</h3>
+<ul>
+<li>quando entrar uma nova pessoa na equipe</li>
+<li>quando mudar responsabilidade de alguem</li>
+<li>quando for preciso remover acesso</li>
+</ul>
+<p>Imagem: Permissoes</p>
+<figure class="image-block"><img src="./images/admin/day-7/permissoes.png" alt="Permissoes" /><figcaption class="caption">Permissoes</figcaption></figure>
+<p>Imagem: Usuarios do sistema</p>
+<figure class="image-block"><img src="./images/admin/day-7/usuarios-sistema.png" alt="Usuarios do Sistema" /><figcaption class="caption">Usuarios do Sistema</figcaption></figure>
+<hr />
+<h2>Rotina recomendada do gestor</h2>
+<h3>Todo dia</h3>
+<ul>
+<li>abrir o <code>Dashboard</code></li>
+<li>verificar <code>Aulas Teste</code></li>
+<li>conferir <code>Agendamentos</code></li>
+<li>acompanhar <code>Presenca</code></li>
+<li>olhar <code>Faturas</code> pendentes quando estiver em periodo de cobranca</li>
+</ul>
+<h3>Toda semana</h3>
+<ul>
+<li>revisar <code>Turmas</code></li>
+<li>acompanhar faltas e lotacao</li>
+<li>usar <code>WhatsApp</code> para relacionamento e cobranca</li>
+<li>revisar <code>Analytics</code></li>
+</ul>
+<h3>Todo mes</h3>
+<ul>
+<li>gerar e acompanhar <code>Faturas</code></li>
+<li>revisar <code>Pagamentos de Professores</code></li>
+<li>analisar crescimento, ocupacao e retencao</li>
+<li>atualizar <code>Landing Page</code> ou <code>Configuracoes</code> se algo do negocio mudou</li>
+</ul>
+<hr />
+<h2>Em uma frase: como pensar o sistema</h2>
+<p>Se quiser resumir o sistema em linguagem simples, pense assim:</p>
+<ul>
+<li><code>Dashboard</code> mostra o que esta acontecendo</li>
+<li><code>Cadastros</code> organizam a operacao</li>
+<li><code>Agendamentos</code> controlam a ocupacao</li>
+<li><code>Faturas</code> controlam o dinheiro que entra</li>
+<li><code>WhatsApp</code> ajuda a manter o cliente perto</li>
+<li><code>Analytics</code> ajuda voce a decidir melhor</li>
+</ul>
+<hr />
+<h2>Resumo final para quem nao e de TI</h2>
+<p>Voce nao precisa entender tecnologia para usar esse sistema.</p>
+<p>O que importa e entender a logica do negocio:</p>
+<p>1. organizar a estrutura</p>
+<p>2. cadastrar corretamente as pessoas</p>
+<p>3. acompanhar a agenda</p>
+<p>4. cuidar da cobranca</p>
+<p>5. manter contato com os clientes</p>
+<p>6. olhar os resultados e ajustar a operacao</p>
+<p>Se essas seis partes estiverem em ordem, o sistema passa a trabalhar a favor da sua gestao.</p>
+
+      </section>
+    </article>
+  </div>
+</body>
+</html>

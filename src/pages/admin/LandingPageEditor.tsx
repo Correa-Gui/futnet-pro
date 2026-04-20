@@ -38,16 +38,22 @@ interface SectionConfig {
 }
 
 const SECTION_LABELS: Record<string, string> = {
-  hero: "Hero (Topo)",
+  hero: "Hero — Topo da página",
   stats: "Estatísticas",
   about: "Sobre Nós",
-  gallery: "Galeria",
+  gallery: "Galeria — Foto destaque (grande)",
   benefits: "Benefícios",
   how_it_works: "Como Funciona",
   testimonials: "Depoimentos",
   plans: "Planos",
   faq: "FAQ",
   final_cta: "CTA Final",
+};
+
+const SECTION_IMAGE_HINTS: Record<string, string> = {
+  hero: "Aparece como fundo da tela inicial (fullscreen). Use foto horizontal de alta qualidade, de preferência com atleta em ação.",
+  about: "Aparece na seção 'Serviços' como foto do card de Aulas. Mostre um treino ou professor com alunos.",
+  gallery: "Foto principal no grid 'O Espaço' (ocupa 2 colunas × 2 linhas). Use uma imagem panorâmica das quadras.",
 };
 
 const DAY_NAMES = [
@@ -247,7 +253,9 @@ export default function LandingPageEditor() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Imagem do Hero</CardTitle>
-                  <CardDescription>Imagem principal no topo da landing page</CardDescription>
+                  <CardDescription>
+                    Aparece como fundo fullscreen na primeira tela da landing page. Use uma foto horizontal (mínimo 1800×900px), de preferência com atleta em ação ou vista panorâmica da arena.
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   {settings.hero_image_url && (
@@ -410,9 +418,13 @@ export default function LandingPageEditor() {
                     <p className="font-semibold text-sm truncate">
                       {SECTION_LABELS[section.section_key] || section.section_key}
                     </p>
-                    {section.title && (
+                    {SECTION_IMAGE_HINTS[section.section_key] ? (
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        {SECTION_IMAGE_HINTS[section.section_key]}
+                      </p>
+                    ) : section.title ? (
                       <p className="text-xs text-muted-foreground truncate">{section.title}</p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">

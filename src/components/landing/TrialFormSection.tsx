@@ -1,65 +1,33 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CheckCircle2, Loader2, MessageCircle, Sparkles } from "lucide-react";
 import { Section, SectionLabel, SectionTitle } from "./Section";
 import { supabase } from "@/integrations/supabase/client";
-import { formatPhoneMask, formatWhatsAppLink, formatDaysOfWeek, cleanPhone } from "@/lib/whatsapp";
+import { formatPhoneMask, formatWhatsAppLink, cleanPhone } from "@/lib/whatsapp";
 import type { LandingSettings } from "./types";
 
-interface ClassOption {
-  id: string;
-  name: string;
-  day_of_week: number[];
-  start_time: string;
-  end_time: string;
-  level: string;
-}
+const LEVELS = ["Aprendiz", "Iniciante", "Principiante"] as const;
 
-export function TrialFormSection({
-  settings,
-  preselectedClassId = "",
-}: {
-  settings: LandingSettings;
-  preselectedClassId?: string;
-}) {
-  const [classes, setClasses] = useState<ClassOption[]>([]);
+export function TrialFormSection({ settings }: { settings: LandingSettings }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
-  const [classId, setClassId] = useState(preselectedClassId);
+  const [level, setLevel] = useState("");
   const [preferredDate, setPreferredDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [selectedClassName, setSelectedClassName] = useState("");
 
-  useEffect(() => {
-    if (preselectedClassId) setClassId(preselectedClassId);
-  }, [preselectedClassId]);
-
-  useEffect(() => {
-    supabase
-      .from("classes")
-      .select("id, name, day_of_week, start_time, end_time, level")
-      .eq("status", "active")
-      .then(({ data }) => {
-        if (data) setClasses(data as ClassOption[]);
-      });
-  }, []);
-
-  const selectedClass = classes.find((c) => c.id === classId);
+  const minDate = new Date().toISOString().split("T")[0];
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || cleanPhone(phone).length < 10) return;
     setSubmitting(true);
 
-    const sel = classes.find((c) => c.id === classId);
-    setSelectedClassName(sel?.name || "");
-
     const { error } = await supabase.from("trial_requests").insert({
       name: name.trim(),
       phone: cleanPhone(phone),
       email: email.trim() || null,
-      preferred_class_id: classId || null,
+      level: level || null,
       preferred_date: preferredDate || null,
       status: "pending",
     });
@@ -68,7 +36,7 @@ export function TrialFormSection({
     if (!error) setSubmitted(true);
   };
 
-  const waMessage = `Olá! Quero agendar minha aula teste de futevôlei!\n\nNome: ${name}${selectedClassName ? `\nTurma: ${selectedClassName}` : ""}${preferredDate ? `\nData preferida: ${new Date(preferredDate + "T12:00:00").toLocaleDateString("pt-BR")}` : ""}\n\nVi no site e quero experimentar!`;
+  const waMessage = `Olá! Quero agendar minha aula experimental de futevôlei!\n\nNome: ${name}${level ? `\nNível: ${level}` : ""}${preferredDate ? `\nDia preferido: ${new Date(preferredDate + "T12:00:00").toLocaleDateString("pt-BR")}` : ""}\n\nVi no site e quero experimentar!`;
 
   if (submitted) {
     return (
@@ -82,12 +50,11 @@ export function TrialFormSection({
               <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-secondary/80">
                 Solicitação recebida
               </p>
-              <h2 className="mt-4 max-w-[10ch] font-heading text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.95] tracking-[-0.05em] text-white">
+              <h3 className="font-landing-headline mt-4 max-w-[10ch] text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-[0.97] tracking-[-0.03em] text-white">
                 PRÓXIMO PASSO PELO WHATSAPP.
-              </h2>
+              </h3>
               <p className="mt-6 max-w-[30rem] text-sm leading-8 text-white/68 sm:text-base">
-                Sua intenção já entrou no fluxo. Agora vale confirmar por WhatsApp para acelerar a
-                resposta e travar a melhor opção de turma.
+                Sua solicitação foi recebida. Confirme pelo WhatsApp para garantir o horário.
               </p>
             </div>
 
@@ -107,25 +74,12 @@ export function TrialFormSection({
                 <MessageCircle className="h-4 w-4" />
                 Confirmar pelo WhatsApp
               </a>
-              <div className="mt-8 rounded-[24px] border border-white/8 bg-white/[0.03] p-5">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
-                  O que acontece agora
-                </p>
-                <p className="mt-3 text-sm leading-7 text-white/66">
-                  Assim que houver validação da vaga, a confirmação segue no seu contato e mantém a
-                  experiência alinhada com o posicionamento premium da landing.
-                </p>
-              </div>
             </div>
           </div>
         </div>
       </Section>
     );
   }
-
-  const allowedDays = selectedClass?.day_of_week || [];
-  const today = new Date();
-  const minDate = today.toISOString().split("T")[0];
 
   return (
     <Section id="aula-teste" className="px-6 py-20 sm:py-24">
@@ -136,8 +90,7 @@ export function TrialFormSection({
             AGENDE SUA AULA EXPERIMENTAL GRATUITA
           </SectionTitle>
           <p className="max-w-[32rem] text-sm leading-8 text-white/68 sm:text-base">
-            Sem compromisso. Preencha o formulário, escolha a turma que te interessa e nossa
-            equipe confirma o horário direto no WhatsApp.
+            Sem compromisso. Preencha seus dados e escolha o melhor dia para você. Nossa equipe confirma o horário direto no WhatsApp.
           </p>
 
           <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -162,7 +115,7 @@ export function TrialFormSection({
             Agendar aula
           </p>
           <p className="mt-4 max-w-[32rem] text-sm leading-8 text-white/68 sm:text-base">
-            Escolha a turma que te interessa e preencha seus dados. Confirmamos em até 24h.
+            Preencha seus dados e escolha o dia de preferência. Confirmamos em até 24h.
           </p>
 
           <div className="mt-8 grid gap-5">
@@ -209,51 +162,35 @@ export function TrialFormSection({
 
             <label className="grid gap-2">
               <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-                Turma de preferência
+                Nível
               </span>
               <select
-                value={classId}
-                onChange={(e) => {
-                  setClassId(e.target.value);
-                  setPreferredDate("");
-                }}
-                className="landing-input appearance-none"
+                value={level}
+                onChange={(e) => setLevel(e.target.value)}
+                className="landing-input"
               >
-                <option value="" className="bg-[#0d1117] text-white">
-                  Selecione uma turma
-                </option>
-                {classes.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-[#0d1117] text-white">
-                    {c.name} — {formatDaysOfWeek(c.day_of_week)} {c.start_time.slice(0, 5)}-{c.end_time.slice(0, 5)}
-                  </option>
+                <option value="">Selecione seu nível</option>
+                {LEVELS.map((l) => (
+                  <option key={l} value={l}>{l}</option>
                 ))}
               </select>
             </label>
 
-            {classId && (
-              <label className="grid gap-2">
-                <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
-                  Data preferida
-                </span>
-                <input
-                  type="date"
-                  value={preferredDate}
-                  min={minDate}
-                  onChange={(e) => {
-                    const d = new Date(e.target.value + "T12:00:00");
-                    if (allowedDays.length === 0 || allowedDays.includes(d.getDay())) {
-                      setPreferredDate(e.target.value);
-                    }
-                  }}
-                  className="landing-input"
-                />
-                {allowedDays.length > 0 && (
-                  <p className="text-xs leading-6 text-white/42">
-                    Esta turma acontece em: {formatDaysOfWeek(allowedDays)}
-                  </p>
-                )}
-              </label>
-            )}
+            <label className="grid gap-2">
+              <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+                Dia de preferência
+              </span>
+              <input
+                type="date"
+                value={preferredDate}
+                min={minDate}
+                onChange={(e) => setPreferredDate(e.target.value)}
+                className="landing-input"
+              />
+              <p className="text-xs leading-6 text-white/42">
+                Opcional — nos ajuda a encontrar o melhor horário para você.
+              </p>
+            </label>
           </div>
 
           <button

@@ -74,11 +74,11 @@ function CourtCard({
           <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/42">
             Quadra 0{index + 1}
           </p>
-          <h3 className="mt-3 font-heading text-[1.8rem] font-extrabold leading-[0.98] tracking-[-0.04em] text-white">
+          <h3 className="mt-3 text-[1.6rem] font-extrabold leading-[1.05] tracking-[-0.02em] text-white">
             {court.name}
           </h3>
         </div>
-        <span className="font-brand text-[2.2rem] leading-none tracking-[0.18em] text-white/16">
+        <span className="text-[2rem] font-extrabold leading-none tracking-[0.06em] text-white/12">
           0{index + 1}
         </span>
       </div>
@@ -198,15 +198,19 @@ export function CourtBookingSection() {
 
       const startHour = parseInt(selectedSlot.split(":")[0]);
       const endTime = `${String(startHour + 1).padStart(2, "0")}:00`;
-      const { error } = await supabase.from("court_bookings").insert({
-        court_id: selectedCourt.id,
-        date: dateStr,
-        start_time: selectedSlot,
-        end_time: endTime,
-        requester_name: validation.data.requester_name,
-        requester_phone: rawPhone,
-        price: 80,
-        status: "requested",
+
+      // Chama a edge function para garantir que o usuário seja salvo em booking_users
+      const { error } = await supabase.functions.invoke("court-availability", {
+        method: "POST",
+        body: {
+          court_id: selectedCourt.id,
+          date: dateStr,
+          start_time: selectedSlot,
+          end_time: endTime,
+          requester_name: validation.data.requester_name,
+          requester_phone: rawPhone,
+          price: 80,
+        },
       });
 
       if (error) throw error;
@@ -261,7 +265,7 @@ export function CourtBookingSection() {
                 <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-secondary/80">
                   Pedido enviado
                 </p>
-                <h3 className="mt-4 max-w-[10ch] font-heading text-[clamp(2.2rem,5vw,4rem)] font-extrabold leading-[0.95] tracking-[-0.05em] text-white">
+                <h3 className="mt-4 max-w-[10ch] text-[clamp(2rem,5vw,3.5rem)] font-extrabold leading-[0.97] tracking-[-0.03em] text-white">
                   SUA QUADRA JÁ ENTROU NO FLUXO DE CONFIRMAÇÃO.
                 </h3>
                 <p className="mt-6 max-w-[30rem] text-sm leading-8 text-white/68 sm:text-base">

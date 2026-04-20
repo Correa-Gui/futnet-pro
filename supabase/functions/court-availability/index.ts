@@ -248,7 +248,7 @@ Deno.serve(async (req) => {
           requester_phone: normalizedPhone,
           price: resolvedPrice,
           booking_type: normalizedBookingType,
-          status: "requested",
+          status: "confirmed",
         })
         .select("id, status, booking_type, price")
         .single();

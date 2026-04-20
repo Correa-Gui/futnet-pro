@@ -56,7 +56,7 @@ export function SectionTitle({
   return (
     <h2
       className={cn(
-        "font-heading text-[clamp(2.1rem,4.8vw,4.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] mb-5",
+        "font-landing-headline text-[clamp(2.1rem,4.8vw,4.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] mb-5",
         light ? "text-white" : "text-white",
         className
       )}

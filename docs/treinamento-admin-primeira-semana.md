@@ -1,481 +1,580 @@
-# Treinamento Admin - 1a Semana
+﻿# Manual do Gestor - Uso do Sistema
 
-Este guia foi pensado para um novo admin aprender o sistema na pratica, sem precisar decorar tudo no primeiro dia.
-A ideia e simples: entender a base, operar a rotina e ganhar seguranca ao longo da primeira semana.
-
----
-
-## Como usar este guia
-
-- Leia por dia, nao por modulo.
-- Execute cada tarefa no sistema antes de avancar.
-- Use as imagens como apoio visual quando forem adicionadas.
-- As imagens deste material ficam em `docs/images/admin/`.
-
-> Observacao: se uma imagem ainda nao aparecer, basta salvar o screenshot com o nome indicado no arquivo `docs/images/admin/README.md`.
+Este material foi feito para quem vai receber o login e usar o sistema para cuidar da operacao do negocio.
+Nao e um guia tecnico.
+A ideia aqui e mostrar, de forma simples, o que cada area do sistema faz, quando usar e como uma decisao impacta a outra.
 
 ---
 
-## Dia 1 - Entender a base do negocio
+## Antes de comecar
 
-### Objetivo do dia
-Configurar o que o sistema precisa para funcionar direito antes de cadastrar alunos ou operar agenda.
+Ao entrar no sistema, pense nele como um painel de gestao da sua arena ou escola.
+Ele ajuda voce a controlar cinco partes principais do negocio:
 
-### Tela: Configuracoes
-O que fazer:
-- Preencher nome da empresa, logo e URL do app
-- Definir preco de aluguel de quadra
-- Definir preco de day use
-- Definir percentual de sinal da reserva
+- organizacao da estrutura
+- cadastro de alunos e professores
+- agenda das aulas e reservas
+- cobranca e pagamentos
+- comunicacao com clientes e alunos
 
-Por que isso vem primeiro:
-- A URL do app aparece em mensagens e links
-- Os precos impactam reservas, day use e leituras do dashboard
-- O sinal afeta a confirmacao de reservas
-
-Impacto nas proximas telas:
-- `Agendamentos` usa os valores configurados
-- `WhatsApp` pode usar a URL do app nas mensagens
-- `Dashboard` e `Analytics` passam a refletir esses dados com mais coerencia
-
-Imagem esperada: Configuracoes > Identidade da Empresa
-
-![Configuracoes - Identidade da Empresa](./images/admin/day-1/settings-identidade.png)
-
-Imagem esperada: Configuracoes > Precos
-
-![Configuracoes - Precos](./images/admin/day-1/settings-precos.png)
-
-### Tela: Landing Page
-O que fazer:
-- Conferir modo do negocio: aulas, aluguel ou ambos
-- Ajustar imagem principal, CTA e links sociais
-- Conferir horario de funcionamento
-
-Por que isso importa:
-- Essa e a porta de entrada publica do negocio
-- O horario de funcionamento afeta a leitura da agenda
-- O CTA influencia captacao de interessados
-
-Impacto nas proximas telas:
-- `Aulas Teste` recebe leads melhores quando a landing esta alinhada
-- `Agendamentos` respeita melhor a operacao exibida
-
-Imagem esperada: Landing Page > Configuracoes Gerais
-
-![Landing Page - Configuracoes Gerais](./images/admin/day-1/landing-geral.png)
-
-### Tela: WhatsApp > Configuracoes
-O que fazer:
-- Preencher URL base do servico
-- Informar nome da instancia
-- Salvar
-
-Por que isso importa:
-- Sem essa etapa, o envio de mensagens pode falhar
-- O sistema depende disso para automacoes e avisos
-
-Impacto nas proximas telas:
-- `Aulas Teste`, `Alunos` e envios manuais ficam mais completos
-
-Imagem esperada: WhatsApp > Configuracoes
-
-![WhatsApp - Configuracoes](./images/admin/day-1/whatsapp-config.png)
-
-### Checklist do Dia 1
-- Empresa configurada
-- Precos configurados
-- Landing revisada
-- WhatsApp conectado
+Se voce entender essas cinco partes, o sistema fica facil de usar no dia a dia.
 
 ---
 
-## Dia 2 - Montar a estrutura da operacao
+## 1. Dashboard
 
-### Objetivo do dia
-Cadastrar a estrutura que sustenta as aulas: quadras, professores, planos e turmas.
+### Para que serve
+O Dashboard e a tela para abrir todo dia.
+Ele mostra um resumo rapido do negocio e ajuda voce a entender onde precisa agir primeiro.
 
-### Tela: Quadras
-O que fazer:
-- Cadastrar cada quadra ativa
-- Informar nome, local e tipo de piso, se desejar
+### O que voce acompanha aqui
+- quantidade de alunos
+- quantidade de turmas ativas
+- receita geral
+- day use do dia
+- proximas aulas
+- proximas reservas
 
-Impacto nas proximas telas:
-- `Turmas` precisam de quadra
-- `Agendamentos` organiza a visualizacao por quadra
+### Quando usar
+- no inicio da manha
+- antes de abrir atendimento
+- sempre que quiser uma visao geral rapida
 
-Imagem esperada: Lista de Quadras
+### O que essa tela influencia
+O Dashboard nao altera nada sozinho, mas mostra para onde voce deve ir em seguida.
+Normalmente ele leva para:
+- `Agendamentos`
+- `Presenca`
+- `Faturas`
+- `Aulas Teste`
 
-![Quadras - Lista](./images/admin/day-2/quadras-lista.png)
-
-Imagem esperada: Modal Nova Quadra
-
-![Quadras - Nova Quadra](./images/admin/day-2/quadras-modal.png)
-
-### Tela: Professores
-O que fazer:
-- Cadastrar professores com nome, email, senha e telefone
-- Definir valor por aula
-
-Impacto nas proximas telas:
-- `Turmas` precisam de professor
-- `Pagamentos de Professores` dependem desse valor
-- Mensagens e aulas teste podem citar o professor
-
-Imagem esperada: Lista de Professores
-
-![Professores - Lista](./images/admin/day-2/professores-lista.png)
-
-Imagem esperada: Modal Novo Professor
-
-![Professores - Novo Professor](./images/admin/day-2/professores-modal.png)
-
-### Tela: Planos
-O que fazer:
-- Criar os planos de mensalidade
-- Definir aulas por semana e valor mensal
-- Ativar apenas os planos disponiveis para venda
-
-Impacto nas proximas telas:
-- `Alunos` podem ser cadastrados ja com plano
-- `Faturas` usam esses valores
-- O aluno tambem pode escolher o plano no portal quando aplicavel
-
-Imagem esperada: Lista de Planos
-
-![Planos - Lista](./images/admin/day-2/planos-lista.png)
-
-Imagem esperada: Modal Novo Plano
-
-![Planos - Novo Plano](./images/admin/day-2/planos-modal.png)
-
-### Tela: Turmas
-O que fazer:
-- Criar turmas com nivel, dias, horario, lotacao, quadra e professor
-- Conferir se nome e horario estao claros
-
-Impacto nas proximas telas:
-- `Presenca` depende das turmas para gerar sessoes
-- `Alunos` serao matriculados nelas
-- `Agendamentos` passa a mostrar a ocupacao fixa
-
-Imagem esperada: Lista de Turmas
-
-![Turmas - Lista](./images/admin/day-2/turmas-lista.png)
-
-Imagem esperada: Modal Nova Turma
-
-![Turmas - Nova Turma](./images/admin/day-2/turmas-modal.png)
-
-### Checklist do Dia 2
-- Quadras cadastradas
-- Professores cadastrados
-- Planos criados
-- Turmas criadas
-
----
-
-## Dia 3 - Cadastrar pessoas e entradas do negocio
-
-### Objetivo do dia
-Aprender a cadastrar alunos e tratar interessados que chegam por aula teste.
-
-### Tela: Alunos
-O que fazer:
-- Criar um aluno novo
-- Definir nivel, plano e turmas
-- Conferir telefone e email
-
-Ponto de atencao:
-- Se o aluno tiver plano, ele entra no fluxo financeiro
-- Se tiver telefone, entra no fluxo de WhatsApp
-- Se estiver em turma, entra no fluxo de presenca
-
-Impacto nas proximas telas:
-- `Faturas` pode gerar cobranca para esse aluno
-- `WhatsApp` pode enviar mensagens para ele
-- `Presenca` vai considerar esse aluno nas sessoes
-
-Imagem esperada: Tela de Alunos
-
-![Alunos - Lista](./images/admin/day-3/alunos-lista.png)
-
-Imagem esperada: Modal Novo Aluno
-
-![Alunos - Novo Aluno](./images/admin/day-3/alunos-modal.png)
-
-### Tela: Aulas Teste
-O que fazer:
-- Revisar solicitacoes pendentes
-- Aprovar ou rejeitar
-- Quando aprovada, confirmar os dados e enviar WhatsApp
-- Quando realizada, marcar como `Realizada`
-
-Impacto nas proximas telas:
-- A aula teste concluida vira oportunidade real de cadastro em `Alunos`
-- O WhatsApp ajuda na conversao
-
-Imagem esperada: Aulas Teste com card pendente
-
-![Aulas Teste - Pendente](./images/admin/day-3/aulas-teste-pendente.png)
-
-Imagem esperada: Aulas Teste com status aprovada
-
-![Aulas Teste - Aprovada](./images/admin/day-3/aulas-teste-aprovada.png)
-
-### Checklist do Dia 3
-- Pelo menos 1 aluno teste cadastrado
-- Fluxo de aula teste entendido
-- Aprovar, concluir e converter uma aula teste sem ajuda
-
----
-
-## Dia 4 - Operacao diaria
-
-### Objetivo do dia
-Aprender a abrir o sistema, entender o dia e agir rapido.
-
-### Tela: Dashboard
-O que observar:
-- Total de alunos
-- Turmas ativas
-- Receita total
-- Day use do dia
-- Proximas aulas
-
-Como usar na pratica:
-- Essa deve ser a primeira tela do dia
-- Ela mostra para onde olhar em seguida
-
-Impacto nas proximas telas:
-- Normalmente leva voce para `Agendamentos`, `Presenca` e `Faturas`
-
-Imagem esperada: Dashboard > Visao geral
+Imagem: Dashboard
 
 ![Dashboard - Visao Geral](./images/admin/day-4/dashboard-visao-geral.png)
 
-### Tela: Agendamentos
-O que fazer:
-- Ver agenda semanal ou por quadra
-- Identificar reservas pendentes, confirmadas e pagas
-- Confirmar ou marcar pagamento quando necessario
+---
 
-Como pensar essa tela:
-- Ela junta o que e aula fixa com o que e reserva avulsa
-- E uma das telas mais importantes para o dia a dia
+## 2. Configuracoes do negocio
 
-Impacto nas proximas telas:
-- Afeta operacao real da quadra
-- Alimenta leitura de ocupacao e receita
+### Para que serve
+Essa area guarda as informacoes basicas que o sistema usa em varios lugares.
 
-Imagem esperada: Agendamentos em modo semana
+### O que configurar aqui
+- nome da empresa
+- logo
+- link do app
+- preco do aluguel de quadra
+- preco do day use
+- percentual do sinal da reserva
+
+### Regra de negocio importante
+Se os valores aqui estiverem errados, o restante da operacao pode ficar errado tambem.
+Por exemplo:
+- reserva pode sair com preco incorreto
+- mensagens podem usar link errado
+- day use pode aparecer com valor desatualizado
+
+### Quando usar
+- na implantacao inicial
+- sempre que mudar preco ou identidade da empresa
+- quando o link do sistema mudar
+
+Imagem: Identidade da empresa
+
+![Configuracoes - Identidade da Empresa](./images/admin/day-1/settings-identidade.png)
+
+Imagem: Precos
+
+![Configuracoes - Precos](./images/admin/day-1/settings-precos.png)
+
+---
+
+## 3. Landing Page
+
+### Para que serve
+E a parte publica do negocio.
+Em outras palavras: e a vitrine digital da arena ou escola.
+
+### O que voce controla aqui
+- imagem principal
+- texto do botao principal
+- link do botao principal
+- redes sociais
+- modo do negocio: aulas, reservas ou os dois
+- horario de funcionamento
+
+### Regra de negocio importante
+A Landing Page influencia a forma como novos interessados chegam no negocio.
+Se ela estiver desatualizada, voce pode atrair pessoas para um servico que nem esta mais sendo vendido.
+
+### Quando usar
+- quando mudar servicos, preco, campanha ou posicionamento
+- quando quiser atualizar a forma de captar clientes
+
+Imagem: Landing Page
+
+![Landing Page - Configuracoes Gerais](./images/admin/day-1/landing-geral.png)
+
+---
+
+## 4. Quadras
+
+### Para que serve
+Aqui voce cadastra os espacos fisicos que o sistema vai administrar.
+
+### O que voce faz aqui
+- criar quadras
+- ativar ou desativar quadras
+- organizar nome e identificacao de cada espaco
+
+### Regra de negocio importante
+Sem quadras cadastradas, voce nao consegue organizar direito:
+- turmas
+- agenda
+- reservas
+- ocupacao da operacao
+
+### Quando usar
+- na configuracao inicial
+- quando abrir, fechar ou renomear uma quadra
+
+Imagem: Lista de quadras
+
+![Quadras - Lista](./images/admin/day-2/quadras-lista.png)
+
+Imagem: Cadastro de quadra
+
+![Quadras - Nova Quadra](./images/admin/day-2/quadras-modal.png)
+
+---
+
+## 5. Professores
+
+### Para que serve
+Aqui voce controla quem da aula no negocio.
+
+### O que voce faz aqui
+- cadastrar professores
+- atualizar telefone e dados
+- definir valor por aula
+
+### Regra de negocio importante
+O valor por aula cadastrado aqui impacta os pagamentos do professor depois.
+Entao essa informacao precisa estar correta.
+
+### Quando usar
+- quando um professor entra
+- quando mudar valor por aula
+- quando precisar atualizar cadastro
+
+Imagem: Lista de professores
+
+![Professores - Lista](./images/admin/day-2/professores-lista.png)
+
+Imagem: Cadastro de professor
+
+![Professores - Novo Professor](./images/admin/day-2/professores-modal.png)
+
+---
+
+## 6. Planos
+
+### Para que serve
+Os planos representam a forma como voce vende a mensalidade para os alunos.
+
+### O que voce define aqui
+- nome do plano
+- quantidade de aulas por semana
+- valor mensal
+- se o plano esta ativo ou nao
+
+### Regra de negocio importante
+O plano afeta diretamente:
+- o cadastro do aluno
+- a geracao de faturas
+- a jornada do aluno dentro do sistema
+
+Se o plano estiver errado, a cobranca tambem pode ficar errada.
+
+### Quando usar
+- quando criar ou mudar um plano comercial
+- quando deixar de vender um plano antigo
+
+Imagem: Lista de planos
+
+![Planos - Lista](./images/admin/day-2/planos-lista.png)
+
+Imagem: Cadastro de plano
+
+![Planos - Novo Plano](./images/admin/day-2/planos-modal.png)
+
+---
+
+## 7. Turmas
+
+### Para que serve
+As turmas organizam a operacao das aulas.
+Elas ligam professor, quadra, horario e alunos.
+
+### O que voce faz aqui
+- criar turmas
+- definir dias e horarios
+- escolher a quadra
+- escolher o professor
+- definir limite de alunos
+- acompanhar lotacao
+
+### Regra de negocio importante
+A turma e o centro da operacao das aulas.
+Ela impacta:
+- presenca
+- agenda
+- matriculas
+- comunicacao com os alunos
+
+Se uma turma estiver com horario, professor ou quadra errados, esse erro aparece em varias partes do sistema.
+
+### Quando usar
+- ao montar a grade de aulas
+- quando abrir nova turma
+- quando mudar professor, horario ou lotacao
+
+Imagem: Lista de turmas
+
+![Turmas - Lista](./images/admin/day-2/turmas-lista.png)
+
+Imagem: Cadastro de turma
+
+![Turmas - Nova Turma](./images/admin/day-2/turmas-modal.png)
+
+---
+
+## 8. Alunos
+
+### Para que serve
+Essa area organiza a base de clientes que fazem aula com voce.
+
+### O que voce faz aqui
+- cadastrar novo aluno
+- atualizar dados
+- definir nivel
+- vincular plano
+- matricular em turma
+
+### Regra de negocio importante
+Quando voce cadastra um aluno, tres areas passam a se conectar:
+- aulas
+- financeiro
+- comunicacao
+
+Por isso, o cadastro precisa estar completo, principalmente:
+- nome
+- telefone
+- plano
+- turma
+
+### Quando usar
+- na entrada de um novo aluno
+- quando houver mudanca de plano ou turma
+- quando precisar corrigir dados
+
+Imagem: Lista de alunos
+
+![Alunos - Lista](./images/admin/day-3/alunos-lista.png)
+
+Imagem: Cadastro de aluno
+
+![Alunos - Novo Aluno](./images/admin/day-3/alunos-modal.png)
+
+---
+
+## 9. Aulas Teste
+
+### Para que serve
+Essa tela ajuda a transformar interessados em alunos pagantes.
+
+### O que voce faz aqui
+- ver pedidos de aula teste
+- aprovar ou rejeitar
+- confirmar comparecimento
+- marcar se a aula foi realizada
+- usar o WhatsApp para dar continuidade no atendimento
+
+### Regra de negocio importante
+Aula teste nao e so agenda. Ela faz parte do processo comercial.
+O ideal e acompanhar sempre, porque cada pedido parado significa uma oportunidade perdida.
+
+### Quando usar
+- todos os dias
+- principalmente no inicio e no fim do expediente
+
+Imagem: Solicitacao pendente
+
+![Aulas Teste - Pendente](./images/admin/day-3/aulas-teste-pendente.png)
+
+Imagem: Solicitacao aprovada
+
+![Aulas Teste - Aprovada](./images/admin/day-3/aulas-teste-aprovada.png)
+
+---
+
+## 10. Agendamentos
+
+### Para que serve
+Essa tela controla o uso real da estrutura: aulas, reservas e day use.
+
+### O que voce faz aqui
+- ver a agenda semanal
+- ver a agenda por quadra
+- identificar horarios livres e ocupados
+- confirmar reservas
+- acompanhar reservas pagas
+
+### Regra de negocio importante
+Essa tela ajuda a evitar conflito operacional.
+Ela mostra tudo o que esta ocupando a quadra, entao deve ser consultada com frequencia.
+
+### Quando usar
+- varias vezes ao dia
+- antes de confirmar reservas
+- para planejar ocupacao e encaixes
+
+Imagem: Visao semanal
 
 ![Agendamentos - Semana](./images/admin/day-4/agendamentos-semana.png)
 
-Imagem esperada: Agendamentos em modo por quadra
+Imagem: Visao por quadra
 
 ![Agendamentos - Por Quadra](./images/admin/day-4/agendamentos-quadra.png)
 
-### Tela: Presenca
-O que fazer:
-- Gerar sessoes futuras
-- Conferir sessoes criadas por turma
-- Acompanhar confirmados, presentes e ausentes
+---
 
-Impacto nas proximas telas:
-- `Analytics` usa esses dados para taxa de presenca
-- Ajuda a acompanhar engajamento das turmas
+## 11. Presenca
 
-Imagem esperada: Presenca com geracao de sessoes
+### Para que serve
+Ajuda voce a acompanhar a rotina das aulas e o compromisso dos alunos com a turma.
+
+### O que voce faz aqui
+- gerar sessoes futuras
+- ver aulas agendadas
+- acompanhar confirmados, presentes e ausentes
+
+### Regra de negocio importante
+A presenca e um sinal de saude da turma.
+Quando a frequencia comeca a cair, normalmente aparece um problema de engajamento, horario, nivel da turma ou risco de cancelamento.
+
+### Quando usar
+- durante a semana
+- no acompanhamento de turmas ativas
+- para apoiar decisao de gestao
+
+Imagem: Presenca
 
 ![Presenca - Sessoes](./images/admin/day-4/presenca-sessoes.png)
 
-### Checklist do Dia 4
-- Abrir dashboard e explicar o que esta vendo
-- Ler a agenda do dia com seguranca
-- Gerar sessoes e entender a presenca
-
 ---
 
-## Dia 5 - Financeiro basico
+## 12. Faturas
 
-### Objetivo do dia
-Entender como cobrar alunos e acompanhar pagamentos.
+### Para que serve
+E a area de cobranca dos alunos.
 
-### Tela: Faturas
-O que fazer:
-- Ver faturas pendentes, pagas e vencidas
-- Criar uma fatura manual
-- Gerar em lote para alunos com plano
-- Marcar uma fatura como paga
+### O que voce faz aqui
+- ver faturas pendentes, pagas e vencidas
+- criar cobranca manual
+- gerar faturas em lote
+- marcar pagamento
 
-Como pensar essa tela:
-- Ela e o centro da cobranca de mensalidade
-- No inicio do mes, o foco costuma ser `Gerar em Lote`
-- Durante o mes, o foco e acompanhar pendencias
+### Regra de negocio importante
+Essa tela representa o dinheiro que entra no negocio.
+Se voce nao acompanha essa parte com frequencia, a inadimplencia cresce sem perceber.
 
-Impacto nas proximas telas:
-- `Dashboard` e `Analytics` passam a refletir receita recebida e pendente
-- `WhatsApp` pode usar variaveis da fatura pendente
+### Quando usar
+- no inicio do mes, para gerar cobrancas
+- ao longo do mes, para acompanhar recebimentos
+- sempre que precisar confirmar pagamento
 
-Imagem esperada: Lista de Faturas
+Imagem: Lista de faturas
 
 ![Faturas - Lista](./images/admin/day-5/faturas-lista.png)
 
-Imagem esperada: Modal Gerar Faturas em Lote
+Imagem: Geracao em lote
 
 ![Faturas - Gerar em Lote](./images/admin/day-5/faturas-lote.png)
 
-### Tela: Pagamentos de Professores
-O que fazer:
-- Filtrar por mes
-- Conferir valor total por professor
-- Marcar como pago quando o repasse for realizado
+---
 
-Impacto nas proximas telas:
-- Ajuda no fechamento financeiro do mes
-- Aparece em parte das analises gerenciais
+## 13. Pagamentos de Professores
 
-Imagem esperada: Pagamentos de Professores
+### Para que serve
+Mostra o que deve ser pago para os professores conforme a operacao do periodo.
+
+### O que voce faz aqui
+- filtrar por mes
+- ver total por professor
+- marcar pagamento realizado
+
+### Regra de negocio importante
+Essa tela ajuda no fechamento financeiro e evita erro no repasse.
+O ideal e revisar sempre junto com a realidade da operacao do mes.
+
+### Quando usar
+- no fechamento mensal
+- na preparacao de pagamentos
+
+Imagem: Pagamentos de professores
 
 ![Pagamentos de Professores](./images/admin/day-5/pagamentos-professores.png)
 
-### Checklist do Dia 5
-- Entender diferenca entre pendente, pago e vencido
-- Gerar faturas em lote
-- Marcar uma fatura como paga
-- Conferir pagamento de professor
-
 ---
 
-## Dia 6 - Comunicacao com alunos
+## 14. WhatsApp
 
-### Objetivo do dia
-Aprender a enviar mensagens sem depender de processos manuais fora do sistema.
+### Para que serve
+E a area de comunicacao com alunos, interessados e clientes.
 
-### Tela: WhatsApp > Enviar
-O que fazer:
-- Enviar mensagem por turma
-- Enviar mensagem individual
-- Testar um template
-- Ver a pre-visualizacao antes do envio
+### O que voce pode fazer aqui
+- enviar mensagem individual
+- enviar mensagem por turma
+- usar templates prontos
+- programar comunicacoes automaticas
+- acompanhar historico
 
-Impacto nas proximas telas:
-- Apoia cobranca, lembrete e relacionamento
-- Usa dados de `Turmas`, `Alunos` e `Faturas`
+### Regra de negocio importante
+O WhatsApp ajuda em tres frentes do negocio:
+- relacionamento
+- comparecimento
+- cobranca
 
-Imagem esperada: WhatsApp > Enviar
+Quando bem usado, ele reduz faltas, melhora a conversao e ajuda a cobrar com mais agilidade.
+
+### Quando usar
+- diariamente para comunicacao ativa
+- em cobrancas
+- em confirmacao de aulas ou reservas
+
+Imagem: Envio de mensagens
 
 ![WhatsApp - Enviar](./images/admin/day-6/whatsapp-enviar.png)
 
-### Tela: WhatsApp > Templates
-O que fazer:
-- Criar um template de boas-vindas
-- Criar um template de cobranca ou lembrete
-
-Impacto nas proximas telas:
-- Acelera envios manuais e automacoes
-
-Imagem esperada: WhatsApp > Templates
+Imagem: Templates
 
 ![WhatsApp - Templates](./images/admin/day-6/whatsapp-templates.png)
 
-### Tela: WhatsApp > Agendamentos
-O que fazer:
-- Revisar mensagens automaticas configuradas
-- Entender gatilho, template e dias antes do evento
-
-Impacto nas proximas telas:
-- Reduz esquecimentos e melhora rotina comercial/financeira
-
-Imagem esperada: WhatsApp > Agendamentos
+Imagem: Agendamentos automaticos
 
 ![WhatsApp - Agendamentos](./images/admin/day-6/whatsapp-agendamentos.png)
 
-### Checklist do Dia 6
-- Enviar mensagem teste com seguranca
-- Entender templates
-- Entender automacoes
-
 ---
 
-## Dia 7 - Leitura do negocio e acessos
+## 15. Analytics
 
-### Objetivo do dia
-Fechar a primeira semana entendendo como acompanhar resultados e como controlar acessos da equipe.
+### Para que serve
+Essa e a area para olhar o negocio com mais estrategia.
 
-### Tela: Analytics
-O que observar:
-- Crescimento de alunos
-- Receita recebida vs pendente
-- Presenca por turma
-- Ocupacao de quadras
-- Retencao e churn
+### O que voce analisa aqui
+- crescimento de alunos
+- receita recebida e pendente
+- presenca por turma
+- ocupacao das quadras
+- retencao de alunos
+- churn
 
-Como usar na pratica:
-- Nao e uma tela para toda hora
-- Ela serve para leitura semanal e tomada de decisao
+### Regra de negocio importante
+Analytics nao e para olhar a toda hora.
+E para parar, observar e decidir melhor.
+Essa tela ajuda voce a responder perguntas como:
+- qual turma esta forte e qual esta fraca
+- qual horario tem melhor ocupacao
+- onde esta a inadimplencia
+- onde o negocio esta crescendo ou travando
 
-Imagem esperada: Analytics
+### Quando usar
+- semanalmente
+- no fechamento do mes
+- antes de tomar decisao comercial ou operacional importante
+
+Imagem: Analytics
 
 ![Analytics](./images/admin/day-7/analytics.png)
 
-### Tela: Permissoes
-O que fazer:
-- Entender grupos de acesso
-- Ver quais menus cada perfil pode enxergar
+---
 
-Imagem esperada: Permissoes
+## 16. Permissoes e Usuarios do Sistema
+
+### Para que serve
+Essa area existe para quem divide a operacao com outras pessoas.
+
+### O que voce controla aqui
+- quem pode acessar o painel
+- quais telas cada pessoa pode ver
+- quem tem acesso total e quem tem acesso limitado
+
+### Regra de negocio importante
+Nem todo mundo precisa ver tudo.
+Controlar permissao protege o negocio e evita erros operacionais.
+
+### Quando usar
+- quando entrar uma nova pessoa na equipe
+- quando mudar responsabilidade de alguem
+- quando for preciso remover acesso
+
+Imagem: Permissoes
 
 ![Permissoes](./images/admin/day-7/permissoes.png)
 
-### Tela: Usuarios do Sistema
-O que fazer:
-- Criar novos admins
-- Atribuir permissao correta
-- Evitar dar acesso total sem necessidade
-
-Impacto nas proximas telas:
-- Organiza a operacao em equipe com menos risco
-
-Imagem esperada: Usuarios do Sistema
+Imagem: Usuarios do sistema
 
 ![Usuarios do Sistema](./images/admin/day-7/usuarios-sistema.png)
 
-### Checklist do Dia 7
-- Ler os indicadores principais
-- Entender quem pode acessar o que
-- Saber criar ou editar um admin
+---
+
+## Rotina recomendada do gestor
+
+### Todo dia
+- abrir o `Dashboard`
+- verificar `Aulas Teste`
+- conferir `Agendamentos`
+- acompanhar `Presenca`
+- olhar `Faturas` pendentes quando estiver em periodo de cobranca
+
+### Toda semana
+- revisar `Turmas`
+- acompanhar faltas e lotacao
+- usar `WhatsApp` para relacionamento e cobranca
+- revisar `Analytics`
+
+### Todo mes
+- gerar e acompanhar `Faturas`
+- revisar `Pagamentos de Professores`
+- analisar crescimento, ocupacao e retencao
+- atualizar `Landing Page` ou `Configuracoes` se algo do negocio mudou
 
 ---
 
-## Rotina recomendada depois da 1a semana
+## Em uma frase: como pensar o sistema
 
-Toda manha:
-- Abrir `Dashboard`
-- Revisar `Aulas Teste`
-- Conferir `Agendamentos`
-- Conferir `Presenca`
+Se quiser resumir o sistema em linguagem simples, pense assim:
 
-Ao longo da semana:
-- Atualizar `Alunos`
-- Enviar mensagens pelo `WhatsApp`
-- Acompanhar `Faturas`
-
-No fechamento semanal ou mensal:
-- Revisar `Analytics`
-- Conferir `Pagamentos de Professores`
-- Ajustar `Landing Page` e `Configuracoes` se necessario
+- `Dashboard` mostra o que esta acontecendo
+- `Cadastros` organizam a operacao
+- `Agendamentos` controlam a ocupacao
+- `Faturas` controlam o dinheiro que entra
+- `WhatsApp` ajuda a manter o cliente perto
+- `Analytics` ajuda voce a decidir melhor
 
 ---
 
-## Resumo rapido para o novo admin
+## Resumo final para quem nao e de TI
 
-Se lembrar so de uma ordem, use esta:
+Voce nao precisa entender tecnologia para usar esse sistema.
+O que importa e entender a logica do negocio:
 
-1. Configurar base
-2. Criar estrutura
-3. Cadastrar alunos
-4. Operar agenda e presenca
-5. Cobrar e comunicar
-6. Analisar resultados
+1. organizar a estrutura
+2. cadastrar corretamente as pessoas
+3. acompanhar a agenda
+4. cuidar da cobranca
+5. manter contato com os clientes
+6. olhar os resultados e ajustar a operacao
+
+Se essas seis partes estiverem em ordem, o sistema passa a trabalhar a favor da sua gestao.

@@ -88,9 +88,9 @@ export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string)
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <div className="max-w-[34rem]">
             <SectionLabel light>Turmas em destaque</SectionLabel>
-            <SectionTitle light className="max-w-[12ch]">
-              ESCOLHA O NÍVEL. SINTA A EVOLUÇÃO ANTES MESMO DO PRIMEIRO TREINO.
-            </SectionTitle>
+            <h2 className="mb-5 max-w-[12ch] text-[clamp(2rem,4.5vw,3.5rem)] font-extrabold uppercase leading-[1.0] tracking-[-0.02em] text-white">
+              Escolha o nível. Sinta a evolução antes mesmo do primeiro treino.
+            </h2>
           </div>
           <div className="landing-panel-soft p-6">
             <p className="text-sm leading-8 text-white/66 sm:text-base">
@@ -134,11 +134,11 @@ export function ClassesSection({ onSelectClass }: { onSelectClass?: (id: string)
                     <span className="inline-flex rounded-full border border-secondary/25 bg-secondary/12 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-secondary/90">
                       {formatLevelLabel(c.level)}
                     </span>
-                    <h3 className="mt-4 max-w-[13ch] font-heading text-[1.8rem] font-extrabold leading-[0.98] tracking-[-0.04em] text-white">
+                    <h3 className="mt-4 max-w-[13ch] text-[1.6rem] font-extrabold leading-[1.05] tracking-[-0.02em] text-white">
                       {c.name}
                     </h3>
                   </div>
-                  <span className="font-brand text-[2.2rem] leading-none tracking-[0.14em] text-white/14">
+                  <span className="text-[2rem] font-extrabold leading-none tracking-[0.06em] text-white/12">
                     {String(c.max_students).padStart(2, "0")}
                   </span>
                 </div>
