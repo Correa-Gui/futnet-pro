@@ -125,6 +125,23 @@ export function CourtBookingSection() {
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
+  const { data: rentalPrice } = useQuery({
+    queryKey: ["court-rental-price"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "court_rental_price")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value ? Number(data.value) : null;
+    },
+  });
+
+  const priceDisplay = rentalPrice != null
+    ? `R$ ${rentalPrice.toFixed(2).replace(".", ",")}`
+    : "R$ —";
+
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 30);
 
@@ -210,7 +227,6 @@ export function CourtBookingSection() {
           end_time: endTime,
           requester_name: validation.data.requester_name,
           requester_phone: rawPhone,
-          price: 80,
         },
       });
 
@@ -283,7 +299,7 @@ export function CourtBookingSection() {
                     { label: "Quadra", value: selectedCourt?.name || "-" },
                     { label: "Data", value: selectedDate ? format(selectedDate, "dd/MM/yyyy") : "-" },
                     { label: "Horário", value: selectedSlot || "-" },
-                    { label: "Valor", value: "R$ 80,00" },
+                    { label: "Valor", value: priceDisplay },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-[#FAF7F2] px-5 py-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">
@@ -520,7 +536,7 @@ export function CourtBookingSection() {
                               ? `${selectedSlot} – ${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
                               : "-",
                           },
-                          { label: "Valor", value: "R$ 80,00" },
+                          { label: "Valor", value: priceDisplay },
                         ].map((item) => (
                           <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-white px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">
