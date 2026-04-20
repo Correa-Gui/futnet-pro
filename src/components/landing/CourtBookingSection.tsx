@@ -55,24 +55,8 @@ function addMinutes(time: string, mins: number): string {
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-function expandToHalfHourSlots(start: string, end: string): string[] {
-  const slots: string[] = [];
-  let cur = start;
-  while (cur < end) {
-    slots.push(cur);
-    cur = addMinutes(cur, 30);
-  }
-  return slots;
-}
-
-function slotsBetween(start: string, end: string): string[] {
-  return expandToHalfHourSlots(start, end);
-}
-
-function calcDurationMinutes(start: string, end: string): number {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  return (eh * 60 + em) - (sh * 60 + sm);
+function slotLabel(slot: string): string {
+  return `${slot} – ${addMinutes(slot, 60)}`;
 }
 
 function CourtCard({
@@ -145,7 +129,6 @@ export function CourtBookingSection() {
     const slots: string[] = [];
     for (let h = openHour; h < closeHour; h++) {
       slots.push(`${String(h).padStart(2, "0")}:00`);
-      slots.push(`${String(h).padStart(2, "0")}:30`);
     }
     return slots;
   }, [openHour, closeHour]);
@@ -153,8 +136,7 @@ export function CourtBookingSection() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedStart, setSelectedStart] = useState<string | null>(null);
-  const [selectedEnd, setSelectedEnd] = useState<string | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
@@ -224,72 +206,53 @@ export function CourtBookingSection() {
 
   const unavailableSlots = useMemo(() => {
     const blocked = new Set<string>();
-    existingBookings.forEach((b) => {
-      const start = b.start_time?.slice(0, 5);
-      const end = b.end_time?.slice(0, 5);
-      if (start && end) {
-        expandToHalfHourSlots(start, end).forEach((s) => blocked.add(s));
-      } else if (start) {
-        blocked.add(start);
-      }
-    });
-    classSessions.forEach((session) => {
-      const start = session.classes?.start_time?.slice(0, 5);
-      const end = session.classes?.end_time?.slice(0, 5);
-      if (start && end) {
-        expandToHalfHourSlots(start, end).forEach((s) => blocked.add(s));
-      } else if (start) {
-        blocked.add(start);
-      }
-    });
+    for (const slot of TIME_SLOTS) {
+      const slotEnd = addMinutes(slot, 60);
+      const blockedByBooking = existingBookings.some((b) => {
+        const s = b.start_time?.slice(0, 5);
+        const e = b.end_time?.slice(0, 5);
+        return s && e && slot < e && slotEnd > s;
+      });
+      const blockedByClass = classSessions.some((cs) => {
+        const s = cs.classes?.start_time?.slice(0, 5);
+        const e = cs.classes?.end_time?.slice(0, 5);
+        return s && e && slot < e && slotEnd > s;
+      });
+      if (blockedByBooking || blockedByClass) blocked.add(slot);
+    }
     return blocked;
-  }, [existingBookings, classSessions]);
+  }, [existingBookings, classSessions, TIME_SLOTS]);
 
   const availableCount = TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).length;
 
-  const bookingEndTime = selectedStart
-    ? addMinutes(selectedEnd ?? selectedStart, 30)
-    : null;
-
-  const durationMinutes = selectedStart && bookingEndTime
-    ? calcDurationMinutes(selectedStart, bookingEndTime)
-    : 0;
-
-  const totalPrice = rentalPrice != null && durationMinutes > 0
-    ? rentalPrice * (durationMinutes / 60)
-    : null;
-
+  const bookingStart = selectedSlots[0] ?? null;
+  const bookingEnd = selectedSlots.length > 0 ? addMinutes(selectedSlots[selectedSlots.length - 1], 60) : null;
+  const totalHours = selectedSlots.length;
+  const totalPrice = rentalPrice != null && totalHours > 0 ? rentalPrice * totalHours : null;
   const totalPriceDisplay = totalPrice != null
     ? `R$ ${totalPrice.toFixed(2).replace(".", ",")}`
     : "—";
-
-  const durationLabel = durationMinutes >= 60
-    ? `${durationMinutes / 60}h`
-    : `${durationMinutes}min`;
+  const durationLabel = totalHours === 1 ? "1h" : `${totalHours}h`;
 
   const handleSlotClick = (slot: string) => {
-    if (!selectedStart) {
-      setSelectedStart(slot);
-      setSelectedEnd(null);
-      return;
-    }
-    if (slot === selectedStart && !selectedEnd) {
-      setSelectedStart(null);
-      return;
-    }
-    if (slot > selectedStart) {
-      const range = slotsBetween(selectedStart, slot);
-      const hasConflict = range.some((s) => unavailableSlots.has(s));
-      if (hasConflict) {
-        setSelectedStart(slot);
-        setSelectedEnd(null);
-      } else {
-        setSelectedEnd(slot);
+    setSelectedSlots((prev) => {
+      const idx = prev.indexOf(slot);
+      if (idx !== -1) {
+        // Deselect: only allow removing first or last
+        if (idx === 0) return prev.slice(1);
+        if (idx === prev.length - 1) return prev.slice(0, -1);
+        // Middle: reset to just this one
+        return [slot];
       }
-      return;
-    }
-    setSelectedStart(slot);
-    setSelectedEnd(null);
+      if (prev.length === 0) return [slot];
+      const allIdx = TIME_SLOTS.indexOf(slot);
+      const firstIdx = TIME_SLOTS.indexOf(prev[0]);
+      const lastIdx = TIME_SLOTS.indexOf(prev[prev.length - 1]);
+      if (allIdx === firstIdx - 1) return [slot, ...prev];
+      if (allIdx === lastIdx + 1) return [...prev, slot];
+      // Not adjacent: start fresh
+      return [slot];
+    });
   };
 
   const createBooking = useMutation({
@@ -301,7 +264,7 @@ export function CourtBookingSection() {
       });
 
       if (!validation.success) throw new Error(validation.error.errors[0].message);
-      if (!selectedCourt || !dateStr || !selectedStart || !bookingEndTime) {
+      if (!selectedCourt || !dateStr || !bookingStart || !bookingEnd) {
         throw new Error("Selecione quadra, data e horário");
       }
 
@@ -310,8 +273,8 @@ export function CourtBookingSection() {
         body: {
           court_id: selectedCourt.id,
           date: dateStr,
-          start_time: selectedStart,
-          end_time: bookingEndTime,
+          start_time: bookingStart,
+          end_time: bookingEnd,
           requester_name: validation.data.requester_name,
           requester_phone: rawPhone,
         },
@@ -329,8 +292,7 @@ export function CourtBookingSection() {
   const handleSelectCourt = (court: Court) => {
     setSelectedCourt(court);
     setSelectedDate(undefined);
-    setSelectedStart(null);
-    setSelectedEnd(null);
+    setSelectedSlots([]);
     setStep(2);
   };
 
@@ -339,8 +301,7 @@ export function CourtBookingSection() {
     setStep(1);
     setSelectedCourt(null);
     setSelectedDate(undefined);
-    setSelectedStart(null);
-    setSelectedEnd(null);
+    setSelectedSlots([]);
     setForm({ requester_name: "", requester_phone: "" });
   };
 
@@ -392,8 +353,8 @@ export function CourtBookingSection() {
                     { label: "Data", value: selectedDate ? format(selectedDate, "dd/MM/yyyy") : "-" },
                     {
                       label: "Horário",
-                      value: selectedStart && bookingEndTime
-                        ? `${selectedStart} – ${bookingEndTime} (${durationLabel})`
+                      value: bookingStart && bookingEnd
+                        ? `${bookingStart} – ${bookingEnd} (${durationLabel})`
                         : "-",
                     },
                     { label: "Valor total", value: totalPriceDisplay },
@@ -563,44 +524,38 @@ export function CourtBookingSection() {
                       ) : (
                         <div className="mt-6">
                           <p className="mb-3 text-[11px] text-[#9B8770]">
-                            Clique no início e depois no fim do período desejado.
+                            Clique nos horários desejados — cada bloco = 1 hora.
                           </p>
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
                             {availableCount === 0 && (
                               <p className="col-span-full text-sm text-[#9B8770]">
                                 Nenhum horário disponível para esta data.
                               </p>
                             )}
                             {TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).map((slot) => {
-                              const isStart = selectedStart === slot && !selectedEnd;
-                              const isInRange = selectedStart && selectedEnd
-                                ? slot >= selectedStart && slot <= selectedEnd
-                                : selectedStart === slot;
+                              const isSelected = selectedSlots.includes(slot);
                               return (
                                 <button
                                   key={slot}
                                   onClick={() => handleSlotClick(slot)}
                                   className={cn(
-                                    "rounded-xl border px-3 py-3 text-sm font-semibold transition-all",
-                                    isInRange
+                                    "rounded-xl border px-4 py-3 text-sm font-semibold transition-all text-left",
+                                    isSelected
                                       ? "border-[#F97316] bg-[#F97316] text-white shadow-[0_4px_16px_rgba(249,115,22,0.2)]"
-                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6",
-                                    isStart && !selectedEnd && "ring-2 ring-[#F97316]/40"
+                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6"
                                   )}
                                 >
-                                  {slot}
+                                  {slotLabel(slot)}
                                 </button>
                               );
                             })}
                           </div>
 
-                          {selectedStart && (
+                          {selectedSlots.length > 0 && (
                             <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#F97316]/30 bg-[#F97316]/6 px-4 py-3">
                               <div className="text-sm font-semibold text-[#C2550A]">
-                                {selectedStart} – {bookingEndTime}
-                                {durationMinutes > 0 && (
-                                  <span className="ml-2 font-normal text-[#9B8770]">({durationLabel})</span>
-                                )}
+                                {bookingStart} – {bookingEnd}
+                                <span className="ml-2 font-normal text-[#9B8770]">({durationLabel})</span>
                               </div>
                               {totalPrice != null && (
                                 <span className="text-base font-extrabold text-[#C2550A]">
@@ -610,7 +565,7 @@ export function CourtBookingSection() {
                             </div>
                           )}
 
-                          {selectedStart && (
+                          {selectedSlots.length > 0 && (
                             <button
                               onClick={() => setStep(3)}
                               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F97316] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#EA6C0A]"
@@ -654,8 +609,8 @@ export function CourtBookingSection() {
                           },
                           {
                             label: "Horário",
-                            value: selectedStart && bookingEndTime
-                              ? `${selectedStart} – ${bookingEndTime} (${durationLabel})`
+                            value: bookingStart && bookingEnd
+                              ? `${bookingStart} – ${bookingEnd} (${durationLabel})`
                               : "-",
                           },
                           { label: "Valor total", value: totalPriceDisplay },
