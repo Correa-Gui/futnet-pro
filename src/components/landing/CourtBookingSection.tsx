@@ -469,20 +469,22 @@ export function CourtBookingSection() {
                       ) : (
                         <div className="mt-6">
                           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                            {TIME_SLOTS.map((slot) => {
-                              const isUnavailable = unavailableSlots.has(slot);
+                            {availableCount === 0 && (
+                              <p className="col-span-full text-sm text-[#9B8770]">
+                                Nenhum horário disponível para esta data.
+                              </p>
+                            )}
+                            {TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).map((slot) => {
                               const isSelected = selectedSlot === slot;
-
                               return (
                                 <button
                                   key={slot}
-                                  disabled={isUnavailable}
                                   onClick={() => setSelectedSlot(slot)}
                                   className={cn(
                                     "rounded-xl border px-3 py-3 text-sm font-semibold transition-all",
-                                    isSelected && "border-[#F97316] bg-[#F97316] text-white shadow-[0_8px_24px_rgba(249,115,22,0.2)]",
-                                    !isSelected && !isUnavailable && "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6",
-                                    isUnavailable && "cursor-not-allowed border-[#EAE1D2] bg-[#FAF7F2] text-[#C5B8A0] line-through"
+                                    isSelected
+                                      ? "border-[#F97316] bg-[#F97316] text-white shadow-[0_8px_24px_rgba(249,115,22,0.2)]"
+                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6"
                                   )}
                                 >
                                   {slot}
