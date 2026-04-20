@@ -12,10 +12,18 @@ const DEFAULT_SETTINGS: LandingSettings = {
   primary_cta_url: "/cadastro",
 };
 
+export interface GalleryImage {
+  url: string;
+  label: string;
+}
+
 export function useLandingData() {
   const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [sections, setSections] = useState<Record<string, SectionConfig>>({});
   const [businessHours, setBusinessHours] = useState<BusinessHoursData | null>(null);
+  const [dayUsePrice, setDayUsePrice] = useState<string | null>(null);
+  const [courtsCount, setCourtsCount] = useState<number>(0);
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -23,7 +31,10 @@ export function useLandingData() {
       supabase.from("landing_page_settings").select("*").limit(1).single(),
       supabase.from("landing_page_config").select("*").order("display_order"),
       supabase.from("system_config").select("value").eq("key", "business_hours").maybeSingle(),
-    ]).then(([settingsRes, sectionsRes, hoursRes]) => {
+      supabase.from("system_config").select("value").eq("key", "day_use_price").maybeSingle(),
+      supabase.from("system_config").select("value").eq("key", "gallery_images").maybeSingle(),
+      supabase.from("courts").select("id", { count: "exact", head: true }).eq("is_active", true),
+    ]).then(([settingsRes, sectionsRes, hoursRes, dayUsePriceRes, galleryRes, courtsRes]) => {
       if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
       if (sectionsRes.data) {
         const map: Record<string, SectionConfig> = {};
@@ -39,6 +50,20 @@ export function useLandingData() {
           setBusinessHours(null);
         }
       }
+      if (dayUsePriceRes.data?.value) {
+        setDayUsePrice(dayUsePriceRes.data.value);
+      }
+      if (galleryRes.data?.value) {
+        try {
+          const parsed = JSON.parse(galleryRes.data.value);
+          if (Array.isArray(parsed)) setGalleryImages(parsed);
+        } catch {
+          setGalleryImages([]);
+        }
+      }
+      if (courtsRes.count !== null) {
+        setCourtsCount(courtsRes.count);
+      }
       setLoaded(true);
     });
   }, []);
@@ -51,5 +76,5 @@ export function useLandingData() {
     return sections[key]?.image_url || fallback;
   }, [sections]);
 
-  return { settings, sections, loaded, isVisible, getImage, businessHours };
+  return { settings, sections, loaded, isVisible, getImage, businessHours, dayUsePrice, courtsCount, galleryImages };
 }

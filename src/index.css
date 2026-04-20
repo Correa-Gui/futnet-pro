@@ -175,23 +175,23 @@
   }
 
   .landing-panel {
-    @apply rounded-[28px] border border-white/[0.10] bg-white/[0.04] backdrop-blur-2xl shadow-[0_28px_90px_rgba(0,0,0,0.35)];
+    @apply rounded-[28px] border border-[#DDD0B8] bg-white shadow-[0_4px_32px_rgba(90,60,20,0.08)];
   }
 
   .landing-panel-soft {
-    @apply rounded-[24px] border border-white/[0.08] bg-white/[0.03] backdrop-blur-xl;
+    @apply rounded-[24px] border border-[#E8DECE] bg-[#FAF7F2];
   }
 
   .landing-eyebrow {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.05] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-white/70;
+    @apply inline-flex items-center gap-2 rounded-full border border-[#DDD0B8] bg-[#FAF7F2] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.32em] text-[#6B5740];
   }
 
   .landing-input {
-    @apply w-full rounded-2xl border border-white/[0.10] bg-white/[0.04] px-4 py-3.5 text-sm text-white outline-none transition duration-200 placeholder:text-white/[0.35] focus:border-secondary/70 focus:bg-white/[0.06] focus:ring-2 focus:ring-secondary/20;
+    @apply w-full rounded-2xl border border-[#DDD0B8] bg-white px-4 py-3.5 text-sm text-[#1A1208] outline-none transition duration-200 placeholder:text-[#B8A898] focus:border-[#F97316]/60 focus:ring-2 focus:ring-[#F97316]/15;
   }
 
   .landing-muted-copy {
-    @apply text-white/[0.62];
+    @apply text-[#6B5740];
   }
 
   .kinetic-glass {

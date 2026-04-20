@@ -29,16 +29,9 @@ export function Section({
   );
 }
 
-export function SectionLabel({ children, light = false }: { children: React.ReactNode; light?: boolean }) {
+export function SectionLabel({ children }: { children: React.ReactNode; light?: boolean }) {
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] mb-4 font-body",
-        light
-          ? "border-white/12 bg-white/[0.04] text-white/68"
-          : "border-white/10 bg-white/[0.03] text-white/60"
-      )}
-    >
+    <span className="inline-flex items-center gap-2 rounded-full border border-[#0EA5E9]/25 bg-[#0EA5E9]/8 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.28em] mb-4 font-body text-[#0369A1]">
       {children}
     </span>
   );
@@ -46,7 +39,6 @@ export function SectionLabel({ children, light = false }: { children: React.Reac
 
 export function SectionTitle({
   children,
-  light = false,
   className = "",
 }: {
   children: React.ReactNode;
@@ -56,8 +48,7 @@ export function SectionTitle({
   return (
     <h2
       className={cn(
-        "font-landing-headline text-[clamp(2.1rem,4.8vw,4.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] mb-5",
-        light ? "text-white" : "text-white",
+        "font-landing-headline text-[clamp(2.1rem,4.8vw,4.6rem)] font-extrabold leading-[0.95] tracking-[-0.05em] mb-5 text-[#1A1208]",
         className
       )}
     >

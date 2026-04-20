@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2, Clock } from "lucide-react";
+import { Save, Upload, Eye, EyeOff, Pencil, Image as ImageIcon, ExternalLink, Loader2, Clock, Plus, Trash2, GripVertical } from "lucide-react";
 import { useBusinessHours, DEFAULT_BUSINESS_HOURS, type BusinessHours } from "@/hooks/useBusinessHours";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -35,6 +35,11 @@ interface SectionConfig {
   content: any;
   image_url: string | null;
   display_order: number;
+}
+
+interface GalleryImage {
+  url: string;
+  label: string;
 }
 
 const SECTION_LABELS: Record<string, string> = {
@@ -80,8 +85,16 @@ export default function LandingPageEditor() {
   const { data: fetchedHours } = useBusinessHours();
   const { toast } = useToast();
 
-  // Sync fetched hours
-  useState(() => { /* handled by effect below */ });
+  // Day use price
+  const [dayUsePrice, setDayUsePrice] = useState("");
+  const [savingDayUse, setSavingDayUse] = useState(false);
+
+  // Gallery images
+  const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
+  const [savingGallery, setSavingGallery] = useState(false);
+  const [newGalleryUrl, setNewGalleryUrl] = useState("");
+  const [newGalleryLabel, setNewGalleryLabel] = useState("");
+
   const [hoursLoaded, setHoursLoaded] = useState(false);
   if (fetchedHours && !hoursLoaded) {
     setBusinessHours(fetchedHours);
@@ -90,12 +103,21 @@ export default function LandingPageEditor() {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [settingsRes, sectionsRes] = await Promise.all([
+    const [settingsRes, sectionsRes, dayUsePriceRes, galleryRes] = await Promise.all([
       supabase.from("landing_page_settings").select("*").limit(1).single(),
       supabase.from("landing_page_config").select("*").order("display_order"),
+      supabase.from("system_config").select("value").eq("key", "day_use_price").maybeSingle(),
+      supabase.from("system_config").select("value").eq("key", "gallery_images").maybeSingle(),
     ]);
     if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
     if (sectionsRes.data) setSections(sectionsRes.data as unknown as SectionConfig[]);
+    if (dayUsePriceRes.data?.value) setDayUsePrice(dayUsePriceRes.data.value);
+    if (galleryRes.data?.value) {
+      try {
+        const parsed = JSON.parse(galleryRes.data.value);
+        if (Array.isArray(parsed)) setGalleryImages(parsed);
+      } catch { /* ignore */ }
+    }
     setLoading(false);
   }, []);
 
@@ -127,6 +149,56 @@ export default function LandingPageEditor() {
     } else {
       toast({ title: "Configurações salvas!" });
     }
+  };
+
+  const saveDayUsePrice = async () => {
+    setSavingDayUse(true);
+    const { error } = await supabase
+      .from("system_config")
+      .upsert({ key: "day_use_price", value: dayUsePrice.trim() }, { onConflict: "key" });
+    setSavingDayUse(false);
+    if (error) {
+      toast({ title: "Erro ao salvar preço", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Preço Day Use salvo!" });
+    }
+  };
+
+  const saveGalleryImages = async (images: GalleryImage[]) => {
+    setSavingGallery(true);
+    const { error } = await supabase
+      .from("system_config")
+      .upsert({ key: "gallery_images", value: JSON.stringify(images) }, { onConflict: "key" });
+    setSavingGallery(false);
+    if (error) {
+      toast({ title: "Erro ao salvar galeria", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Galeria atualizada!" });
+    }
+  };
+
+  const addGalleryImage = async () => {
+    if (!newGalleryUrl.trim()) return;
+    const updated = [...galleryImages, { url: newGalleryUrl.trim(), label: newGalleryLabel.trim() || "Imagem" }];
+    setGalleryImages(updated);
+    setNewGalleryUrl("");
+    setNewGalleryLabel("");
+    await saveGalleryImages(updated);
+  };
+
+  const removeGalleryImage = async (index: number) => {
+    const updated = galleryImages.filter((_, i) => i !== index);
+    setGalleryImages(updated);
+    await saveGalleryImages(updated);
+  };
+
+  const moveGalleryImage = async (from: number, to: number) => {
+    if (to < 0 || to >= galleryImages.length) return;
+    const updated = [...galleryImages];
+    const [item] = updated.splice(from, 1);
+    updated.splice(to, 0, item);
+    setGalleryImages(updated);
+    await saveGalleryImages(updated);
   };
 
   const toggleVisibility = async (section: SectionConfig) => {
@@ -218,6 +290,7 @@ export default function LandingPageEditor() {
       <Tabs defaultValue="geral">
         <TabsList>
           <TabsTrigger value="geral">Configurações Gerais</TabsTrigger>
+          <TabsTrigger value="galeria">Galeria</TabsTrigger>
           <TabsTrigger value="secoes">Seções</TabsTrigger>
         </TabsList>
 
@@ -272,6 +345,36 @@ export default function LandingPageEditor() {
                   >
                     {uploadingFor === "hero" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
                     {settings.hero_image_url ? "Trocar Imagem" : "Enviar Imagem"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Day Use Price */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Preço do Day Use</CardTitle>
+                  <CardDescription>
+                    Valor por pessoa exibido na landing page. Use apenas o número (ex: 120) ou com casas decimais (ex: 120.00).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="text-muted-foreground text-sm font-medium">R$</span>
+                    <Input
+                      value={dayUsePrice}
+                      onChange={(e) => setDayUsePrice(e.target.value)}
+                      placeholder="120"
+                      className="max-w-[160px]"
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={saveDayUsePrice}
+                    disabled={savingDayUse}
+                  >
+                    {savingDayUse ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Salvar Preço
                   </Button>
                 </CardContent>
               </Card>
@@ -400,13 +503,100 @@ export default function LandingPageEditor() {
           )}
         </TabsContent>
 
+        {/* ── TAB: Gallery ── */}
+        <TabsContent value="galeria" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Imagens da Galeria — O Espaço</CardTitle>
+              <CardDescription>
+                Imagens exibidas na seção "O Espaço". A primeira sempre ocupa o espaço maior (2×2). Se vazio, usa as imagens padrão.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {galleryImages.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma imagem adicionada. Usando imagens padrão.</p>
+              )}
+
+              {galleryImages.map((img, i) => (
+                <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
+                    <img src={img.url} alt={img.label} className="h-full w-full object-cover" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{img.label}</p>
+                    <p className="text-xs text-muted-foreground truncate">{img.url}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={i === 0}
+                      onClick={() => moveGalleryImage(i, i - 1)}
+                      title="Mover para cima"
+                    >
+                      ↑
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      disabled={i === galleryImages.length - 1}
+                      onClick={() => moveGalleryImage(i, i + 1)}
+                      title="Mover para baixo"
+                    >
+                      ↓
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      onClick={() => removeGalleryImage(i)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+
+              <div className="rounded-lg border border-dashed p-4 space-y-3">
+                <p className="text-sm font-medium">Adicionar imagem</p>
+                <div className="space-y-2">
+                  <Label className="text-xs">URL da imagem</Label>
+                  <Input
+                    value={newGalleryUrl}
+                    onChange={(e) => setNewGalleryUrl(e.target.value)}
+                    placeholder="https://..."
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs">Legenda</Label>
+                  <Input
+                    value={newGalleryLabel}
+                    onChange={(e) => setNewGalleryLabel(e.target.value)}
+                    placeholder="Quadras premium"
+                  />
+                </div>
+                <Button
+                  size="sm"
+                  onClick={addGalleryImage}
+                  disabled={!newGalleryUrl.trim() || savingGallery}
+                >
+                  {savingGallery ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
+                  Adicionar
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         {/* ── TAB: Sections ── */}
         <TabsContent value="secoes" className="space-y-4">
           {sections.map((section) => (
             <Card key={section.id}>
               <CardContent className="flex items-center justify-between gap-4 py-4">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  {/* Thumbnail */}
                   <div className="w-16 h-12 rounded-md bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
                     {section.image_url ? (
                       <img src={section.image_url} alt="" className="w-full h-full object-cover" />
@@ -519,4 +709,3 @@ export default function LandingPageEditor() {
     </div>
   );
 }
-
