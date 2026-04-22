@@ -32,6 +32,7 @@ type Court = {
   name: string;
   location: string | null;
   surface_type: string | null;
+  slot_offset_minutes: number | null;
 };
 
 type ExistingBooking = {
@@ -126,12 +127,16 @@ export function CourtBookingSection() {
   const openHour = businessHours?.open_hour ?? 6;
   const closeHour = businessHours?.close_hour ?? 22;
   const TIME_SLOTS = useMemo(() => {
+    const offset = selectedCourt?.slot_offset_minutes ?? 30;
     const slots: string[] = [];
     for (let h = openHour; h < closeHour; h++) {
-      slots.push(`${String(h).padStart(2, "0")}:30`);
+      const totalMins = h * 60 + offset;
+      const hh = Math.floor(totalMins / 60);
+      const mm = totalMins % 60;
+      slots.push(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
     }
     return slots;
-  }, [openHour, closeHour]);
+  }, [openHour, closeHour, selectedCourt?.slot_offset_minutes]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
@@ -204,9 +209,41 @@ export function CourtBookingSection() {
     enabled: !!selectedCourt && !!dateStr,
   });
 
+  const { data: recurringClasses = [] } = useQuery<{ start_time: string; end_time: string }[]>({
+    queryKey: ["recurring-classes-landing", selectedCourt?.id, selectedDate?.toISOString()],
+    queryFn: async () => {
+      if (!selectedCourt || !selectedDate) return [];
+      const dayOfWeek = selectedDate.getDay();
+      const { data, error } = await supabase
+        .from("classes")
+        .select("start_time, end_time")
+        .eq("court_id", selectedCourt.id)
+        .eq("status", "active")
+        .contains("day_of_week", [dayOfWeek]);
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!selectedCourt && !!selectedDate,
+  });
+
   const unavailableSlots = useMemo(() => {
     const blocked = new Set<string>();
+    const now = new Date();
+    const isToday = selectedDate
+      ? format(selectedDate, "yyyy-MM-dd") === format(now, "yyyy-MM-dd")
+      : false;
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
     for (const slot of TIME_SLOTS) {
+      // Block slots already past on today
+      if (isToday) {
+        const [sh, sm] = slot.split(":").map(Number);
+        if (sh * 60 + sm <= nowMinutes) {
+          blocked.add(slot);
+          continue;
+        }
+      }
+
       const slotEnd = addMinutes(slot, 60);
       const blockedByBooking = existingBookings.some((b) => {
         const s = b.start_time?.slice(0, 5);
@@ -218,10 +255,15 @@ export function CourtBookingSection() {
         const e = cs.classes?.end_time?.slice(0, 5);
         return s && e && slot < e && slotEnd > s;
       });
-      if (blockedByBooking || blockedByClass) blocked.add(slot);
+      const blockedByRecurring = recurringClasses.some((cls) => {
+        const s = cls.start_time?.slice(0, 5);
+        const e = cls.end_time?.slice(0, 5);
+        return s && e && slot < e && slotEnd > s;
+      });
+      if (blockedByBooking || blockedByClass || blockedByRecurring) blocked.add(slot);
     }
     return blocked;
-  }, [existingBookings, classSessions, TIME_SLOTS]);
+  }, [existingBookings, classSessions, recurringClasses, TIME_SLOTS, selectedDate]);
 
   const availableCount = TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).length;
 
