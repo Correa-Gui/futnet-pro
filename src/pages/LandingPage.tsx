@@ -121,14 +121,14 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { settings, loaded, getImage, businessHours, dayUsePrice, courtsCount, galleryImages } = useLandingData();
+  const { settings, loaded, getImage, businessHours, dayUsePrice, galleryImages } = useLandingData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   const hasClasses = supportsClasses(settings.business_mode);
   const hasRentals = supportsRentals(settings.business_mode);
   const heroImage = settings.hero_image_url || getImage("hero", landingImages.hero);
-  const whatsappLink = getWhatsAppLink(settings.whatsapp_number, "Olá! Quero mais informações sobre a Arena Hub.");
+  const whatsappLink = getWhatsAppLink(settings.whatsapp_number, "Olá! Quero mais informações sobre a Estancia Beach.");
   const trialLink = "#aula-teste";
   const courtLink = "#reservar-quadra";
   const dayUseLink = "#day-use";
@@ -155,9 +155,6 @@ export default function LandingPage() {
     ...(hasRentals ? [{ label: "Reservar Quadra", href: courtLink }] : []),
     { label: "Contato", href: "#contato" },
   ];
-
-  // Dynamic courts count stat — only show if we have courts
-  const stats = courtsCount > 0 ? [{ value: String(courtsCount), label: "Quadras" }] : [];
 
   // Day use price display
   const dayUsePriceDisplay = dayUsePrice
@@ -378,13 +375,13 @@ export default function LandingPage() {
             </div>
 
             <h1 className="font-landing-headline text-[clamp(3rem,8vw,5.5rem)] font-extrabold uppercase leading-[0.95] tracking-[-0.03em] text-[#1A1208]">
-              A arena<br />
-              <span className="text-[#F97316]">do futevôlei</span><br />
-              de verdade.
+              Tradição<br />
+              <span className="text-[#F97316]">Esporte</span><br />
+              Natureza.
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-[#6B5740]">
-              Quadras premium, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra, venha no day use ou experimente uma aula grátis.
+              Quadras, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra, venha no day use ou experimente uma aula grátis.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -401,16 +398,6 @@ export default function LandingPage() {
               )}
             </div>
 
-            {stats.length > 0 && (
-              <div className="mt-12 grid grid-cols-1 gap-6 border-t border-[#E8DECE] pt-8 max-w-xs">
-                {stats.map((s) => (
-                  <div key={s.label}>
-                    <p className="text-2xl font-extrabold text-[#1A1208]">{s.value}</p>
-                    <p className="mt-0.5 text-[11px] uppercase tracking-wider text-[#9B8770]">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* RIGHT — service pods */}
@@ -790,7 +777,7 @@ export default function LandingPage() {
 
         <div className="border-t border-[#E8DECE] px-6 py-5 text-center">
           <p className="text-xs text-[#B8A888]">
-            © {new Date().getFullYear()} Arena Hub. Todos os direitos reservados.
+            © {new Date().getFullYear()} Estancia Beach. Todos os direitos reservados.
           </p>
         </div>
       </footer>
