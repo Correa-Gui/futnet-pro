@@ -126,6 +126,14 @@ export function CourtBookingSection() {
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
   const openHour = businessHours?.open_hour ?? 6;
   const closeHour = businessHours?.close_hour ?? 22;
+
+  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
+  const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
+  const [submitted, setSubmitted] = useState(false);
+
   const TIME_SLOTS = useMemo(() => {
     const offset = selectedCourt?.slot_offset_minutes ?? 30;
     const slots: string[] = [];
@@ -137,13 +145,6 @@ export function CourtBookingSection() {
     }
     return slots;
   }, [openHour, closeHour, selectedCourt?.slot_offset_minutes]);
-
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
-  const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
-  const [submitted, setSubmitted] = useState(false);
 
   const { data: rentalPrice } = useQuery({
     queryKey: ["court-rental-price"],
