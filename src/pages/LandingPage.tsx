@@ -121,7 +121,7 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { settings, loaded, getImage, businessHours, dayUsePrice, courtRentalPrice, galleryImages } = useLandingData();
+  const { settings, loaded, getImage, businessHours, dayUsePrice, courtRentalPrice, companyName, galleryImages } = useLandingData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -306,7 +306,7 @@ export default function LandingPage() {
       )}>
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4">
           <a href="#hero" className="text-lg font-extrabold uppercase tracking-tight text-[#1A1208] no-underline">
-            Arena <span className="text-[#F97316]">Hub</span>
+            {companyName}
           </a>
 
           <div className="hidden items-center gap-7 lg:flex">
@@ -716,7 +716,7 @@ export default function LandingPage() {
         <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 sm:grid-cols-3">
           <div>
             <p className="text-lg font-extrabold uppercase tracking-tight text-[#1A1208]">
-              Arena <span className="text-[#F97316]">Hub</span>
+              {companyName}
             </p>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#9B8770]">
               Quadras premium, bar completo e aulas com método. A arena feita para quem leva o futevôlei a sério.

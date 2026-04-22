@@ -23,6 +23,7 @@ export function useLandingData() {
   const [businessHours, setBusinessHours] = useState<BusinessHoursData | null>(null);
   const [dayUsePrice, setDayUsePrice] = useState<string | null>(null);
   const [courtRentalPrice, setCourtRentalPrice] = useState<string | null>(null);
+  const [companyName, setCompanyName] = useState<string>("Estancia Beach");
   const [courtsCount, setCourtsCount] = useState<number>(0);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -36,7 +37,8 @@ export function useLandingData() {
       supabase.from("system_config").select("value").eq("key", "gallery_images").maybeSingle(),
       supabase.from("courts").select("id", { count: "exact", head: true }).eq("is_active", true),
       supabase.from("system_config").select("value").eq("key", "court_rental_price").maybeSingle(),
-    ]).then(([settingsRes, sectionsRes, hoursRes, dayUsePriceRes, galleryRes, courtsRes, rentalPriceRes]) => {
+      supabase.from("system_config").select("value").eq("key", "company_name").maybeSingle(),
+    ]).then(([settingsRes, sectionsRes, hoursRes, dayUsePriceRes, galleryRes, courtsRes, rentalPriceRes, companyNameRes]) => {
       if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
       if (sectionsRes.data) {
         const map: Record<string, SectionConfig> = {};
@@ -57,6 +59,9 @@ export function useLandingData() {
       }
       if (rentalPriceRes.data?.value) {
         setCourtRentalPrice(rentalPriceRes.data.value);
+      }
+      if (companyNameRes.data?.value) {
+        setCompanyName(companyNameRes.data.value);
       }
       if (galleryRes.data?.value) {
         try {
@@ -90,5 +95,5 @@ export function useLandingData() {
     return sections[key]?.image_url || fallback;
   }, [sections]);
 
-  return { settings, sections, loaded, isVisible, getImage, businessHours, dayUsePrice, courtRentalPrice, courtsCount, galleryImages };
+  return { settings, sections, loaded, isVisible, getImage, businessHours, dayUsePrice, courtRentalPrice, companyName, courtsCount, galleryImages };
 }
