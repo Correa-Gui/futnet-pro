@@ -23,6 +23,7 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
       { key: 'professores',       title: 'Professores' },
       { key: 'usuarios-reservas', title: 'Usuários (Reservas)' },
       { key: 'agendamentos',      title: 'Agendamentos' },
+      { key: 'agendamentos-lista', title: 'Lista de Agendamentos' },
     ],
   },
   {

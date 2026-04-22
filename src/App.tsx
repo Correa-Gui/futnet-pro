@@ -41,6 +41,7 @@ import AdminAttendance from "./pages/admin/Attendance";
 import AdminInvoices from "./pages/admin/Invoices";
 import LandingPageEditor from "./pages/admin/LandingPageEditor";
 import AdminBookings from "./pages/admin/Bookings";
+import AdminBookingsTable from "./pages/admin/BookingsTable";
 import AdminAnalytics from "./pages/admin/Analytics";
 import AdminTeacherPayments from "./pages/admin/TeacherPayments";
 import AdminSettings from "./pages/admin/Settings";
@@ -108,6 +109,7 @@ const App = () => (
               <Route path="landing-page" element={<LandingPageEditor />} />
               <Route path="chatbot-intents" element={<ChatbotIntents />} />
               <Route path="agendamentos" element={<AdminBookings />} />
+              <Route path="agendamentos-lista" element={<AdminBookingsTable />} />
               <Route path="analytics" element={<AdminAnalytics />} />
               <Route path="pagamentos-professores" element={<AdminTeacherPayments />} />
               <Route path="configuracoes" element={<AdminSettings />} />
