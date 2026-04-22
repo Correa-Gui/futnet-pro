@@ -237,7 +237,7 @@ Deno.serve(async (req) => {
             ? Number(pricingMap.day_use_price || 0)
             : Number(pricingMap.court_rental_price || 0) * durationHours;
 
-      const { data: booking, error: insertError } = await supabase
+      const { data: booking, error: insertError } = await adminSupabase
         .from("court_bookings")
         .insert({
           court_id,

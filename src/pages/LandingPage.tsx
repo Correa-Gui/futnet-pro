@@ -121,7 +121,7 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { settings, loaded, getImage, businessHours, dayUsePrice, galleryImages } = useLandingData();
+  const { settings, loaded, getImage, businessHours, dayUsePrice, courtRentalPrice, galleryImages } = useLandingData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -156,10 +156,14 @@ export default function LandingPage() {
     { label: "Contato", href: "#contato" },
   ];
 
-  // Day use price display
-  const dayUsePriceDisplay = dayUsePrice
-    ? `A partir de R$ ${parseFloat(dayUsePrice.replace(/[^\d.,]/g, "").replace(",", ".")).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`
-    : "A partir de R$ 120";
+  const formatPrice = (raw: string | null, fallback: string) => {
+    if (!raw) return fallback;
+    const n = parseFloat(raw.replace(/[^\d.,]/g, "").replace(",", "."));
+    return isNaN(n) ? fallback : `A partir de R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
+  };
+
+  const dayUsePriceDisplay = formatPrice(dayUsePrice, "A partir de R$ 120");
+  const courtRentalPriceDisplay = formatPrice(courtRentalPrice, "A partir de R$ 80");
 
   const services = [
     {
@@ -175,7 +179,7 @@ export default function LandingPage() {
         "Iluminação LED até as 22h",
         "Bolas disponíveis no local",
       ],
-      price: "A partir de R$ 80",
+      price: courtRentalPriceDisplay,
       unit: "/hora",
       cta: "Reservar agora",
       href: courtLink,

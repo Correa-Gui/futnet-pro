@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Building2, DollarSign, Percent, Clock } from 'lucide-react';
+import { Building2, DollarSign, Percent, Clock, Upload, Loader2 } from 'lucide-react';
 import { useBusinessHours, type BusinessHours, DEFAULT_BUSINESS_HOURS } from '@/hooks/useBusinessHours';
 import { toast } from 'sonner';
 
@@ -45,6 +45,27 @@ export default function Settings() {
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [appUrl, setAppUrl] = useState('');
+  const [logoUploading, setLogoUploading] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleLogoUpload(file: File) {
+    setLogoUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `logos/company-logo.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from('landing-images')
+        .upload(path, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
+      const { data } = supabase.storage.from('landing-images').getPublicUrl(path);
+      setLogoUrl(`${data.publicUrl}?t=${Date.now()}`);
+      toast.success('Logo enviado com sucesso');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao enviar logo');
+    } finally {
+      setLogoUploading(false);
+    }
+  }
 
   useEffect(() => {
     if (!identityConfig) return;
@@ -150,14 +171,44 @@ export default function Settings() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="logo-url">URL do logo</Label>
-            <Input
-              id="logo-url"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://exemplo.com/logo.png"
-              disabled={identityLoading || identityMutation.isPending}
-            />
+            <Label>Logo da empresa</Label>
+            <div className="flex items-center gap-4">
+              {logoUrl && (
+                <img
+                  src={logoUrl}
+                  alt="Logo"
+                  className="h-16 w-16 rounded-lg border object-contain bg-muted p-1"
+                />
+              )}
+              <div className="flex flex-col gap-2 flex-1">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={logoUploading || identityLoading || identityMutation.isPending}
+                  onClick={() => logoInputRef.current?.click()}
+                  className="w-fit"
+                >
+                  {logoUploading ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enviando...</>
+                  ) : (
+                    <><Upload className="mr-2 h-4 w-4" /> Fazer upload</>
+                  )}
+                </Button>
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                    e.target.value = '';
+                  }}
+                />
+                <p className="text-xs text-muted-foreground">PNG, JPG ou SVG. Será usado como favicon e logo.</p>
+              </div>
+            </div>
           </div>
           <div className="space-y-2">
             <Label htmlFor="app-url">URL do app (usado nos links do WhatsApp)</Label>

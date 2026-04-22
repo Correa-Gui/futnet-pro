@@ -36,6 +36,7 @@ type Court = {
 
 type ExistingBooking = {
   start_time: string | null;
+  end_time: string | null;
   status: string;
 };
 
@@ -44,8 +45,19 @@ type ClassSessionRow = {
   classes: {
     court_id: string;
     start_time: string;
+    end_time: string;
   } | null;
 };
+
+function addMinutes(time: string, mins: number): string {
+  const [h, m] = time.split(":").map(Number);
+  const total = h * 60 + m + mins;
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function slotLabel(slot: string): string {
+  return `${slot} – ${addMinutes(slot, 60)}`;
+}
 
 function CourtCard({
   court,
@@ -113,17 +125,37 @@ export function CourtBookingSection() {
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
   const openHour = businessHours?.open_hour ?? 6;
   const closeHour = businessHours?.close_hour ?? 22;
-  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
-    const h = i + openHour;
-    return `${String(h).padStart(2, "0")}:00`;
-  });
+  const TIME_SLOTS = useMemo(() => {
+    const slots: string[] = [];
+    for (let h = openHour; h < closeHour; h++) {
+      slots.push(`${String(h).padStart(2, "0")}:30`);
+    }
+    return slots;
+  }, [openHour, closeHour]);
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
+
+  const { data: rentalPrice } = useQuery({
+    queryKey: ["court-rental-price"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "court_rental_price")
+        .maybeSingle();
+      if (error) throw error;
+      return data?.value ? Number(data.value) : null;
+    },
+  });
+
+  const priceDisplay = rentalPrice != null
+    ? `R$ ${rentalPrice.toFixed(2).replace(".", ",")}`
+    : "R$ —";
 
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 30);
@@ -145,7 +177,7 @@ export function CourtBookingSection() {
       if (!selectedCourt || !dateStr) return [];
       const { data, error } = await supabase
         .from("court_bookings")
-        .select("start_time, status")
+        .select("start_time, end_time, status")
         .eq("court_id", selectedCourt.id)
         .eq("date", dateStr)
         .in("status", ["requested", "confirmed", "paid"]);
@@ -161,7 +193,7 @@ export function CourtBookingSection() {
       if (!selectedCourt || !dateStr) return [];
       const { data, error } = await supabase
         .from("class_sessions")
-        .select("id, classes!inner(court_id, start_time)")
+        .select("id, classes!inner(court_id, start_time, end_time)")
         .eq("date", dateStr)
         .neq("status", "cancelled");
       if (error) throw error;
@@ -174,18 +206,54 @@ export function CourtBookingSection() {
 
   const unavailableSlots = useMemo(() => {
     const blocked = new Set<string>();
-    existingBookings.forEach((b) => {
-      const start = b.start_time?.slice(0, 5);
-      if (start) blocked.add(start);
-    });
-    classSessions.forEach((session) => {
-      const start = session.classes?.start_time?.slice(0, 5);
-      if (start) blocked.add(start);
-    });
+    for (const slot of TIME_SLOTS) {
+      const slotEnd = addMinutes(slot, 60);
+      const blockedByBooking = existingBookings.some((b) => {
+        const s = b.start_time?.slice(0, 5);
+        const e = b.end_time?.slice(0, 5);
+        return s && e && slot < e && slotEnd > s;
+      });
+      const blockedByClass = classSessions.some((cs) => {
+        const s = cs.classes?.start_time?.slice(0, 5);
+        const e = cs.classes?.end_time?.slice(0, 5);
+        return s && e && slot < e && slotEnd > s;
+      });
+      if (blockedByBooking || blockedByClass) blocked.add(slot);
+    }
     return blocked;
-  }, [existingBookings, classSessions]);
+  }, [existingBookings, classSessions, TIME_SLOTS]);
 
   const availableCount = TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).length;
+
+  const bookingStart = selectedSlots[0] ?? null;
+  const bookingEnd = selectedSlots.length > 0 ? addMinutes(selectedSlots[selectedSlots.length - 1], 60) : null;
+  const totalHours = selectedSlots.length;
+  const totalPrice = rentalPrice != null && totalHours > 0 ? rentalPrice * totalHours : null;
+  const totalPriceDisplay = totalPrice != null
+    ? `R$ ${totalPrice.toFixed(2).replace(".", ",")}`
+    : "—";
+  const durationLabel = totalHours === 1 ? "1h" : `${totalHours}h`;
+
+  const handleSlotClick = (slot: string) => {
+    setSelectedSlots((prev) => {
+      const idx = prev.indexOf(slot);
+      if (idx !== -1) {
+        // Deselect: only allow removing first or last
+        if (idx === 0) return prev.slice(1);
+        if (idx === prev.length - 1) return prev.slice(0, -1);
+        // Middle: reset to just this one
+        return [slot];
+      }
+      if (prev.length === 0) return [slot];
+      const allIdx = TIME_SLOTS.indexOf(slot);
+      const firstIdx = TIME_SLOTS.indexOf(prev[0]);
+      const lastIdx = TIME_SLOTS.indexOf(prev[prev.length - 1]);
+      if (allIdx === firstIdx - 1) return [slot, ...prev];
+      if (allIdx === lastIdx + 1) return [...prev, slot];
+      // Not adjacent: start fresh
+      return [slot];
+    });
+  };
 
   const createBooking = useMutation({
     mutationFn: async () => {
@@ -196,25 +264,26 @@ export function CourtBookingSection() {
       });
 
       if (!validation.success) throw new Error(validation.error.errors[0].message);
-      if (!selectedCourt || !dateStr || !selectedSlot) throw new Error("Selecione quadra, data e horário");
+      if (!selectedCourt || !dateStr || !bookingStart || !bookingEnd) {
+        throw new Error("Selecione quadra, data e horário");
+      }
 
-      const startHour = parseInt(selectedSlot.split(":")[0]);
-      const endTime = `${String(startHour + 1).padStart(2, "0")}:00`;
-
-      const { error } = await supabase.functions.invoke("court-availability", {
+      const { error, data } = await supabase.functions.invoke("court-availability", {
         method: "POST",
         body: {
           court_id: selectedCourt.id,
           date: dateStr,
-          start_time: selectedSlot,
-          end_time: endTime,
+          start_time: bookingStart,
+          end_time: bookingEnd,
           requester_name: validation.data.requester_name,
           requester_phone: rawPhone,
-          price: 80,
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        const message = (data as any)?.error || error.message;
+        throw new Error(message);
+      }
     },
     onSuccess: () => setSubmitted(true),
     onError: (e: Error) => toast.error(e.message),
@@ -223,7 +292,7 @@ export function CourtBookingSection() {
   const handleSelectCourt = (court: Court) => {
     setSelectedCourt(court);
     setSelectedDate(undefined);
-    setSelectedSlot(null);
+    setSelectedSlots([]);
     setStep(2);
   };
 
@@ -232,7 +301,7 @@ export function CourtBookingSection() {
     setStep(1);
     setSelectedCourt(null);
     setSelectedDate(undefined);
-    setSelectedSlot(null);
+    setSelectedSlots([]);
     setForm({ requester_name: "", requester_phone: "" });
   };
 
@@ -282,8 +351,13 @@ export function CourtBookingSection() {
                   {[
                     { label: "Quadra", value: selectedCourt?.name || "-" },
                     { label: "Data", value: selectedDate ? format(selectedDate, "dd/MM/yyyy") : "-" },
-                    { label: "Horário", value: selectedSlot || "-" },
-                    { label: "Valor", value: "R$ 80,00" },
+                    {
+                      label: "Horário",
+                      value: bookingStart && bookingEnd
+                        ? `${bookingStart} – ${bookingEnd} (${durationLabel})`
+                        : "-",
+                    },
+                    { label: "Valor total", value: totalPriceDisplay },
                   ].map((item) => (
                     <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-[#FAF7F2] px-5 py-4">
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">
@@ -411,7 +485,7 @@ export function CourtBookingSection() {
                           selected={selectedDate}
                           onSelect={(date) => {
                             setSelectedDate(date);
-                            setSelectedSlot(null);
+                            setSelectedSlots([]);
                           }}
                           disabled={(date) =>
                             isBefore(date, today) ||
@@ -449,33 +523,52 @@ export function CourtBookingSection() {
                         </div>
                       ) : (
                         <div className="mt-6">
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                            {TIME_SLOTS.map((slot) => {
-                              const isUnavailable = unavailableSlots.has(slot);
-                              const isSelected = selectedSlot === slot;
-
+                          <p className="mb-3 text-[11px] text-[#9B8770]">
+                            Clique nos horários desejados — cada bloco = 1 hora.
+                          </p>
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                            {availableCount === 0 && (
+                              <p className="col-span-full text-sm text-[#9B8770]">
+                                Nenhum horário disponível para esta data.
+                              </p>
+                            )}
+                            {TIME_SLOTS.filter((slot) => !unavailableSlots.has(slot)).map((slot) => {
+                              const isSelected = selectedSlots.includes(slot);
                               return (
                                 <button
                                   key={slot}
-                                  disabled={isUnavailable}
-                                  onClick={() => setSelectedSlot(slot)}
+                                  onClick={() => handleSlotClick(slot)}
                                   className={cn(
-                                    "rounded-xl border px-3 py-3 text-sm font-semibold transition-all",
-                                    isSelected && "border-[#F97316] bg-[#F97316] text-white shadow-[0_8px_24px_rgba(249,115,22,0.2)]",
-                                    !isSelected && !isUnavailable && "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6",
-                                    isUnavailable && "cursor-not-allowed border-[#EAE1D2] bg-[#FAF7F2] text-[#C5B8A0] line-through"
+                                    "rounded-xl border px-4 py-3 text-sm font-semibold transition-all text-left",
+                                    isSelected
+                                      ? "border-[#F97316] bg-[#F97316] text-white shadow-[0_4px_16px_rgba(249,115,22,0.2)]"
+                                      : "border-[#E8DECE] bg-white text-[#1A1208] hover:border-[#F97316]/40 hover:bg-[#F97316]/6"
                                   )}
                                 >
-                                  {slot}
+                                  {slotLabel(slot)}
                                 </button>
                               );
                             })}
                           </div>
 
-                          {selectedSlot && (
+                          {selectedSlots.length > 0 && (
+                            <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-[#F97316]/30 bg-[#F97316]/6 px-4 py-3">
+                              <div className="text-sm font-semibold text-[#C2550A]">
+                                {bookingStart} – {bookingEnd}
+                                <span className="ml-2 font-normal text-[#9B8770]">({durationLabel})</span>
+                              </div>
+                              {totalPrice != null && (
+                                <span className="text-base font-extrabold text-[#C2550A]">
+                                  {totalPriceDisplay}
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {selectedSlots.length > 0 && (
                             <button
                               onClick={() => setStep(3)}
-                              className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F97316] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#EA6C0A]"
+                              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#F97316] px-6 py-3.5 text-sm font-bold text-white transition hover:bg-[#EA6C0A]"
                             >
                               Continuar
                               <ChevronRight className="h-4 w-4" />
@@ -516,11 +609,11 @@ export function CourtBookingSection() {
                           },
                           {
                             label: "Horário",
-                            value: selectedSlot
-                              ? `${selectedSlot} – ${String(parseInt(selectedSlot) + 1).padStart(2, "0")}:00`
+                            value: bookingStart && bookingEnd
+                              ? `${bookingStart} – ${bookingEnd} (${durationLabel})`
                               : "-",
                           },
-                          { label: "Valor", value: "R$ 80,00" },
+                          { label: "Valor total", value: totalPriceDisplay },
                         ].map((item) => (
                           <div key={item.label} className="rounded-2xl border border-[#E8DECE] bg-white px-4 py-3">
                             <p className="text-[10px] font-semibold uppercase tracking-widest text-[#9B8770]">

@@ -22,6 +22,7 @@ export function useLandingData() {
   const [sections, setSections] = useState<Record<string, SectionConfig>>({});
   const [businessHours, setBusinessHours] = useState<BusinessHoursData | null>(null);
   const [dayUsePrice, setDayUsePrice] = useState<string | null>(null);
+  const [courtRentalPrice, setCourtRentalPrice] = useState<string | null>(null);
   const [courtsCount, setCourtsCount] = useState<number>(0);
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -34,7 +35,8 @@ export function useLandingData() {
       supabase.from("system_config").select("value").eq("key", "day_use_price").maybeSingle(),
       supabase.from("system_config").select("value").eq("key", "gallery_images").maybeSingle(),
       supabase.from("courts").select("id", { count: "exact", head: true }).eq("is_active", true),
-    ]).then(([settingsRes, sectionsRes, hoursRes, dayUsePriceRes, galleryRes, courtsRes]) => {
+      supabase.from("system_config").select("value").eq("key", "court_rental_price").maybeSingle(),
+    ]).then(([settingsRes, sectionsRes, hoursRes, dayUsePriceRes, galleryRes, courtsRes, rentalPriceRes]) => {
       if (settingsRes.data) setSettings(settingsRes.data as unknown as LandingSettings);
       if (sectionsRes.data) {
         const map: Record<string, SectionConfig> = {};
@@ -52,6 +54,9 @@ export function useLandingData() {
       }
       if (dayUsePriceRes.data?.value) {
         setDayUsePrice(dayUsePriceRes.data.value);
+      }
+      if (rentalPriceRes.data?.value) {
+        setCourtRentalPrice(rentalPriceRes.data.value);
       }
       if (galleryRes.data?.value) {
         try {
@@ -76,5 +81,5 @@ export function useLandingData() {
     return sections[key]?.image_url || fallback;
   }, [sections]);
 
-  return { settings, sections, loaded, isVisible, getImage, businessHours, dayUsePrice, courtsCount, galleryImages };
+  return { settings, sections, loaded, isVisible, getImage, businessHours, dayUsePrice, courtRentalPrice, courtsCount, galleryImages };
 }
