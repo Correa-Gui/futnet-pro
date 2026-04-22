@@ -27,7 +27,7 @@ export function useLandingData() {
   const [galleryImages, setGalleryImages] = useState<GalleryImage[]>([]);
   const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
+  const fetchData = useCallback(() => {
     Promise.all([
       supabase.from("landing_page_settings").select("*").limit(1).single(),
       supabase.from("landing_page_config").select("*").order("display_order"),
@@ -72,6 +72,15 @@ export function useLandingData() {
       setLoaded(true);
     });
   }, []);
+
+  useEffect(() => {
+    fetchData();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchData();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [fetchData]);
 
   const isVisible = useCallback((key: string) => {
     return sections[key]?.is_visible !== false;

@@ -54,7 +54,15 @@ import AdminSystemUsers from "./pages/admin/SystemUsers";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 0,
+      refetchOnMount: true,
+      refetchOnWindowFocus: true,
+    },
+  },
+});
 
 function AppMeta() {
   useAppMeta();
