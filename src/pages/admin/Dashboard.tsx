@@ -178,7 +178,10 @@ export default function AdminDashboard() {
     queryFn: async () => {
       const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
 
-      const [studentsRes, studentsNoPlanRes, classesRes, invoicesRes, bookingsRes, sessionsRes, mrrRes] =
+      const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+
+      const [studentsRes, studentsNoPlanRes, classesRes, invoicesRes, bookingsRes, paidBookingsRes, sessionsRes, mrrRes] =
         await Promise.all([
           supabase.from('student_profiles').select('id', { count: 'exact', head: true }),
           supabase
@@ -196,8 +199,15 @@ export default function AdminDashboard() {
             .from('court_bookings')
             .select('id, date, start_time, end_time, status, price, requester_name, booking_type, courts(name)')
             .gte('date', today)
+            .neq('status', 'cancelled')
             .order('date', { ascending: true })
             .order('start_time', { ascending: true }),
+          supabase
+            .from('court_bookings')
+            .select('id, date, price, booking_type, status')
+            .gte('date', monthStart)
+            .lte('date', monthEnd)
+            .eq('status', 'paid'),
           supabase
             .from('class_sessions')
             .select('id, date, classes(name, start_time, end_time, courts(name))')
@@ -224,7 +234,7 @@ export default function AdminDashboard() {
       const invoiceAmount = (list: typeof allInvoices) =>
         list.reduce((s, i) => s + Number(i.amount) - Number(i.discount || 0), 0);
 
-      // Bookings by type
+      // Bookings by type (future/pipeline)
       const bookings = (bookingsRes.data || []) as unknown as BookingItem[];
 
       const rentals = bookings.filter((b) => b.booking_type === 'rental');
@@ -237,11 +247,14 @@ export default function AdminDashboard() {
       const ticketAvg = (list: BookingItem[]) =>
         list.length === 0 ? 0 : bookingAmount(list) / list.length;
 
-      const rentalPaid = byStatus(rentals, 'paid');
+      // Paid bookings this month (separate query includes past dates)
+      const paidBookingsThisMonth = (paidBookingsRes.data || []) as unknown as BookingItem[];
+      const rentalPaid = paidBookingsThisMonth.filter((b) => b.booking_type === 'rental');
+      const dayUsePaid = paidBookingsThisMonth.filter((b) => b.booking_type === 'day_use');
+
       const rentalConfirmed = byStatus(rentals, 'confirmed');
       const rentalRequested = byStatus(rentals, 'requested');
 
-      const dayUsePaid = byStatus(dayUses, 'paid');
       const dayUseConfirmed = byStatus(dayUses, 'confirmed');
       const dayUseRequested = byStatus(dayUses, 'requested');
 

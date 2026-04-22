@@ -14,9 +14,13 @@ import {
   subMonths,
   addDays,
   subDays,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import {
@@ -31,13 +35,14 @@ import {
   CalendarRange,
   User,
   DollarSign,
+  List,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Database } from "@/integrations/supabase/types";
 import { useBusinessHours } from "@/hooks/useBusinessHours";
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
-type ViewMode = "week" | "day";
+type ViewMode = "week" | "day" | "list";
 type FilterType = "all" | "class" | "rental" | "dayuse";
 type Court = { id: string; name: string };
 
@@ -143,8 +148,12 @@ export default function Bookings() {
   const filteredWeekDays = weekDays.filter((day) => openDays.includes(getDay(day)));
 
   const dateRange = {
-    from: format(viewMode === "day" ? currentDate : weekStart, "yyyy-MM-dd"),
-    to: format(viewMode === "day" ? currentDate : weekEnd, "yyyy-MM-dd"),
+    from: viewMode === "list"
+      ? format(startOfMonth(currentDate), "yyyy-MM-dd")
+      : format(viewMode === "day" ? currentDate : weekStart, "yyyy-MM-dd"),
+    to: viewMode === "list"
+      ? format(endOfMonth(currentDate), "yyyy-MM-dd")
+      : format(viewMode === "day" ? currentDate : weekEnd, "yyyy-MM-dd"),
   };
 
   const { data: courts = [] } = useQuery({
@@ -461,6 +470,14 @@ export default function Bookings() {
           >
             <LayoutGrid className="h-3.5 w-3.5" /> Por Quadra
           </Button>
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            className="gap-1.5 h-8"
+            onClick={() => setViewMode("list")}
+          >
+            <List className="h-3.5 w-3.5" /> Lista
+          </Button>
         </div>
       </div>
 
@@ -628,8 +645,150 @@ export default function Bookings() {
         )}
       </div>
 
+      {/* List View */}
+      {viewMode === "list" && (() => {
+        const listBookings = bookings
+          .filter((b) => {
+            if (filterType === "rental") return (b as any).booking_type === "rental";
+            if (filterType === "dayuse") return (b as any).booking_type === "day_use";
+            if (filterType === "class") return false;
+            return true;
+          })
+          .sort((a, b) => {
+            const dateCmp = a.date.localeCompare(b.date);
+            if (dateCmp !== 0) return dateCmp;
+            return a.start_time.localeCompare(b.start_time);
+          });
+
+        const statusLabel: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+          requested: { label: "Solicitado", variant: "outline" },
+          confirmed: { label: "Confirmado", variant: "secondary" },
+          paid:      { label: "Pago", variant: "default" },
+          cancelled: { label: "Cancelado", variant: "destructive" },
+        };
+
+        const monthLabel = format(currentDate, "MMMM yyyy", { locale: ptBR });
+
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <p className="text-sm font-semibold capitalize">{monthLabel}</p>
+              <div className="flex items-center gap-1">
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(subMonths(currentDate, 1))}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setCurrentDate(addMonths(currentDate, 1))}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b bg-muted/40 text-muted-foreground text-xs">
+                    <th className="text-left px-4 py-3 font-medium">Data</th>
+                    <th className="text-left px-4 py-3 font-medium">Horário</th>
+                    <th className="text-left px-4 py-3 font-medium">Quadra</th>
+                    <th className="text-left px-4 py-3 font-medium">Nome</th>
+                    <th className="text-left px-4 py-3 font-medium hidden md:table-cell">Telefone</th>
+                    <th className="text-left px-4 py-3 font-medium hidden sm:table-cell">Tipo</th>
+                    <th className="text-right px-4 py-3 font-medium">Valor</th>
+                    <th className="text-center px-4 py-3 font-medium">Status</th>
+                    <th className="text-right px-4 py-3 font-medium">Ações</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listBookings.length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="text-center py-10 text-muted-foreground">
+                        Nenhum agendamento encontrado.
+                      </td>
+                    </tr>
+                  )}
+                  {listBookings.map((b) => {
+                    const price = resolvePrice(b);
+                    const s = statusLabel[b.status] ?? { label: b.status, variant: "secondary" as const };
+                    const parsedDate = parseISO(b.date);
+                    return (
+                      <tr key={b.id} className="border-b last:border-0 hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {format(parsedDate, "dd/MM/yyyy", { locale: ptBR })}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {b.start_time.slice(0, 5)} – {b.end_time.slice(0, 5)}
+                        </td>
+                        <td className="px-4 py-3">{(b as any).courts?.name || "—"}</td>
+                        <td className="px-4 py-3 max-w-[140px] truncate">{b.requester_name || "—"}</td>
+                        <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{b.requester_phone || "—"}</td>
+                        <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground capitalize">
+                          {(b as any).booking_type === "day_use" ? "Day Use" : "Aluguel"}
+                        </td>
+                        <td className="px-4 py-3 text-right font-semibold">
+                          R$ {price.toFixed(2)}
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge variant={s.variant}>{s.label}</Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {b.status === "requested" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-blue-600 hover:text-blue-700"
+                                onClick={() => updateStatus.mutate({ id: b.id, status: "confirmed" })}
+                                disabled={updateStatus.isPending}
+                              >
+                                <CheckCircle className="h-3.5 w-3.5 mr-1" /> Confirmar
+                              </Button>
+                            )}
+                            {(b.status === "confirmed" || b.status === "requested") && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-emerald-600 hover:text-emerald-700"
+                                onClick={() => updateStatus.mutate({ id: b.id, status: "paid" })}
+                                disabled={updateStatus.isPending}
+                              >
+                                <DollarSign className="h-3.5 w-3.5 mr-1" /> Marcar Pago
+                              </Button>
+                            )}
+                            {b.status === "paid" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-muted-foreground hover:text-amber-600"
+                                onClick={() => updateStatus.mutate({ id: b.id, status: "confirmed" })}
+                                disabled={updateStatus.isPending}
+                              >
+                                Desfazer Pago
+                              </Button>
+                            )}
+                            {b.status !== "cancelled" && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 text-xs text-destructive hover:text-destructive"
+                                onClick={() => updateStatus.mutate({ id: b.id, status: "cancelled" })}
+                                disabled={updateStatus.isPending}
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Calendar */}
-      <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
+      {viewMode !== "list" && <div className="border rounded-xl overflow-hidden bg-card shadow-sm">
         {/* Sticky column headers */}
         <div
           className="sticky top-0 z-20 bg-card border-b"
@@ -794,7 +953,7 @@ export default function Bookings() {
             </div>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

@@ -131,7 +131,7 @@ export default function CourtBooking() {
         requester_name: validation.data.requester_name,
         requester_phone: validation.data.requester_phone,
         price: courtRentalPrice,
-        status: "requested",
+        status: "confirmed",
         booking_type: "rental",
       });
       if (error) throw error;
@@ -155,12 +155,12 @@ export default function CourtBooking() {
               <CheckCircle className="h-8 w-8 text-primary" />
             </div>
             <h2 className="text-2xl font-bold text-foreground font-heading">
-              Reserva Solicitada!
+              Reserva Confirmada!
             </h2>
             <p className="text-muted-foreground">
-              Sua solicitação de reserva para <strong>{selectedCourtData?.name}</strong> no dia{" "}
+              Sua reserva para <strong>{selectedCourtData?.name}</strong> no dia{" "}
               <strong>{selectedDate && format(selectedDate, "dd/MM/yyyy")}</strong> às{" "}
-              <strong>{selectedSlot}</strong> foi recebida. Entraremos em contato para confirmar.
+              <strong>{selectedSlot}</strong> está confirmada. Entraremos em contato para combinar o pagamento.
             </p>
             <div className="flex gap-2 justify-center pt-4">
               <Button variant="outline" onClick={() => { setSubmitted(false); setStep(1); setSelectedCourt(null); setSelectedDate(undefined); setSelectedSlot(null); setForm({ requester_name: "", requester_phone: "" }); }}>
@@ -387,7 +387,7 @@ export default function CourtBooking() {
                   {createBooking.isPending ? "Enviando..." : "Solicitar Reserva"}
                 </Button>
                 <p className="text-xs text-muted-foreground text-center">
-                  Você receberá a confirmação por WhatsApp
+                  Você receberá os detalhes de pagamento por WhatsApp
                 </p>
               </CardContent>
             </Card>
