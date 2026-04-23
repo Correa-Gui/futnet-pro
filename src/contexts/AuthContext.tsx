@@ -119,18 +119,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setTimeout(async () => {
             await fetchUserData(newSession.user.id);
             if (initializedRef.current) {
-              // Only set loading if we're past initialization
+              setLoading(false);
             }
           }, 0);
         } else {
           setRole(null);
           setProfile(null);
           setAllowedMenus(null);
-        }
-
-        // Don't set loading=false here during initialization — getSession handles that
-        if (initializedRef.current) {
-          setLoading(false);
+          if (initializedRef.current) {
+            setLoading(false);
+          }
         }
       }
     );
