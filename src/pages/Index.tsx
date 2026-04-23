@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 const Index = () => {
   const { user, role, loading, profile, studentProfile } = useAuth();
 
-  if (loading) {
+  if (loading || (user && profile === null)) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
