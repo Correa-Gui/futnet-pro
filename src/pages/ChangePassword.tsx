@@ -47,7 +47,7 @@ export default function ChangePassword() {
 
     setIsLoading(false);
     toast.success('Senha definida com sucesso!');
-    navigate(role === 'teacher' ? '/professor' : '/aluno');
+    navigate(role === 'admin' ? '/admin' : role === 'teacher' ? '/professor' : '/aluno');
   };
 
   return (

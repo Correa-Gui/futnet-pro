@@ -123,7 +123,7 @@ Deno.serve(async (req) => {
       ...(phone && { phone }),
       ...(cpf && { cpf }),
       ...(birth_date && { birth_date }),
-      ...(role === "student" && { force_password_change: true }),
+      force_password_change: true,
     };
     if (Object.keys(profileUpdates).length > 0) {
       await adminClient
