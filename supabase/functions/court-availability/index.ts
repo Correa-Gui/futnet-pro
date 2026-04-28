@@ -346,16 +346,18 @@ Deno.serve(async (req) => {
           const formattedDate = `${d}/${m}/${y}`;
           const endpoint = `${baseUrl.replace(/\/$/, "")}/messages/send`;
 
-          // Mensagem para o cliente
-          if (templateRaw) {
-            const addressLine = companyAddress ? `\n📌 *Endereço:* ${companyAddress}` : "";
-            const clientMessage = templateRaw
-              .replace("{nome}", normalizedName)
-              .replace("{quadra}", courtName)
-              .replace("{data}", formattedDate)
-              .replace("{horario_inicio}", start_time.slice(0, 5))
-              .replace("{horario_fim}", end_time.slice(0, 5)) + addressLine;
+          const addressLine = companyAddress ? `\n📌 *Endereço:* ${companyAddress}` : "";
+          const clientMessage = templateRaw
+            ? templateRaw
+                .replace("{nome}", normalizedName)
+                .replace("{quadra}", courtName)
+                .replace("{data}", formattedDate)
+                .replace("{horario_inicio}", start_time.slice(0, 5))
+                .replace("{horario_fim}", end_time.slice(0, 5)) + addressLine
+            : null;
 
+          // Mensagem para o cliente
+          if (clientMessage) {
             const fullPhone = normalizedPhone.startsWith("55") && normalizedPhone.length >= 12
               ? normalizedPhone
               : `55${normalizedPhone}`;
@@ -367,21 +369,12 @@ Deno.serve(async (req) => {
             });
           }
 
-          // Notificacao para o grupo de admins
-          if (adminGroupJid && groupTemplateRaw) {
-            const groupMessage = groupTemplateRaw
-              .replace("{nome}", normalizedName)
-              .replace("{telefone}", normalizedPhone)
-              .replace("{quadra}", courtName)
-              .replace("{data}", formattedDate)
-              .replace("{horario_inicio}", start_time.slice(0, 5))
-              .replace("{horario_fim}", end_time.slice(0, 5))
-              .replace("{valor}", resolvedPrice.toFixed(2).replace(".", ","));
-
+          // Notificacao para o grupo de admins — mesmo template do cliente
+          if (adminGroupJid && clientMessage) {
             await fetch(endpoint, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ number: adminGroupJid, text: groupMessage, instance_name: instanceName }),
+              body: JSON.stringify({ number: adminGroupJid, text: clientMessage, instance_name: instanceName }),
             });
           }
         }
