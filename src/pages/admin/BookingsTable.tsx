@@ -79,7 +79,7 @@ const formatCurrency = (v: number) =>
 export default function BookingsTable() {
   const queryClient = useQueryClient();
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [filterStatus, setFilterStatus] = useState<FilterStatus>("all");
+  const [filterStatus, setFilterStatus] = useState<FilterStatus>("confirmed");
   const [filterType, setFilterType] = useState<FilterType>("all");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
