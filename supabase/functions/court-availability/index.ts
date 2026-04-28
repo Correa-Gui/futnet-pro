@@ -312,46 +312,76 @@ Deno.serve(async (req) => {
         console.error("Falha ao sincronizar booking_users apos reserva", bookingUserError);
       }
 
-      // Envia WhatsApp de confirmacao — falha silenciosa para nao bloquear a reserva
+      // Envia WhatsApp — falha silenciosa para nao bloquear a reserva
       try {
         const { data: waRows } = await supabase
           .from("system_config")
           .select("key, value")
-          .in("key", ["whatsapp_service_base_url", "whatsapp_instance_name", "booking_confirmation_template"]);
+          .in("key", [
+            "whatsapp_service_base_url",
+            "whatsapp_instance_name",
+            "booking_confirmation_template",
+            "admin_group_jid",
+          ]);
 
         const waCfg = Object.fromEntries((waRows ?? []).map((r: any) => [r.key, (r.value as string).trim()]));
         const baseUrl = waCfg.whatsapp_service_base_url;
         const instanceName = waCfg.whatsapp_instance_name;
         const templateRaw = waCfg.booking_confirmation_template;
+        const adminGroupJid = waCfg.admin_group_jid;
 
-        if (baseUrl && instanceName && templateRaw) {
+        if (baseUrl && instanceName) {
           const { data: courtRow } = await supabase
             .from("courts")
             .select("name")
             .eq("id", court_id)
             .single();
 
+          const courtName = courtRow?.name ?? "";
           const [y, m, d] = date.split("-");
           const formattedDate = `${d}/${m}/${y}`;
-          const message = templateRaw
-            .replace("{nome}", normalizedName)
-            .replace("{quadra}", courtRow?.name ?? "")
-            .replace("{data}", formattedDate)
-            .replace("{horario_inicio}", start_time.slice(0, 5))
-            .replace("{horario_fim}", end_time.slice(0, 5));
+          const endpoint = `${baseUrl.replace(/\/$/, "")}/messages/send`;
 
-          const fullPhone = normalizedPhone.startsWith("55") && normalizedPhone.length >= 12
-            ? normalizedPhone
-            : `55${normalizedPhone}`;
+          // Mensagem para o cliente
+          if (templateRaw) {
+            const clientMessage = templateRaw
+              .replace("{nome}", normalizedName)
+              .replace("{quadra}", courtName)
+              .replace("{data}", formattedDate)
+              .replace("{horario_inicio}", start_time.slice(0, 5))
+              .replace("{horario_fim}", end_time.slice(0, 5));
 
-          await fetch(`${baseUrl.replace(/\/$/, "")}/messages/send`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ number: fullPhone, text: message, instance_name: instanceName }),
-          });
+            const fullPhone = normalizedPhone.startsWith("55") && normalizedPhone.length >= 12
+              ? normalizedPhone
+              : `55${normalizedPhone}`;
+
+            await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ number: fullPhone, text: clientMessage, instance_name: instanceName }),
+            });
+          }
+
+          // Notificacao para o grupo de admins
+          if (adminGroupJid) {
+            const groupMessage =
+              `🏐 *Nova reserva!*\n\n` +
+              `👤 ${normalizedName}\n` +
+              `📱 ${normalizedPhone}\n` +
+              `📍 ${courtName}\n` +
+              `📅 ${formattedDate}\n` +
+              `🕐 ${start_time.slice(0, 5)} às ${end_time.slice(0, 5)}\n` +
+              `💰 R$ ${resolvedPrice.toFixed(2).replace(".", ",")}`;
+
+            await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ number: adminGroupJid, text: groupMessage, instance_name: instanceName }),
+            });
+          }
         }
       } catch (waError) {
-        console.error("Falha ao enviar WhatsApp de confirmacao", waError);
+        console.error("Falha ao enviar WhatsApp", waError);
       }
 
       return new Response(

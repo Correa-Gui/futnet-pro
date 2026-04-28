@@ -118,6 +118,29 @@ export default function Settings() {
     onError: (e: Error) => toast.error('Erro ao salvar', { description: e.message }),
   });
 
+  // --- WhatsApp grupo de admins ---
+  const { data: waConfig, isLoading: waLoading } = useSystemConfig(['admin_group_jid']);
+  const [adminGroupJid, setAdminGroupJid] = useState('');
+
+  useEffect(() => {
+    if (!waConfig) return;
+    setAdminGroupJid(waConfig.admin_group_jid || '');
+  }, [waConfig]);
+
+  const waMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await saveConfigs([
+        { key: 'admin_group_jid', value: adminGroupJid.trim() },
+      ]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['system-config'] });
+      toast.success('JID do grupo salvo.');
+    },
+    onError: (e: Error) => toast.error('Erro ao salvar', { description: e.message }),
+  });
+
   // --- Reservation ---
   const { data: reservationConfig, isLoading: reservationLoading } = useSystemConfig([
     'reservation_deposit_percentage',
@@ -299,6 +322,35 @@ export default function Settings() {
           </div>
           <Button onClick={() => reservationMutation.mutate()} disabled={reservationMutation.isPending}>
             {reservationMutation.isPending ? 'Salvando...' : 'Salvar configuração'}
+          </Button>
+        </CardContent>
+      </Card>
+
+      {/* WhatsApp grupo admins */}
+      <Card>
+        <CardHeader className="flex flex-row items-start gap-3">
+          <div className="mt-0.5 h-5 w-5 flex items-center justify-center text-primary font-bold text-xs">WA</div>
+          <div>
+            <CardTitle className="text-base">Notificações WhatsApp (Grupo)</CardTitle>
+            <CardDescription>JID do grupo que receberá alertas de novas reservas</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="admin-group-jid">JID do grupo</Label>
+            <Input
+              id="admin-group-jid"
+              value={adminGroupJid}
+              onChange={(e) => setAdminGroupJid(e.target.value)}
+              placeholder="120363430535428937@g.us"
+              disabled={waLoading || waMutation.isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              Formato: <code>{'<id>@g.us'}</code>. Deixe em branco para desativar.
+            </p>
+          </div>
+          <Button onClick={() => waMutation.mutate()} disabled={waMutation.isPending}>
+            {waMutation.isPending ? 'Salvando...' : 'Salvar'}
           </Button>
         </CardContent>
       </Card>
