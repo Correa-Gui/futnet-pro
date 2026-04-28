@@ -139,6 +139,7 @@ export function CourtBookingSection() {
     const slots: string[] = [];
     for (let h = openHour; h < closeHour; h++) {
       const totalMins = h * 60 + offset;
+      if (totalMins + 60 > closeHour * 60) break;
       const hh = Math.floor(totalMins / 60);
       const mm = totalMins % 60;
       slots.push(`${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`);
