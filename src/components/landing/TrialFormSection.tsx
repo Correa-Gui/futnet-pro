@@ -46,32 +46,23 @@ export function TrialFormSection({ settings }: { settings: LandingSettings }) {
                 <CheckCircle2 className="h-8 w-8" />
               </div>
               <p className="mt-8 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#0D9488]">
-                Solicitação recebida
+                Solicitação enviada
               </p>
-              <h3 className="font-landing-headline mt-4 max-w-[12ch] text-[clamp(1.8rem,4vw,2.8rem)] font-extrabold leading-tight tracking-tight text-[#1A1208]">
-                PRÓXIMO PASSO PELO WHATSAPP.
+              <h3 className="font-landing-headline mt-4 max-w-[14ch] text-[clamp(1.8rem,4vw,2.8rem)] font-extrabold leading-tight tracking-tight text-[#1A1208]">
+                RECEBEMOS SUA SOLICITAÇÃO!
               </h3>
               <p className="mt-6 max-w-[30rem] text-sm leading-7 text-[#6B5740]">
-                Sua solicitação foi recebida. Confirme pelo WhatsApp para garantir o horário.
+                Sua solicitação foi criada com sucesso. Em breve você receberá uma confirmação pelo WhatsApp com mais informações sobre a sua aula experimental.
               </p>
             </div>
 
             <div className="p-8 sm:p-10">
               <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#9B8770]">
-                Ação final
+                O que acontece agora?
               </p>
               <p className="mt-4 text-base leading-7 text-[#6B5740]">
-                Um toque e você cai direto na conversa com a mensagem pronta.
+                Nossa equipe vai analisar sua solicitação e entrar em contato pelo WhatsApp para confirmar o horário e turma da sua aula teste.
               </p>
-              <a
-                href={formatWhatsAppLink(settings.whatsapp_number || "", waMessage)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-8 inline-flex items-center gap-3 rounded-xl border border-[#0D9488]/30 bg-[#0D9488]/10 px-6 py-4 text-sm font-bold text-[#0D9488] no-underline transition hover:bg-[#0D9488]/18"
-              >
-                <MessageCircle className="h-4 w-4" />
-                Confirmar pelo WhatsApp
-              </a>
             </div>
           </div>
         </div>
