@@ -62,7 +62,12 @@ export function overlaps(
   bStart: string,
   bEnd: string,
 ) {
-  return aStart < bEnd && aEnd > bStart;
+  const startA = toMinutes(aStart);
+  const endA = toMinutes(aEnd);
+  const startB = toMinutes(bStart);
+  const endB = toMinutes(bEnd);
+
+  return startA < endB && endA > startB;
 }
 
 export function addOneHour(value: string) {

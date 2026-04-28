@@ -5,6 +5,7 @@ import {
   getDurationHours,
   isBusinessDayOpen,
   isWithinBusinessHours,
+  overlaps,
   phoneLookupKey,
 } from "../_shared/booking.ts";
 
@@ -45,15 +46,6 @@ function generateHourSlots(
   }
 
   return slots;
-}
-
-function overlaps(
-  aStart: string,
-  aEnd: string,
-  bStart: string,
-  bEnd: string,
-): boolean {
-  return aStart < bEnd && aEnd > bStart;
 }
 
 Deno.serve(async (req) => {
