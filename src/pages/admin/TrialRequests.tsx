@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -6,6 +6,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import {
   CalendarCheck, Phone, Mail, Clock, Copy, MessageCircle,
   Check, X, UserCheck, UserX, ChevronDown,
@@ -63,6 +78,11 @@ export default function TrialRequests() {
   const qc = useQueryClient();
   const [filter, setFilter] = useState<TrialStatus | "all">("all");
   const [expandedNotes, setExpandedNotes] = useState<Record<string, string>>({});
+  const [approvalDialog, setApprovalDialog] = useState<{
+    open: boolean;
+    trial: TrialRequest | null;
+    classId: string;
+  }>({ open: false, trial: null, classId: "" });
 
   const { data: trials = [] } = useQuery({
     queryKey: ["admin-trial-requests"],
@@ -112,13 +132,14 @@ export default function TrialRequests() {
   });
 
   const updateStatus = useMutation({
-    mutationFn: async ({ id, status, notes, phone, recipientName, message }: { id: string; status: TrialStatus; notes?: string; phone?: string; recipientName?: string; message?: string }) => {
+    mutationFn: async ({ id, status, notes, phone, recipientName, message, preferred_class_id }: { id: string; status: TrialStatus; notes?: string; phone?: string; recipientName?: string; message?: string; preferred_class_id?: string }) => {
       const updates: Record<string, any> = { status };
       if (status === "approved") {
         updates.approved_at = new Date().toISOString();
         updates.approved_by = user?.id;
       }
       if (notes !== undefined) updates.admin_notes = notes;
+      if (preferred_class_id) updates.preferred_class_id = preferred_class_id;
       await supabase.from("trial_requests" as any).update(updates).eq("id", id);
       if (status === "approved" && phone && message) {
         await supabase.functions.invoke("send-whatsapp", {
@@ -158,8 +179,13 @@ export default function TrialRequests() {
     return "a definir";
   };
 
-  const buildApprovalMessage = (t: TrialRequest) => {
-    const c = t.preferred_class_id ? classMap[t.preferred_class_id] : null;
+  const classList = useMemo(
+    () => Object.values(classMap).sort((a, b) => a.name.localeCompare(b.name)),
+    [classMap],
+  );
+
+  const buildApprovalMessageForClass = (t: TrialRequest, classId: string) => {
+    const c = classId ? classMap[classId] : null;
     const courtName = c ? courtMap[c.court_id] || "Quadra" : "";
     const teacherName = c ? teacherMap[c.teacher_id] || "Professor" : "";
     const dateStr = t.preferred_date
@@ -168,6 +194,9 @@ export default function TrialRequests() {
 
     return `Oi ${t.name}! 🏐 Sua aula teste tá confirmada!\n\n📋 Turma: ${c?.name || "A definir"}\n📅 Data: ${dateStr}\n🕐 Horário: ${c ? `${c.start_time.slice(0, 5)} às ${c.end_time.slice(0, 5)}` : "A definir"}\n👨‍🏫 Professor: ${teacherName}\n📍 Local: ${courtName}\n\nTraga roupa leve e venha com vontade! Nos vemos na quadra! 💪`;
   };
+
+  const buildApprovalMessage = (t: TrialRequest) =>
+    buildApprovalMessageForClass(t, t.preferred_class_id || "");
 
   const buildConversionMessage = (t: TrialRequest) => {
     return `E aí ${t.name}, curtiu a aula? 🔥\n\nPra continuar treinando, escolha seu plano e crie sua conta no app:\n👉 ${window.location.origin}/cadastro\n\nQualquer dúvida, é só chamar!`;
@@ -279,17 +308,13 @@ export default function TrialRequests() {
                           size="sm"
                           className="bg-emerald-600 hover:bg-emerald-700"
                           disabled={updateStatus.isPending}
-                          onClick={() => {
-                            const msg = buildApprovalMessage(t);
-                            updateStatus.mutate({
-                              id: t.id,
-                              status: "approved",
-                              notes: expandedNotes[t.id],
-                              phone: t.phone,
-                              recipientName: t.name,
-                              message: msg,
-                            });
-                          }}
+                          onClick={() =>
+                            setApprovalDialog({
+                              open: true,
+                              trial: t,
+                              classId: t.preferred_class_id || "",
+                            })
+                          }
                         >
                           <Check className="mr-1 h-4 w-4" /> Aprovar & Enviar WhatsApp
                         </Button>
@@ -378,6 +403,81 @@ export default function TrialRequests() {
           })}
         </div>
       )}
+      {/* Dialog de aprovação com seleção de turma */}
+      <Dialog
+        open={approvalDialog.open}
+        onOpenChange={(open) => setApprovalDialog((prev) => ({ ...prev, open }))}
+      >
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Aprovar aula teste — {approvalDialog.trial?.name}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div className="space-y-1">
+              <Label>Turma / Horário</Label>
+              <Select
+                value={approvalDialog.classId}
+                onValueChange={(v) =>
+                  setApprovalDialog((prev) => ({ ...prev, classId: v }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione a turma (obrigatório)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {classList.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} — {formatDaysOfWeek(c.day_of_week)} {c.start_time.slice(0, 5)}-{c.end_time.slice(0, 5)}
+                      {teacherMap[c.teacher_id] ? ` · ${teacherMap[c.teacher_id]}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {approvalDialog.trial && (
+              <div className="space-y-1">
+                <Label className="text-muted-foreground text-xs">Prévia da mensagem</Label>
+                <pre className="text-xs bg-muted rounded-lg p-3 whitespace-pre-wrap font-body">
+                  {buildApprovalMessageForClass(approvalDialog.trial, approvalDialog.classId)}
+                </pre>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setApprovalDialog({ open: false, trial: null, classId: "" })}
+            >
+              Cancelar
+            </Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={!approvalDialog.classId || updateStatus.isPending}
+              onClick={() => {
+                if (!approvalDialog.trial || !approvalDialog.classId) return;
+                const t = approvalDialog.trial;
+                const msg = buildApprovalMessageForClass(t, approvalDialog.classId);
+                updateStatus.mutate({
+                  id: t.id,
+                  status: "approved",
+                  notes: expandedNotes[t.id],
+                  phone: t.phone,
+                  recipientName: t.name,
+                  message: msg,
+                  preferred_class_id: approvalDialog.classId,
+                });
+                setApprovalDialog({ open: false, trial: null, classId: "" });
+              }}
+            >
+              <Check className="mr-1 h-4 w-4" />
+              {updateStatus.isPending ? "Enviando..." : "Confirmar & Enviar WhatsApp"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
