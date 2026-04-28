@@ -163,9 +163,13 @@ export default function BookingsTable() {
       const defaultPrice = newType === "day_use"
         ? Number(sysConfig?.day_use_price || 0)
         : Number(sysConfig?.court_rental_price || 0);
-      const { error, data } = await supabase.functions.invoke("court-availability", {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/court-availability`, {
         method: "POST",
-        body: {
+        headers: {
+          apikey: SUPABASE_KEY,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           court_id: newCourtId,
           date: newDate,
           start_time: slot.start,
@@ -174,9 +178,12 @@ export default function BookingsTable() {
           requester_phone: newPhone.trim(),
           booking_type: newType,
           price: newPrice ? Number(newPrice) : defaultPrice,
-        },
+        }),
       });
-      if (error) throw new Error((data as any)?.error || error.message);
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        throw new Error(data?.error || "Nao foi possivel criar a reserva. Tente novamente.");
+      }
       return data;
     },
     onSuccess: () => {
