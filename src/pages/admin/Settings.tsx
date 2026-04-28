@@ -40,11 +40,12 @@ export default function Settings() {
 
   // --- Identity ---
   const { data: identityConfig, isLoading: identityLoading } = useSystemConfig([
-    'company_name', 'company_logo_url', 'app_url',
+    'company_name', 'company_logo_url', 'app_url', 'company_address',
   ]);
   const [companyName, setCompanyName] = useState('');
   const [logoUrl, setLogoUrl] = useState('');
   const [appUrl, setAppUrl] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('');
   const [logoUploading, setLogoUploading] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
 
@@ -72,6 +73,7 @@ export default function Settings() {
     setCompanyName(identityConfig.company_name || '');
     setLogoUrl(identityConfig.company_logo_url || '');
     setAppUrl(identityConfig.app_url || '');
+    setCompanyAddress(identityConfig.company_address || '');
   }, [identityConfig]);
 
   const identityMutation = useMutation({
@@ -80,6 +82,7 @@ export default function Settings() {
         { key: 'company_name', value: companyName.trim() },
         { key: 'company_logo_url', value: logoUrl.trim() },
         { key: 'app_url', value: appUrl.trim() },
+        { key: 'company_address', value: companyAddress.trim() },
       ]);
       if (error) throw error;
     },
@@ -240,6 +243,16 @@ export default function Settings() {
               value={appUrl}
               onChange={(e) => setAppUrl(e.target.value)}
               placeholder="https://futnetpro.app"
+              disabled={identityLoading || identityMutation.isPending}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="company-address">Endereço (usado nas mensagens de confirmação)</Label>
+            <Input
+              id="company-address"
+              value={companyAddress}
+              onChange={(e) => setCompanyAddress(e.target.value)}
+              placeholder="Rua Exemplo, 123 — Bairro, Cidade/UF"
               disabled={identityLoading || identityMutation.isPending}
             />
           </div>

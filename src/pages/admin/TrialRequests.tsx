@@ -117,6 +117,19 @@ export default function TrialRequests() {
     },
   });
 
+  const { data: companyAddress = "" } = useQuery({
+    queryKey: ["system-config-address"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "company_address")
+        .maybeSingle();
+      return (data?.value as string) || "";
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: teacherMap = {} } = useQuery({
     queryKey: ["admin-teachers-name-map"],
     queryFn: async () => {
@@ -192,7 +205,8 @@ export default function TrialRequests() {
       ? new Date(t.preferred_date + "T12:00:00").toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" })
       : c ? getNextClassDate(c.day_of_week) : "a definir";
 
-    return `Oi ${t.name}! 🏐 Sua aula teste tá confirmada!\n\n📋 Turma: ${c?.name || "A definir"}\n📅 Data: ${dateStr}\n🕐 Horário: ${c ? `${c.start_time.slice(0, 5)} às ${c.end_time.slice(0, 5)}` : "A definir"}\n👨‍🏫 Professor: ${teacherName}\n📍 Local: ${courtName}\n\nTraga roupa leve e venha com vontade! Nos vemos na quadra! 💪`;
+    const addressLine = companyAddress ? `\n📌 Endereço: ${companyAddress}` : "";
+    return `Oi ${t.name}! 🏐 Sua aula teste tá confirmada!\n\n📋 Turma: ${c?.name || "A definir"}\n📅 Data: ${dateStr}\n🕐 Horário: ${c ? `${c.start_time.slice(0, 5)} às ${c.end_time.slice(0, 5)}` : "A definir"}\n👨‍🏫 Professor: ${teacherName}\n📍 Local: ${courtName}${addressLine}\n\nTraga roupa leve e venha com vontade! Nos vemos na quadra! 💪`;
   };
 
   const buildApprovalMessage = (t: TrialRequest) =>

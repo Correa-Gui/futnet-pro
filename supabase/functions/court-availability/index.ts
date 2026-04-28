@@ -322,6 +322,7 @@ Deno.serve(async (req) => {
             "whatsapp_instance_name",
             "booking_confirmation_template",
             "admin_group_jid",
+            "company_address",
           ]);
 
         const waCfg = Object.fromEntries((waRows ?? []).map((r: any) => [r.key, (r.value as string).trim()]));
@@ -329,6 +330,7 @@ Deno.serve(async (req) => {
         const instanceName = waCfg.whatsapp_instance_name;
         const templateRaw = waCfg.booking_confirmation_template;
         const adminGroupJid = waCfg.admin_group_jid;
+        const companyAddress = waCfg.company_address;
 
         if (baseUrl && instanceName) {
           const { data: courtRow } = await supabase
@@ -344,12 +346,13 @@ Deno.serve(async (req) => {
 
           // Mensagem para o cliente
           if (templateRaw) {
+            const addressLine = companyAddress ? `\n📌 *Endereço:* ${companyAddress}` : "";
             const clientMessage = templateRaw
               .replace("{nome}", normalizedName)
               .replace("{quadra}", courtName)
               .replace("{data}", formattedDate)
               .replace("{horario_inicio}", start_time.slice(0, 5))
-              .replace("{horario_fim}", end_time.slice(0, 5));
+              .replace("{horario_fim}", end_time.slice(0, 5)) + addressLine;
 
             const fullPhone = normalizedPhone.startsWith("55") && normalizedPhone.length >= 12
               ? normalizedPhone
