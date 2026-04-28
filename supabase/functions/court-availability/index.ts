@@ -321,6 +321,7 @@ Deno.serve(async (req) => {
             "whatsapp_service_base_url",
             "whatsapp_instance_name",
             "booking_confirmation_template",
+            "booking_group_template",
             "admin_group_jid",
             "company_address",
           ]);
@@ -331,6 +332,7 @@ Deno.serve(async (req) => {
         const templateRaw = waCfg.booking_confirmation_template;
         const adminGroupJid = waCfg.admin_group_jid;
         const companyAddress = waCfg.company_address;
+        const groupTemplateRaw = waCfg.booking_group_template;
 
         if (baseUrl && instanceName) {
           const { data: courtRow } = await supabase
@@ -366,15 +368,15 @@ Deno.serve(async (req) => {
           }
 
           // Notificacao para o grupo de admins
-          if (adminGroupJid) {
-            const groupMessage =
-              `🏐 *Nova reserva!*\n\n` +
-              `👤 ${normalizedName}\n` +
-              `📱 ${normalizedPhone}\n` +
-              `📍 ${courtName}\n` +
-              `📅 ${formattedDate}\n` +
-              `🕐 ${start_time.slice(0, 5)} às ${end_time.slice(0, 5)}\n` +
-              `💰 R$ ${resolvedPrice.toFixed(2).replace(".", ",")}`;
+          if (adminGroupJid && groupTemplateRaw) {
+            const groupMessage = groupTemplateRaw
+              .replace("{nome}", normalizedName)
+              .replace("{telefone}", normalizedPhone)
+              .replace("{quadra}", courtName)
+              .replace("{data}", formattedDate)
+              .replace("{horario_inicio}", start_time.slice(0, 5))
+              .replace("{horario_fim}", end_time.slice(0, 5))
+              .replace("{valor}", resolvedPrice.toFixed(2).replace(".", ","));
 
             await fetch(endpoint, {
               method: "POST",

@@ -1,15 +1,104 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, FileText, Sparkles } from "lucide-react";
 import { toast } from "sonner";
+
+const BOOKING_CLIENT_DEFAULT =
+  `Olá *{nome}*! ✅ Sua reserva foi confirmada!\n\n📍 *{quadra}*\n📅 *{data}*\n🕐 *{horario_inicio}* às *{horario_fim}*\n\nQualquer dúvida, estamos à disposição!`;
+
+const BOOKING_GROUP_DEFAULT =
+  `🏐 *Nova reserva!*\n\n👤 {nome}\n📱 {telefone}\n📍 {quadra}\n📅 {data}\n🕐 {horario_inicio} às {horario_fim}\n💰 R$ {valor}`;
+
+function BookingTemplatesSection() {
+  const qc = useQueryClient();
+
+  const { data: cfg } = useQuery({
+    queryKey: ["system-config-booking-templates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("key, value")
+        .in("key", ["booking_confirmation_template", "booking_group_template"]);
+      return Object.fromEntries((data || []).map((r: any) => [r.key, r.value]));
+    },
+    staleTime: 0,
+  });
+
+  const [clientTpl, setClientTpl] = useState("");
+  const [groupTpl, setGroupTpl] = useState("");
+
+  useEffect(() => {
+    if (!cfg) return;
+    setClientTpl(cfg.booking_confirmation_template || BOOKING_CLIENT_DEFAULT);
+    setGroupTpl(cfg.booking_group_template || BOOKING_GROUP_DEFAULT);
+  }, [cfg]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("system_config").upsert([
+        { key: "booking_confirmation_template", value: clientTpl },
+        { key: "booking_group_template", value: groupTpl },
+      ], { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["system-config-booking-templates"] });
+      toast.success("Templates de reserva salvos!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Templates de Reserva de Quadra</CardTitle>
+        <CardDescription>
+          Mensagens enviadas automaticamente quando uma reserva é criada.
+          Variáveis disponíveis: <code className="bg-muted px-1 rounded text-xs">{"{nome}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{quadra}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{data}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{horario_inicio}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{horario_fim}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{telefone}"}</code>{" "}
+          <code className="bg-muted px-1 rounded text-xs">{"{valor}"}</code>
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <Label>Mensagem para o cliente</Label>
+          <Textarea
+            value={clientTpl}
+            onChange={(e) => setClientTpl(e.target.value)}
+            rows={6}
+            className="font-mono text-sm"
+          />
+        </div>
+        <Separator />
+        <div className="space-y-2">
+          <Label>Notificação para o grupo de admins</Label>
+          <Textarea
+            value={groupTpl}
+            onChange={(e) => setGroupTpl(e.target.value)}
+            rows={6}
+            className="font-mono text-sm"
+          />
+        </div>
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Salvando..." : "Salvar templates"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
 
 const STARTER_TEMPLATES = [
   {
@@ -180,6 +269,11 @@ export default function WhatsAppTemplates() {
 
   return (
     <div className="space-y-6">
+      {/* System booking templates */}
+      <BookingTemplatesSection />
+
+      <Separator />
+
       {/* Starter templates */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
