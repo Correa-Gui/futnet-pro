@@ -50,6 +50,7 @@ import AdminWhatsApp from "./pages/admin/WhatsApp";
 import AdminPresentation from "./pages/admin/Presentation";
 import AdminApiDocs from "./pages/admin/ApiDocs";
 import AdminBookingUsers from "./pages/admin/BookingUsers";
+import AdminBlockedDates from "./pages/admin/BlockedDates";
 import AdminRoles from "./pages/admin/Roles";
 import AdminSystemUsers from "./pages/admin/SystemUsers";
 import StudentInvoices from "./pages/student/Invoices";
@@ -117,6 +118,7 @@ const App = () => (
               <Route path="apresentacao" element={<AdminPresentation />} />
               <Route path="api-docs" element={<AdminApiDocs />} />
               <Route path="usuarios" element={<AdminBookingUsers />} />
+              <Route path="dias-bloqueados" element={<AdminBlockedDates />} />
               <Route path="roles" element={<AdminRoles />} />
               <Route path="system-users" element={<AdminSystemUsers />} />
             </Route>

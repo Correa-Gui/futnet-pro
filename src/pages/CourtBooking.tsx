@@ -38,6 +38,27 @@ export default function CourtBooking() {
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
 
+  const { data: blockedDatesConfig } = useQuery({
+    queryKey: ["blocked-dates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "blocked_dates")
+        .maybeSingle();
+      try {
+        return JSON.parse(data?.value || "[]") as { date: string; reason: string }[];
+      } catch {
+        return [] as { date: string; reason: string }[];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const blockedDatesSet = useMemo(
+    () => new Set((blockedDatesConfig ?? []).map((b) => b.date)),
+    [blockedDatesConfig],
+  );
+
   const { data: courtRentalPrice = 0 } = useQuery({
     queryKey: ["system-config-rental-price"],
     queryFn: async () => {
@@ -270,7 +291,8 @@ export default function CourtBooking() {
                     disabled={(date) =>
                       isBefore(date, today) ||
                       isBefore(maxDate, date) ||
-                      !openDays.includes(date.getDay())
+                      !openDays.includes(date.getDay()) ||
+                      blockedDatesSet.has(format(date, "yyyy-MM-dd"))
                     }
                     locale={ptBR}
                     className={cn("p-3 pointer-events-auto")}

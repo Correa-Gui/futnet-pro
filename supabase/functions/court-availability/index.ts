@@ -8,6 +8,21 @@ import {
   phoneLookupKey,
 } from "../_shared/booking.ts";
 
+async function getBlockedReason(supabase: any, date: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("system_config")
+    .select("value")
+    .eq("key", "blocked_dates")
+    .maybeSingle();
+  try {
+    const list: { date: string; reason: string }[] = JSON.parse(data?.value || "[]");
+    const entry = list.find((b) => b.date === date);
+    return entry ? entry.reason : null;
+  } catch {
+    return null;
+  }
+}
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
@@ -91,6 +106,22 @@ Deno.serve(async (req) => {
             court_id: courtId,
             court_name: court.name,
             available_slots: [],
+            business_hours: businessHours,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const blockedReason = await getBlockedReason(supabase, targetDate);
+      if (blockedReason) {
+        return new Response(
+          JSON.stringify({
+            date: targetDate,
+            court_id: courtId,
+            court_name: court.name,
+            available_slots: [],
+            blocked: true,
+            blocked_reason: blockedReason,
             business_hours: businessHours,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -181,6 +212,14 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "A arena nao funciona neste dia." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const blockedReason = await getBlockedReason(supabase, date);
+      if (blockedReason) {
+        return new Response(
+          JSON.stringify({ error: `Data bloqueada: ${blockedReason}` }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 

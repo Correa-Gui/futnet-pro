@@ -146,6 +146,28 @@ export function CourtBookingSection() {
     return slots;
   }, [openHour, closeHour, selectedCourt?.slot_offset_minutes]);
 
+  const { data: blockedDatesConfig } = useQuery({
+    queryKey: ["blocked-dates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("value")
+        .eq("key", "blocked_dates")
+        .maybeSingle();
+      try {
+        return JSON.parse(data?.value || "[]") as { date: string; reason: string }[];
+      } catch {
+        return [] as { date: string; reason: string }[];
+      }
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const blockedDates = useMemo(
+    () => new Set((blockedDatesConfig ?? []).map((b) => b.date)),
+    [blockedDatesConfig],
+  );
+
   const { data: rentalPrice } = useQuery({
     queryKey: ["court-rental-price"],
     queryFn: async () => {
@@ -533,7 +555,8 @@ export function CourtBookingSection() {
                           disabled={(date) =>
                             isBefore(date, today) ||
                             isBefore(maxDate, date) ||
-                            !openDays.includes(date.getDay())
+                            !openDays.includes(date.getDay()) ||
+                            blockedDates.has(format(date, "yyyy-MM-dd"))
                           }
                           locale={ptBR}
                           className="pointer-events-auto w-full"

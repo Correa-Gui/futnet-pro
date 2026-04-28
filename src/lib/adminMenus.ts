@@ -41,7 +41,8 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
       { key: 'landing-page',  title: 'Landing Page' },
       { key: 'apresentacao',  title: 'Apresentação' },
       { key: 'api-docs',      title: 'API Docs' },
-      { key: 'configuracoes', title: 'Configurações' },
+      { key: 'configuracoes',   title: 'Configurações' },
+      { key: 'dias-bloqueados', title: 'Dias Bloqueados' },
     ],
   },
   {

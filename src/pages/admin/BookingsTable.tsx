@@ -319,7 +319,7 @@ export default function BookingsTable() {
                             onClick={() => updateStatus.mutate({ id: b.id, status: "paid" })}
                             disabled={updateStatus.isPending}
                           >
-                            <DollarSign className="h-3.5 w-3.5 mr-1" />Pago
+                            <DollarSign className="h-3.5 w-3.5 mr-1" />Confirmar pagamento
                           </Button>
                         )}
                         {b.status === "paid" && (

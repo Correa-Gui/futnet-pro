@@ -153,7 +153,7 @@ export function isWithinBusinessHours(
   endTime: string,
   businessHours: NormalizedBusinessHours,
 ) {
-  return startTime >= businessHours.start && endTime <= businessHours.end;
+  return startTime >= businessHours.start && startTime < businessHours.end;
 }
 
 export function normalizeBusinessHours(rawValue: unknown): NormalizedBusinessHours {
