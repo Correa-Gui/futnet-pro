@@ -312,6 +312,48 @@ Deno.serve(async (req) => {
         console.error("Falha ao sincronizar booking_users apos reserva", bookingUserError);
       }
 
+      // Envia WhatsApp de confirmacao — falha silenciosa para nao bloquear a reserva
+      try {
+        const { data: waRows } = await supabase
+          .from("system_config")
+          .select("key, value")
+          .in("key", ["whatsapp_service_base_url", "whatsapp_instance_name", "booking_confirmation_template"]);
+
+        const waCfg = Object.fromEntries((waRows ?? []).map((r: any) => [r.key, (r.value as string).trim()]));
+        const baseUrl = waCfg.whatsapp_service_base_url;
+        const instanceName = waCfg.whatsapp_instance_name;
+        const templateRaw = waCfg.booking_confirmation_template;
+
+        if (baseUrl && instanceName && templateRaw) {
+          const { data: courtRow } = await supabase
+            .from("courts")
+            .select("name")
+            .eq("id", court_id)
+            .single();
+
+          const [y, m, d] = date.split("-");
+          const formattedDate = `${d}/${m}/${y}`;
+          const message = templateRaw
+            .replace("{nome}", normalizedName)
+            .replace("{quadra}", courtRow?.name ?? "")
+            .replace("{data}", formattedDate)
+            .replace("{horario_inicio}", start_time.slice(0, 5))
+            .replace("{horario_fim}", end_time.slice(0, 5));
+
+          const fullPhone = normalizedPhone.startsWith("55") && normalizedPhone.length >= 12
+            ? normalizedPhone
+            : `55${normalizedPhone}`;
+
+          await fetch(`${baseUrl.replace(/\/$/, "")}/messages/send`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ number: fullPhone, text: message, instance_name: instanceName }),
+          });
+        }
+      } catch (waError) {
+        console.error("Falha ao enviar WhatsApp de confirmacao", waError);
+      }
+
       return new Response(
         JSON.stringify({
           booking_id: booking.id,

@@ -13,6 +13,8 @@ import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -20,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from "@/components/ui/sheet";
 import { toast } from "sonner";
 import {
   ChevronLeft,
@@ -30,8 +39,12 @@ import {
   CalendarDays,
   Clock,
   Undo2,
+  Plus,
 } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL as string;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
 
 type BookingStatus = Database["public"]["Enums"]["booking_status"];
 
@@ -101,6 +114,82 @@ export default function BookingsTable() {
     staleTime: 5 * 60 * 1000,
   });
 
+  // --- Nova Reserva ---
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [newCourtId, setNewCourtId] = useState("");
+  const [newDate, setNewDate] = useState(format(new Date(), "yyyy-MM-dd"));
+  const [newSlot, setNewSlot] = useState("");
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
+  const [newType, setNewType] = useState<"rental" | "day_use">("rental");
+  const [newPrice, setNewPrice] = useState("");
+
+  const { data: courts = [] } = useQuery({
+    queryKey: ["admin-courts-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("courts")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      if (error) throw error;
+      return data as { id: string; name: string }[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const { data: availableSlots = [], isFetching: slotsFetching } = useQuery({
+    queryKey: ["admin-available-slots", newCourtId, newDate],
+    queryFn: async () => {
+      if (!newCourtId || !newDate) return [];
+      const res = await fetch(
+        `${SUPABASE_URL}/functions/v1/court-availability?court_id=${newCourtId}&date=${newDate}`,
+        { headers: { apikey: SUPABASE_KEY } },
+      );
+      const json = await res.json();
+      return (json.available_slots ?? []) as { start: string; end: string }[];
+    },
+    enabled: !!newCourtId && !!newDate,
+    staleTime: 0,
+  });
+
+  const createBooking = useMutation({
+    mutationFn: async () => {
+      if (!newCourtId || !newDate || !newSlot || !newName.trim() || !newPhone.trim()) {
+        throw new Error("Preencha todos os campos obrigatórios");
+      }
+      const slot = availableSlots.find((s) => s.start === newSlot);
+      if (!slot) throw new Error("Horário inválido");
+      const defaultPrice = newType === "day_use"
+        ? Number(sysConfig?.day_use_price || 0)
+        : Number(sysConfig?.court_rental_price || 0);
+      const { error, data } = await supabase.functions.invoke("court-availability", {
+        method: "POST",
+        body: {
+          court_id: newCourtId,
+          date: newDate,
+          start_time: slot.start,
+          end_time: slot.end,
+          requester_name: newName.trim(),
+          requester_phone: newPhone.trim(),
+          booking_type: newType,
+          price: newPrice ? Number(newPrice) : defaultPrice,
+        },
+      });
+      if (error) throw new Error((data as any)?.error || error.message);
+      return data;
+    },
+    onSuccess: () => {
+      toast.success("Reserva criada! WhatsApp enviado ao cliente.");
+      queryClient.invalidateQueries({ queryKey: ["bookings-table"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-dashboard-rich"] });
+      setSheetOpen(false);
+      setNewCourtId(""); setNewDate(format(new Date(), "yyyy-MM-dd"));
+      setNewSlot(""); setNewName(""); setNewPhone(""); setNewType("rental"); setNewPrice("");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: BookingStatus }) => {
       const { error } = await supabase
@@ -167,9 +256,14 @@ export default function BookingsTable() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold font-brand">Lista de Agendamentos</h2>
-        <p className="text-sm text-muted-foreground">Tabela por horário com controle de pagamento</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-bold font-brand">Lista de Agendamentos</h2>
+          <p className="text-sm text-muted-foreground">Tabela por horário com controle de pagamento</p>
+        </div>
+        <Button onClick={() => setSheetOpen(true)} size="sm" className="shrink-0">
+          <Plus className="h-4 w-4 mr-1" /> Nova Reserva
+        </Button>
       </div>
 
       {/* Summary cards */}
@@ -377,6 +471,107 @@ export default function BookingsTable() {
           </div>
         </div>
       </div>
+      <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+        <SheetContent className="w-full sm:max-w-md overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>Nova Reserva</SheetTitle>
+          </SheetHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-1">
+              <Label>Quadra *</Label>
+              <Select value={newCourtId} onValueChange={(v) => { setNewCourtId(v); setNewSlot(""); }}>
+                <SelectTrigger><SelectValue placeholder="Selecione a quadra" /></SelectTrigger>
+                <SelectContent>
+                  {courts.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Data *</Label>
+              <Input
+                type="date"
+                value={newDate}
+                onChange={(e) => { setNewDate(e.target.value); setNewSlot(""); }}
+              />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Horário *</Label>
+              <Select
+                value={newSlot}
+                onValueChange={setNewSlot}
+                disabled={!newCourtId || !newDate || slotsFetching}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={slotsFetching ? "Buscando horários..." : "Selecione o horário"} />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableSlots.length === 0 && !slotsFetching && (
+                    <SelectItem value="__none__" disabled>Sem horários disponíveis</SelectItem>
+                  )}
+                  {availableSlots.map((s) => (
+                    <SelectItem key={s.start} value={s.start}>
+                      {s.start} – {s.end}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Nome do cliente *</Label>
+              <Input placeholder="Nome completo" value={newName} onChange={(e) => setNewName(e.target.value)} />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Telefone (WhatsApp) *</Label>
+              <Input placeholder="(11) 99999-9999" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+            </div>
+
+            <div className="space-y-1">
+              <Label>Tipo</Label>
+              <Select value={newType} onValueChange={(v) => setNewType(v as "rental" | "day_use")}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="rental">Aluguel de Quadra</SelectItem>
+                  <SelectItem value="day_use">Day Use</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label>Valor (R$) — opcional</Label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder={
+                  newType === "day_use"
+                    ? sysConfig?.day_use_price || "0"
+                    : sysConfig?.court_rental_price || "0"
+                }
+                value={newPrice}
+                onChange={(e) => setNewPrice(e.target.value)}
+              />
+              <p className="text-xs text-muted-foreground">Deixe em branco para usar o preço padrão</p>
+            </div>
+          </div>
+
+          <SheetFooter>
+            <Button
+              className="w-full"
+              onClick={() => createBooking.mutate()}
+              disabled={createBooking.isPending}
+            >
+              {createBooking.isPending ? "Agendando..." : "Agendar"}
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
