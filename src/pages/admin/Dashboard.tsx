@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -170,16 +171,20 @@ function BookingCard({ booking, navigate }: { booking: BookingItem; navigate: (p
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
-  const monthRef = format(new Date(), 'yyyy-MM');
+  const [selectedMonth, setSelectedMonth] = useState(format(new Date(), 'yyyy-MM'));
+
+  const monthRef = selectedMonth;
   const today = format(new Date(), 'yyyy-MM-dd');
+  const isCurrentMonth = selectedMonth === format(new Date(), 'yyyy-MM');
 
   const { data } = useQuery<DashboardData>({
-    queryKey: ['admin-dashboard-rich'],
+    queryKey: ['admin-dashboard-rich', selectedMonth],
     queryFn: async () => {
       const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
 
-      const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
-      const monthEnd = format(endOfMonth(new Date()), 'yyyy-MM-dd');
+      const selectedMonthDate = parseISO(`${selectedMonth}-01`);
+      const monthStart = format(startOfMonth(selectedMonthDate), 'yyyy-MM-dd');
+      const monthEnd = format(endOfMonth(selectedMonthDate), 'yyyy-MM-dd');
 
       const [studentsRes, studentsNoPlanRes, classesRes, invoicesRes, bookingsRes, paidBookingsRes, sessionsRes, mrrRes] =
         await Promise.all([
@@ -198,7 +203,8 @@ export default function AdminDashboard() {
           supabase
             .from('court_bookings')
             .select('id, date, start_time, end_time, status, price, requester_name, booking_type, courts(name)')
-            .gte('date', today)
+            .gte('date', isCurrentMonth ? today : monthStart)
+            .lte('date', monthEnd)
             .neq('status', 'cancelled')
             .order('date', { ascending: true })
             .order('start_time', { ascending: true }),
@@ -335,17 +341,31 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h2 className="text-2xl font-bold font-brand">Dashboard</h2>
           <p className="text-sm text-muted-foreground">
             {format(new Date(), "EEEE, dd 'de' MMMM", { locale: ptBR })}
           </p>
         </div>
-        <Button onClick={() => navigate('/admin/agendamentos')}>
-          <CalendarDays className="mr-2 h-4 w-4" />
-          Abrir agenda
-        </Button>
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label htmlFor="dashboard-month" className="text-sm text-muted-foreground whitespace-nowrap">
+              Mês de referência
+            </label>
+            <input
+              id="dashboard-month"
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+          <Button onClick={() => navigate('/admin/agendamentos')}>
+            <CalendarDays className="mr-2 h-4 w-4" />
+            Abrir agenda
+          </Button>
+        </div>
       </div>
 
       {/* Top stat cards */}

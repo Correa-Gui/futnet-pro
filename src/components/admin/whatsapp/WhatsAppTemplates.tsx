@@ -18,6 +18,24 @@ const BOOKING_CLIENT_DEFAULT =
 const BOOKING_GROUP_DEFAULT =
   `🏐 *Nova reserva!*\n\n👤 {nome}\n📱 {telefone}\n📍 {quadra}\n📅 {data}\n🕐 {horario_inicio} às {horario_fim}\n💰 R$ {valor}`;
 
+const CANCELLATION_CLIENT_DEFAULT =
+  `Olá *{nome}*! ❌ Sua reserva foi cancelada.\n\n📍 *{quadra}*\n📅 *{data}*\n🕐 *{horario_inicio}* às *{horario_fim}*\n\nQualquer dúvida, entre em contato conosco.`;
+
+const CANCELLATION_GROUP_DEFAULT =
+  `❌ *Reserva cancelada*\n\n👤 {nome}\n📱 {telefone}\n📍 {quadra}\n📅 {data}\n🕐 {horario_inicio} às {horario_fim}`;
+
+const BOOKING_TEMPLATE_VARS = (
+  <>
+    <code className="bg-muted px-1 rounded text-xs">{"{nome}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{quadra}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{data}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{horario_inicio}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{horario_fim}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{telefone}"}</code>{" "}
+    <code className="bg-muted px-1 rounded text-xs">{"{valor}"}</code>
+  </>
+);
+
 function BookingTemplatesSection() {
   const qc = useQueryClient();
 
@@ -60,16 +78,86 @@ function BookingTemplatesSection() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Templates de Reserva de Quadra</CardTitle>
+        <CardTitle className="text-base">Templates de Confirmação de Reserva</CardTitle>
         <CardDescription>
           Mensagens enviadas automaticamente quando uma reserva é criada.
-          Variáveis disponíveis: <code className="bg-muted px-1 rounded text-xs">{"{nome}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{quadra}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{data}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{horario_inicio}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{horario_fim}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{telefone}"}</code>{" "}
-          <code className="bg-muted px-1 rounded text-xs">{"{valor}"}</code>
+          Variáveis disponíveis: {BOOKING_TEMPLATE_VARS}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-2">
+          <Label>Mensagem para o cliente</Label>
+          <Textarea
+            value={clientTpl}
+            onChange={(e) => setClientTpl(e.target.value)}
+            rows={6}
+            className="font-mono text-sm"
+          />
+        </div>
+        <Separator />
+        <div className="space-y-2">
+          <Label>Notificação para o grupo de admins</Label>
+          <Textarea
+            value={groupTpl}
+            onChange={(e) => setGroupTpl(e.target.value)}
+            rows={6}
+            className="font-mono text-sm"
+          />
+        </div>
+        <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending}>
+          {saveMutation.isPending ? "Salvando..." : "Salvar templates"}
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CancellationTemplatesSection() {
+  const qc = useQueryClient();
+
+  const { data: cfg } = useQuery({
+    queryKey: ["system-config-cancellation-templates"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("system_config")
+        .select("key, value")
+        .in("key", ["booking_cancellation_template", "booking_cancellation_group_template"]);
+      return Object.fromEntries((data || []).map((r: any) => [r.key, r.value]));
+    },
+    staleTime: 0,
+  });
+
+  const [clientTpl, setClientTpl] = useState("");
+  const [groupTpl, setGroupTpl] = useState("");
+
+  useEffect(() => {
+    if (!cfg) return;
+    setClientTpl(cfg.booking_cancellation_template || CANCELLATION_CLIENT_DEFAULT);
+    setGroupTpl(cfg.booking_cancellation_group_template || CANCELLATION_GROUP_DEFAULT);
+  }, [cfg]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase.from("system_config").upsert([
+        { key: "booking_cancellation_template", value: clientTpl },
+        { key: "booking_cancellation_group_template", value: groupTpl },
+      ], { onConflict: "key" });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["system-config-cancellation-templates"] });
+      toast.success("Templates de cancelamento salvos!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Templates de Cancelamento de Reserva</CardTitle>
+        <CardDescription>
+          Mensagens enviadas automaticamente quando uma reserva é cancelada.
+          Variáveis disponíveis: {BOOKING_TEMPLATE_VARS}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -271,6 +359,9 @@ export default function WhatsAppTemplates() {
     <div className="space-y-6">
       {/* System booking templates */}
       <BookingTemplatesSection />
+
+      {/* System cancellation templates */}
+      <CancellationTemplatesSection />
 
       <Separator />
 
