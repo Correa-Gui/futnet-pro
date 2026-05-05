@@ -204,6 +204,16 @@ export default function BookingsTable() {
         .update({ status })
         .eq("id", id);
       if (error) throw error;
+
+      if (status === "cancelled") {
+        try {
+          await supabase.functions.invoke("notify-booking-cancelled", {
+            body: { booking_id: id },
+          });
+        } catch (waErr) {
+          console.error("Falha ao notificar cancelamento via WhatsApp", waErr);
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["bookings-table"] });
