@@ -132,8 +132,24 @@ export default function Bookings() {
   const { data: businessHours } = useBusinessHours();
 
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
-  const openHour = businessHours?.open_hour ?? 6;
-  const closeHour = businessHours?.close_hour ?? 22;
+  const openHour = (() => {
+    if (!businessHours) return 6;
+    if (businessHours.per_day && businessHours.open_days.length > 0) {
+      return Math.min(...businessHours.open_days.map(
+        (d) => businessHours.per_day![String(d)]?.open_hour ?? businessHours.open_hour
+      ));
+    }
+    return businessHours.open_hour;
+  })();
+  const closeHour = (() => {
+    if (!businessHours) return 22;
+    if (businessHours.per_day && businessHours.open_days.length > 0) {
+      return Math.max(...businessHours.open_days.map(
+        (d) => businessHours.per_day![String(d)]?.close_hour ?? businessHours.close_hour
+      ));
+    }
+    return businessHours.close_hour;
+  })();
   const HOURS = Array.from({ length: closeHour - openHour }, (_, i) => i + openHour);
   const totalHeight = HOURS.length * HOUR_HEIGHT;
 

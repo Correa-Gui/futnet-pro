@@ -141,7 +141,21 @@ export default function LandingPageEditor() {
         .eq("id", settings.id),
       supabase
         .from("system_config")
-        .upsert({ key: "business_hours", value: JSON.stringify(businessHours) }, { onConflict: "key" }),
+        .upsert({
+          key: "business_hours",
+          value: JSON.stringify({
+            ...businessHours,
+            per_day: Object.fromEntries(
+              businessHours.open_days.map((d) => [
+                String(d),
+                businessHours.per_day?.[String(d)] ?? {
+                  open_hour: businessHours.open_hour,
+                  close_hour: businessHours.close_hour,
+                },
+              ])
+            ),
+          }),
+        }, { onConflict: "key" }),
     ]);
     setSaving(false);
     if (settingsRes.error || hoursRes.error) {
@@ -457,59 +471,87 @@ export default function LandingPageEditor() {
                   <CardTitle className="text-lg flex items-center gap-2">
                     <Clock className="h-5 w-5" /> Horário de Funcionamento
                   </CardTitle>
-                  <CardDescription>Define os dias e horários exibidos nos agendamentos</CardDescription>
+                  <CardDescription>Configure o horário de abertura e fechamento para cada dia da semana</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>Dias abertos</Label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                      {DAY_NAMES.map((day) => (
-                        <label key={day.value} className="flex items-center gap-2 cursor-pointer">
+                <CardContent>
+                  <div className="space-y-1">
+                    <div className="grid grid-cols-[auto_1fr_1fr_1fr] gap-x-3 gap-y-2 items-center text-xs text-muted-foreground font-medium px-1 mb-2">
+                      <span />
+                      <span>Dia</span>
+                      <span>Abertura</span>
+                      <span>Fechamento</span>
+                    </div>
+                    {DAY_NAMES.map((day) => {
+                      const isOpen = businessHours.open_days.includes(day.value);
+                      const dayKey = String(day.value);
+                      const daySchedule = businessHours.per_day?.[dayKey];
+                      const openH = daySchedule?.open_hour ?? businessHours.open_hour;
+                      const closeH = daySchedule?.close_hour ?? businessHours.close_hour;
+
+                      return (
+                        <div
+                          key={day.value}
+                          className={`grid grid-cols-[auto_1fr_1fr_1fr] gap-x-3 items-center rounded-lg border px-3 py-2 transition-colors ${isOpen ? "" : "opacity-50"}`}
+                        >
                           <Checkbox
-                            checked={businessHours.open_days.includes(day.value)}
+                            checked={isOpen}
                             onCheckedChange={(checked) => {
-                              setBusinessHours((prev) => ({
-                                ...prev,
-                                open_days: checked
+                              setBusinessHours((prev) => {
+                                const newOpenDays = checked
                                   ? [...prev.open_days, day.value].sort()
-                                  : prev.open_days.filter((d) => d !== day.value),
-                              }));
+                                  : prev.open_days.filter((d) => d !== day.value);
+                                const newPerDay = { ...(prev.per_day ?? {}) };
+                                if (checked && !newPerDay[dayKey]) {
+                                  newPerDay[dayKey] = { open_hour: prev.open_hour, close_hour: prev.close_hour };
+                                }
+                                return { ...prev, open_days: newOpenDays, per_day: newPerDay };
+                              });
                             }}
                           />
-                          <span className="text-sm">{day.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Abertura</Label>
-                      <Select
-                        value={String(businessHours.open_hour)}
-                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, open_hour: parseInt(v) }))}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {HOUR_OPTIONS.map((h) => (
-                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Fechamento</Label>
-                      <Select
-                        value={String(businessHours.close_hour)}
-                        onValueChange={(v) => setBusinessHours((prev) => ({ ...prev, close_hour: parseInt(v) }))}
-                      >
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          {HOUR_OPTIONS.map((h) => (
-                            <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                          <span className="text-sm font-medium">{day.label}</span>
+                          <Select
+                            disabled={!isOpen}
+                            value={String(openH)}
+                            onValueChange={(v) => {
+                              setBusinessHours((prev) => ({
+                                ...prev,
+                                per_day: {
+                                  ...(prev.per_day ?? {}),
+                                  [dayKey]: { open_hour: parseInt(v), close_hour: closeH },
+                                },
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {HOUR_OPTIONS.map((h) => (
+                                <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Select
+                            disabled={!isOpen}
+                            value={String(closeH)}
+                            onValueChange={(v) => {
+                              setBusinessHours((prev) => ({
+                                ...prev,
+                                per_day: {
+                                  ...(prev.per_day ?? {}),
+                                  [dayKey]: { open_hour: openH, close_hour: parseInt(v) },
+                                },
+                              }));
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              {HOUR_OPTIONS.map((h) => (
+                                <SelectItem key={h} value={String(h)}>{String(h).padStart(2, "0")}:00</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      );
+                    })}
                   </div>
                 </CardContent>
               </Card>

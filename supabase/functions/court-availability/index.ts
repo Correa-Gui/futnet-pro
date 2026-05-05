@@ -3,6 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import {
   fetchBusinessHours,
   getDurationHours,
+  getHoursForDate,
   isBusinessDayOpen,
   isWithinBusinessHours,
   overlaps,
@@ -148,7 +149,8 @@ Deno.serve(async (req) => {
         })),
       ];
 
-      const allSlots = generateHourSlots(businessHours.start, businessHours.end);
+      const { start: dayStart, end: dayEnd } = getHoursForDate(targetDate, businessHours);
+      const allSlots = generateHourSlots(dayStart, dayEnd);
       const availableSlots = allSlots.filter(
         (slot) => !occupiedSlots.some((occupied) => overlaps(slot.start, slot.end, occupied.start, occupied.end)),
       );
@@ -215,7 +217,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      if (!isWithinBusinessHours(start_time, end_time, businessHours)) {
+      if (!isWithinBusinessHours(start_time, end_time, businessHours, date)) {
         return new Response(
           JSON.stringify({
             error: "Horario fora do funcionamento da arena.",

@@ -4,6 +4,7 @@ import {
   errorResponse,
   fetchBusinessHours,
   generateHourSlots,
+  getHoursForDate,
   isBusinessDayOpen,
   isFutureWindow,
   jsonResponse,
@@ -213,7 +214,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      const groupedPeriods = buildGroupedPeriods(courts, occupancy, targetDate, businessHours, now);
+      const groupedPeriods = buildGroupedPeriods(courts, occupancy, targetDate, getHoursForDate(targetDate, businessHours), now);
       const periodsToReturn = period
         ? { morning: [], afternoon: [], night: [], [period]: groupedPeriods[period as keyof typeof groupedPeriods] }
         : groupedPeriods;

@@ -41,6 +41,7 @@ export interface NormalizedBusinessHours {
   close_hour: number;
   start: string;
   end: string;
+  per_day?: Record<string, { open_hour: number; close_hour: number }>;
 }
 
 export function generateHourSlots(dayStart: string, dayEnd: string) {
@@ -153,12 +154,31 @@ export function isBusinessDayOpen(targetDate: string, businessHours: NormalizedB
   return businessHours.open_days.includes(weekday);
 }
 
+export function getHoursForDate(
+  date: string,
+  businessHours: NormalizedBusinessHours,
+): { start: string; end: string } {
+  if (businessHours.per_day) {
+    const dayOfWeek = new Date(`${date}T12:00:00-03:00`).getDay();
+    const entry = businessHours.per_day[String(dayOfWeek)];
+    if (entry) {
+      return {
+        start: `${String(entry.open_hour).padStart(2, "0")}:00`,
+        end: `${String(entry.close_hour).padStart(2, "0")}:00`,
+      };
+    }
+  }
+  return { start: businessHours.start, end: businessHours.end };
+}
+
 export function isWithinBusinessHours(
   startTime: string,
   endTime: string,
   businessHours: NormalizedBusinessHours,
+  date?: string,
 ) {
-  return startTime >= businessHours.start && startTime < businessHours.end;
+  const { start, end } = date ? getHoursForDate(date, businessHours) : businessHours;
+  return startTime >= start && startTime < end;
 }
 
 export function normalizeBusinessHours(rawValue: unknown): NormalizedBusinessHours {
@@ -194,12 +214,27 @@ export function normalizeBusinessHours(rawValue: unknown): NormalizedBusinessHou
   const safeOpenHour = Math.max(0, Math.min(23, openHour));
   const safeCloseHour = Math.max(safeOpenHour + 1, Math.min(24, closeHour));
 
+  const perDay: Record<string, { open_hour: number; close_hour: number }> | undefined =
+    candidate.per_day && typeof candidate.per_day === "object"
+      ? Object.fromEntries(
+          Object.entries(candidate.per_day as Record<string, unknown>)
+            .filter(([k]) => /^[0-6]$/.test(k))
+            .map(([k, v]) => {
+              const entry = v as Record<string, unknown>;
+              const oh = Math.max(0, Math.min(23, Number(entry.open_hour) || safeOpenHour));
+              const ch = Math.max(oh + 1, Math.min(24, Number(entry.close_hour) || safeCloseHour));
+              return [k, { open_hour: oh, close_hour: ch }];
+            }),
+        )
+      : undefined;
+
   return {
     open_days: openDays.length ? [...new Set(openDays)].sort((a, b) => a - b) : defaults.open_days,
     open_hour: safeOpenHour,
     close_hour: safeCloseHour,
     start: `${String(safeOpenHour).padStart(2, "0")}:00`,
     end: `${String(safeCloseHour).padStart(2, "0")}:00`,
+    ...(perDay && Object.keys(perDay).length > 0 ? { per_day: perDay } : {}),
   };
 }
 

@@ -1,13 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
+export interface DaySchedule {
+  open_hour: number;
+  close_hour: number;
+}
+
 export interface BusinessHours {
   /** Days open: 0=Sun, 1=Mon ... 6=Sat */
   open_days: number[];
-  /** Opening hour (e.g. 6 for 06:00) */
+  /** Global fallback opening hour */
   open_hour: number;
-  /** Closing hour (e.g. 22 for 22:00) */
+  /** Global fallback closing hour */
   close_hour: number;
+  /** Per-day overrides keyed by weekday number (0-6) */
+  per_day?: Record<string, DaySchedule>;
+}
+
+/** Returns the schedule for a given weekday, falling back to global hours. */
+export function getHoursForDay(bh: BusinessHours, dayOfWeek: number): DaySchedule {
+  return bh.per_day?.[String(dayOfWeek)] ?? { open_hour: bh.open_hour, close_hour: bh.close_hour };
 }
 
 const DEFAULT_BUSINESS_HOURS: BusinessHours = {

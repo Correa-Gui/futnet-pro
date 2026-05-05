@@ -6,6 +6,7 @@ import {
   fetchBusinessHours,
   generateHourSlots,
   getDurationHours,
+  getHoursForDate,
   isBusinessDayOpen,
   isWithinBusinessHours,
   isFutureWindow,
@@ -117,7 +118,7 @@ Deno.serve(async (req) => {
     }
 
     const businessHours = await fetchBusinessHours(supabase);
-    if (!isBusinessDayOpen(targetDate, businessHours) || !isWithinBusinessHours(startTime, endTime, businessHours)) {
+    if (!isBusinessDayOpen(targetDate, businessHours) || !isWithinBusinessHours(startTime, endTime, businessHours, targetDate)) {
       return jsonResponse({
         date: targetDate,
         start_time: startTime,
@@ -139,7 +140,8 @@ Deno.serve(async (req) => {
     });
 
     const suggestions = new Map<string, { start: string; end: string }>();
-    const daySlots = generateHourSlots(businessHours.start, businessHours.end);
+    const { start: dayStart, end: dayEnd } = getHoursForDate(targetDate, businessHours);
+    const daySlots = generateHourSlots(dayStart, dayEnd);
 
     for (const court of activeCourts) {
       const occupied = occupancy[court.id] || [];

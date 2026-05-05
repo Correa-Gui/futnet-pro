@@ -4,6 +4,7 @@ import {
   errorResponse,
   fetchBusinessHours,
   generateHourSlots,
+  getHoursForDate,
   isBusinessDayOpen,
   isFutureWindow,
   jsonResponse,
@@ -93,7 +94,8 @@ Deno.serve(async (req) => {
     }
     const occupancy = await loadOccupancyMap(supabase, targetDate);
     const uniqueSlots = new Map<string, { start: string; end: string }>();
-    const daySlots = generateHourSlots(businessHours.start, businessHours.end);
+    const { start: dayStart, end: dayEnd } = getHoursForDate(targetDate, businessHours);
+    const daySlots = generateHourSlots(dayStart, dayEnd);
 
     for (const court of courts || []) {
       const occupied = occupancy[court.id] || [];
