@@ -56,6 +56,7 @@ export default function Reports() {
       const { data, error } = await supabase
         .from('invoices')
         .select('*')
+        .eq('status', 'paid')
         .gte('due_date', monthStartStr)
         .lte('due_date', monthEndStr)
         .order('due_date', { ascending: true });
@@ -89,6 +90,7 @@ export default function Reports() {
         .from('court_bookings')
         .select('*, courts(name)')
         .eq('booking_type', 'rental')
+        .eq('status', 'paid')
         .gte('date', monthStartStr)
         .lte('date', monthEndStr)
         .order('date', { ascending: true });
@@ -104,6 +106,7 @@ export default function Reports() {
         .from('court_bookings')
         .select('*, courts(name)')
         .eq('booking_type', 'day_use')
+        .eq('status', 'paid')
         .gte('date', monthStartStr)
         .lte('date', monthEndStr)
         .order('date', { ascending: true });
