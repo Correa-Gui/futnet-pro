@@ -33,6 +33,7 @@ export const ADMIN_MENU_GROUPS: AdminMenuGroup[] = [
       { key: 'presenca',               title: 'Presença' },
       { key: 'faturas',                title: 'Faturas' },
       { key: 'pagamentos-professores', title: 'Pag. Professores' },
+      { key: 'relatorios',             title: 'Relatórios' },
     ],
   },
   {

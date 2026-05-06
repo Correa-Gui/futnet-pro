@@ -3,7 +3,7 @@ import {
   LayoutDashboard, MapPin, Users, GraduationCap, UserCheck,
   Receipt, CalendarDays, Settings, CreditCard, LogOut, ClipboardCheck,
   BarChart3, CalendarCheck, MessageCircle, Search, Bell, Monitor, BookOpen,
-  ShieldCheck, UserCog,
+  ShieldCheck, UserCog, FileText,
   Bot,
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
@@ -39,6 +39,7 @@ const iconMap: Record<string, React.ElementType> = {
   presenca:               ClipboardCheck,
   faturas:                Receipt,
   'pagamentos-professores': Receipt,
+  relatorios:             FileText,
   'landing-page':         Settings,
   'chatbot-intents':      Bot,
   whatsapp:               MessageCircle,
@@ -62,6 +63,7 @@ const urlMap: Record<string, string> = {
   presenca:               '/admin/presenca',
   faturas:                '/admin/faturas',
   'pagamentos-professores': '/admin/pagamentos-professores',
+  relatorios:             '/admin/relatorios',
   'landing-page':         '/admin/landing-page',
   'chatbot-intents':      '/admin/chatbot-intents',
   whatsapp:               '/admin/whatsapp',

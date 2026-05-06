@@ -53,6 +53,7 @@ import AdminBookingUsers from "./pages/admin/BookingUsers";
 import AdminBlockedDates from "./pages/admin/BlockedDates";
 import AdminRoles from "./pages/admin/Roles";
 import AdminSystemUsers from "./pages/admin/SystemUsers";
+import AdminReports from "./pages/admin/Reports";
 import StudentInvoices from "./pages/student/Invoices";
 import CourtBooking from "./pages/CourtBooking";
 
@@ -119,6 +120,7 @@ const App = () => (
               <Route path="api-docs" element={<AdminApiDocs />} />
               <Route path="usuarios" element={<AdminBookingUsers />} />
               <Route path="dias-bloqueados" element={<AdminBlockedDates />} />
+              <Route path="relatorios" element={<AdminReports />} />
               <Route path="roles" element={<AdminRoles />} />
               <Route path="system-users" element={<AdminSystemUsers />} />
             </Route>
