@@ -259,10 +259,10 @@ export function CourtBookingSection() {
     const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
     for (const slot of TIME_SLOTS) {
-      // Block slots already past on today
+      // Block slots within 30 minutes from now (advance notice rule)
       if (isToday) {
         const [sh, sm] = slot.split(":").map(Number);
-        if (sh * 60 + sm <= nowMinutes) {
+        if (sh * 60 + sm < nowMinutes + 30) {
           blocked.add(slot);
           continue;
         }
