@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, addDays, isBefore, startOfDay } from "date-fns";
+import { format, addDays, isBefore, startOfDay, isToday as dateFnsIsToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Calendar } from "@/components/ui/calendar";
 import { Button } from "@/components/ui/button";
@@ -129,8 +129,18 @@ export default function CourtBooking() {
       const start = s.classes?.start_time?.slice(0, 5);
       if (start) blocked.add(start);
     });
+    if (selectedDate && dateFnsIsToday(selectedDate)) {
+      const now = new Date();
+      const cutoff = now.getTime() + 30 * 60 * 1000;
+      TIME_SLOTS.forEach((slot) => {
+        const [h] = slot.split(":").map(Number);
+        const slotTime = new Date(now);
+        slotTime.setHours(h, 0, 0, 0);
+        if (slotTime.getTime() < cutoff) blocked.add(slot);
+      });
+    }
     return blocked;
-  }, [existingBookings, classSessions]);
+  }, [existingBookings, classSessions, selectedDate, TIME_SLOTS]);
 
   const createBooking = useMutation({
     mutationFn: async () => {

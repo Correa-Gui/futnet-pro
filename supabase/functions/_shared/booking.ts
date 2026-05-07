@@ -149,6 +149,11 @@ export function isFutureWindow(date: string, endTime: string, now = new Date()) 
   return new Date(toSaoPauloIso(date, endTime)).getTime() > now.getTime();
 }
 
+export function isSlotBookable(date: string, startTime: string, now = new Date(), advanceMinutes = 30) {
+  const slotStart = new Date(toSaoPauloIso(date, startTime)).getTime();
+  return slotStart - now.getTime() >= advanceMinutes * 60 * 1000;
+}
+
 export function isBusinessDayOpen(targetDate: string, businessHours: NormalizedBusinessHours) {
   const weekday = new Date(`${targetDate}T12:00:00-03:00`).getDay();
   return businessHours.open_days.includes(weekday);

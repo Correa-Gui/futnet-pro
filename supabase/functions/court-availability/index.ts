@@ -5,6 +5,7 @@ import {
   getDurationHours,
   getHoursForDate,
   isBusinessDayOpen,
+  isSlotBookable,
   isWithinBusinessHours,
   overlaps,
   phoneLookupKey,
@@ -152,7 +153,9 @@ Deno.serve(async (req) => {
       const { start: dayStart, end: dayEnd } = getHoursForDate(targetDate, businessHours);
       const allSlots = generateHourSlots(dayStart, dayEnd);
       const availableSlots = allSlots.filter(
-        (slot) => !occupiedSlots.some((occupied) => overlaps(slot.start, slot.end, occupied.start, occupied.end)),
+        (slot) =>
+          !occupiedSlots.some((occupied) => overlaps(slot.start, slot.end, occupied.start, occupied.end)) &&
+          isSlotBookable(targetDate, slot.start),
       );
 
       return new Response(
@@ -197,6 +200,13 @@ Deno.serve(async (req) => {
       if (start_time >= end_time) {
         return new Response(
           JSON.stringify({ error: "start_time deve ser anterior a end_time" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (!isSlotBookable(date, start_time)) {
+        return new Response(
+          JSON.stringify({ error: "Este horário não está mais disponível para agendamento. É necessário ao menos 30 minutos de antecedência." }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
