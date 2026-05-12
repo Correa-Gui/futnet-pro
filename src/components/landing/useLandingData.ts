@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useTenant } from "@/core/tenant";
 import type { LandingSettings, SectionConfig, BusinessHoursData } from "./types";
 
 const DEFAULT_SETTINGS: LandingSettings = {
@@ -18,6 +19,7 @@ export interface GalleryImage {
 }
 
 export function useLandingData() {
+  const { tenant } = useTenant();
   const [settings, setSettings] = useState<LandingSettings>(DEFAULT_SETTINGS);
   const [sections, setSections] = useState<Record<string, SectionConfig>>({});
   const [businessHours, setBusinessHours] = useState<BusinessHoursData | null>(null);
@@ -86,6 +88,12 @@ export function useLandingData() {
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [fetchData]);
+
+  useEffect(() => {
+    if (tenant?.config.companyName) {
+      setCompanyName(tenant.config.companyName);
+    }
+  }, [tenant?.config.companyName]);
 
   const isVisible = useCallback((key: string) => {
     return sections[key]?.is_visible !== false;

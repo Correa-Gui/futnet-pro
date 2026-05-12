@@ -13,6 +13,7 @@ import { Send, Users, User, Loader2, Info } from "lucide-react";
 import { toast } from "sonner";
 import { formatDaysOfWeek } from "@/lib/whatsapp";
 import { useWhatsAppProviderConfig } from "@/hooks/useWhatsAppProviderConfig";
+import { useTenant } from "@/core/tenant";
 
 interface StudentWithProfile {
   studentId: string;
@@ -39,6 +40,7 @@ const VAR_LABELS: Record<string, string> = {
 };
 
 export default function WhatsAppSend() {
+  const { tenant } = useTenant();
   const [mode, setMode] = useState<"class" | "individual">("class");
   const [selectedClassId, setSelectedClassId] = useState<string>("");
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
@@ -135,7 +137,7 @@ export default function WhatsAppSend() {
   });
 
   // Load app_url from system_config for automatic resolution
-  const { data: appUrl = "" } = useQuery({
+  const { data: legacyAppUrl = "" } = useQuery({
     queryKey: ["wa-app-url"],
     queryFn: async () => {
       const { data } = await supabase
@@ -146,6 +148,7 @@ export default function WhatsAppSend() {
       return data?.value || "";
     },
   });
+  const appUrl = tenant?.config.appUrl || legacyAppUrl;
 
   // Pending/overdue invoices keyed by student_id — used for auto-filling financial vars
   const { data: invoiceMap = {} } = useQuery({

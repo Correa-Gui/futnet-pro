@@ -86,12 +86,38 @@ Deno.serve(async (req) => {
 
     if (profile?.phone) {
       try {
-        const { data: cfg } = await adminClient
-          .from("system_config")
-          .select("value")
-          .eq("key", "app_url")
-          .maybeSingle();
-        const appUrl = (cfg as any)?.value || supabaseUrl;
+        const [{ data: tenantMember }, { data: cfg }] = await Promise.all([
+          adminClient
+            .from("tenant_members")
+            .select("tenant_id")
+            .eq("user_id", user_id)
+            .limit(1)
+            .maybeSingle(),
+          adminClient
+            .from("system_config")
+            .select("value")
+            .eq("key", "app_url")
+            .maybeSingle(),
+        ]);
+        let appUrl = (cfg as any)?.value || supabaseUrl;
+
+        if (tenantMember?.tenant_id) {
+          const { data: tenantSettings } = await adminClient
+            .from("tenant_settings")
+            .select("config")
+            .eq("tenant_id", tenantMember.tenant_id)
+            .maybeSingle();
+          const tenantConfig =
+            tenantSettings?.config &&
+            typeof tenantSettings.config === "object" &&
+            !Array.isArray(tenantSettings.config)
+              ? tenantSettings.config
+              : {};
+
+          if (typeof tenantConfig.app_url === "string" && tenantConfig.app_url) {
+            appUrl = tenantConfig.app_url;
+          }
+        }
 
         const { data: tpl } = await adminClient
           .from("whatsapp_templates")

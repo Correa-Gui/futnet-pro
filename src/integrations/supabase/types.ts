@@ -10,33 +10,33 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
       admin_roles: {
         Row: {
-          id: string
-          name: string
-          description: string | null
           allowed_menus: string[]
           created_at: string
+          description: string | null
+          id: string
+          name: string
           updated_at: string
         }
         Insert: {
-          id?: string
-          name: string
-          description?: string | null
           allowed_menus?: string[]
           created_at?: string
+          description?: string | null
+          id?: string
+          name: string
           updated_at?: string
         }
         Update: {
-          id?: string
-          name?: string
-          description?: string | null
           allowed_menus?: string[]
           created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
@@ -79,6 +79,158 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      booking_users: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          normalized_phone: string
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          normalized_phone: string
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          normalized_phone?: string
+          phone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chatbot_intent_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          key: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key: string
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          key?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chatbot_intent_examples: {
+        Row: {
+          category_id: string
+          created_at: string
+          example_text: string
+          id: string
+          is_active: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          example_text: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          example_text?: string
+          id?: string
+          is_active?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chatbot_intent_examples_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "chatbot_intent_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chatbot_sessions: {
+        Row: {
+          current_menu: string
+          display_name: string | null
+          end_reason: string | null
+          ended_at: string | null
+          flow_data: string
+          is_active: boolean
+          is_student: boolean
+          last_interaction_at: string
+          phone: string
+          sender_id: string
+          session_id: string
+          started_at: string
+          state: string
+          user_loaded: boolean
+          user_name: string | null
+        }
+        Insert: {
+          current_menu?: string
+          display_name?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          flow_data?: string
+          is_active?: boolean
+          is_student?: boolean
+          last_interaction_at: string
+          phone: string
+          sender_id: string
+          session_id: string
+          started_at: string
+          state?: string
+          user_loaded?: boolean
+          user_name?: string | null
+        }
+        Update: {
+          current_menu?: string
+          display_name?: string | null
+          end_reason?: string | null
+          ended_at?: string | null
+          flow_data?: string
+          is_active?: boolean
+          is_student?: boolean
+          last_interaction_at?: string
+          phone?: string
+          sender_id?: string
+          session_id?: string
+          started_at?: string
+          state?: string
+          user_loaded?: boolean
+          user_name?: string | null
+        }
+        Relationships: []
       }
       class_sessions: {
         Row: {
@@ -236,6 +388,7 @@ export type Database = {
           location: string | null
           name: string
           photo_url: string | null
+          slot_offset_minutes: number
           surface_type: string | null
           updated_at: string
         }
@@ -246,6 +399,7 @@ export type Database = {
           location?: string | null
           name: string
           photo_url?: string | null
+          slot_offset_minutes?: number
           surface_type?: string | null
           updated_at?: string
         }
@@ -256,8 +410,45 @@ export type Database = {
           location?: string | null
           name?: string
           photo_url?: string | null
+          slot_offset_minutes?: number
           surface_type?: string | null
           updated_at?: string
+        }
+        Relationships: []
+      }
+      day_use_bookings: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          notes: string | null
+          people_count: number
+          price_per_person: number | null
+          requester_name: string
+          requester_phone: string
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          notes?: string | null
+          people_count?: number
+          price_per_person?: number | null
+          requester_name: string
+          requester_phone: string
+          status?: string
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          notes?: string | null
+          people_count?: number
+          price_per_person?: number | null
+          requester_name?: string
+          requester_phone?: string
+          status?: string
         }
         Relationships: []
       }
@@ -299,6 +490,80 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      faturas_saas: {
+        Row: {
+          asaas_id: string | null
+          created_at: string
+          id: string
+          link_boleto: string | null
+          status: string
+          tenant_id: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          asaas_id?: string | null
+          created_at?: string
+          id?: string
+          link_boleto?: string | null
+          status?: string
+          tenant_id: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          asaas_id?: string | null
+          created_at?: string
+          id?: string
+          link_boleto?: string | null
+          status?: string
+          tenant_id?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_saas_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      institutional_info: {
+        Row: {
+          category: string
+          content: Json
+          created_at: string
+          id: string
+          is_active: boolean
+          slug: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          content?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: Json
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          slug?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       invoices: {
         Row: {
@@ -550,7 +815,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "admin_roles"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       student_profiles: {
@@ -590,6 +855,38 @@ export type Database = {
             columns: ["plan_id"]
             isOneToOne: false
             referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscriptions: {
+        Row: {
+          active: boolean
+          created_at: string
+          expires_at: string | null
+          module: string
+          tenant_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          expires_at?: string | null
+          module: string
+          tenant_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          expires_at?: string | null
+          module?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
             referencedColumns: ["id"]
           },
         ]
@@ -669,6 +966,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          pix_key: string | null
           rate_per_class: number
           updated_at: string
           user_id: string
@@ -676,6 +974,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          pix_key?: string | null
           rate_per_class?: number
           updated_at?: string
           user_id: string
@@ -683,9 +982,95 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          pix_key?: string | null
           rate_per_class?: number
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      tenant_members: {
+        Row: {
+          created_at: string
+          role: string
+          tenant_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          role?: string
+          tenant_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          role?: string
+          tenant_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_members_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_settings: {
+        Row: {
+          config: Json
+          created_at: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_settings_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          plano: string
+          slug: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          plano?: string
+          slug: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          plano?: string
+          slug?: string
+          status?: string
         }
         Relationships: []
       }
@@ -697,6 +1082,7 @@ export type Database = {
           created_at: string
           email: string | null
           id: string
+          level: string | null
           name: string
           phone: string
           preferred_class_id: string | null
@@ -711,6 +1097,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          level?: string | null
           name: string
           phone: string
           preferred_class_id?: string | null
@@ -725,6 +1112,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           id?: string
+          level?: string | null
           name?: string
           phone?: string
           preferred_class_id?: string | null
@@ -868,6 +1256,8 @@ export type Database = {
           created_at: string
           id: string
           is_active: boolean
+          meta_template_language: string | null
+          meta_template_name: string | null
           name: string
           updated_at: string
           variables: string[] | null
@@ -878,6 +1268,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          meta_template_language?: string | null
+          meta_template_name?: string | null
           name: string
           updated_at?: string
           variables?: string[] | null
@@ -888,6 +1280,8 @@ export type Database = {
           created_at?: string
           id?: string
           is_active?: boolean
+          meta_template_language?: string | null
+          meta_template_name?: string | null
           name?: string
           updated_at?: string
           variables?: string[] | null
@@ -899,14 +1293,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      auto_generate_sessions: { Args: { days_ahead?: number }; Returns: number }
       create_invoice_for_student: {
         Args: {
           p_due_date: string
-          p_reference_month?: string | null
+          p_reference_month?: string
           p_student_id: string
         }
         Returns: string
       }
+      current_tenant_id: { Args: never; Returns: string }
       generate_automatic_invoices: {
         Args: { p_run_date?: string }
         Returns: number
@@ -926,10 +1322,8 @@ export type Database = {
         Args: { p_due_day: number; p_month: number; p_year: number }
         Returns: string
       }
-      select_student_plan: {
-        Args: { p_plan_id: string }
-        Returns: undefined
-      }
+      mark_password_changed: { Args: never; Returns: undefined }
+      select_student_plan: { Args: { p_plan_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "teacher" | "student"

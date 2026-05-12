@@ -1,0 +1,18 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Trigger Coolify staging deploy
+        run: |
+          curl --fail --show-error --silent \
+            -X POST "${{ secrets.COOLIFY_WEBHOOK_STAGING }}" \
+            -H "Authorization: Bearer ${{ secrets.COOLIFY_TOKEN_STAGING }}"

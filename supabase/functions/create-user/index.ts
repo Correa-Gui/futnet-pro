@@ -6,13 +6,42 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+async function resolveTenantId(adminClient: any, caller: any, requestedTenantId?: string) {
+  if (requestedTenantId) {
+    return requestedTenantId;
+  }
+
+  if (typeof caller?.app_metadata?.tenant_id === "string" && caller.app_metadata.tenant_id.trim()) {
+    return caller.app_metadata.tenant_id.trim();
+  }
+
+  const { data: membership } = await adminClient
+    .from("tenant_members")
+    .select("tenant_id")
+    .eq("user_id", caller.id)
+    .limit(1)
+    .maybeSingle();
+
+  if (membership?.tenant_id) {
+    return membership.tenant_id;
+  }
+
+  const { data: fallbackTenant } = await adminClient
+    .from("tenants")
+    .select("id")
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  return fallbackTenant?.id ?? null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    // Verify the calling user is admin
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -23,13 +52,13 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
 
-    // Verify caller is admin using their token
     const token = authHeader.replace(/^Bearer\s+/i, "");
-    const callerClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const callerClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    // Pass token explicitly — Deno has no localStorage so getUser() without args returns null
+
     const { data: { user: caller }, error: callerError } = await callerClient.auth.getUser(token);
     if (callerError || !caller) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -38,7 +67,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check admin role
     const adminClient = createClient(supabaseUrl, serviceRoleKey);
     const { data: roleData } = await adminClient
       .from("user_roles")
@@ -55,18 +83,28 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
     const {
-      full_name, phone, cpf, birth_date,
-      role, rate_per_class, pix_key, skill_level, plan_id, invoice_due_day,
-      class_ids, admin_role_id,
+      full_name,
+      phone,
+      cpf,
+      birth_date,
+      role,
+      rate_per_class,
+      pix_key,
+      skill_level,
+      plan_id,
+      invoice_due_day,
+      class_ids,
+      admin_role_id,
+      tenant_id: requestedTenantId,
     } = body;
 
-    // For students, email is optional — derive it from phone if not provided
     let email: string | undefined = body.email;
     if (!email && role === "student" && phone) {
       const digits = phone.replace(/\D/g, "");
       const normalized = digits.startsWith("55") && digits.length >= 12 ? digits : `55${digits}`;
       email = `${normalized}@aluno.futnet.app`;
     }
+
     const normalizedInvoiceDueDay =
       typeof invoice_due_day === "number"
         ? invoice_due_day
@@ -81,11 +119,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // For students, always generate a random 6-digit password so the admin never sets one manually.
-    // For admin/teacher, a password may be passed in; fall back to a random one.
-    const generatedPassword = Math.floor(100000 + Math.random() * 900000).toString();
-    const password: string = (role === "student") ? generatedPassword : (body.password || generatedPassword);
-
     if (!["admin", "teacher", "student"].includes(role)) {
       return new Response(JSON.stringify({ error: "Role deve ser 'admin', 'teacher' ou 'student'" }), {
         status: 400,
@@ -93,19 +126,33 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (normalizedInvoiceDueDay !== null && (!Number.isInteger(normalizedInvoiceDueDay) || normalizedInvoiceDueDay < 1 || normalizedInvoiceDueDay > 31)) {
+    if (
+      normalizedInvoiceDueDay !== null &&
+      (!Number.isInteger(normalizedInvoiceDueDay) || normalizedInvoiceDueDay < 1 || normalizedInvoiceDueDay > 31)
+    ) {
       return new Response(JSON.stringify({ error: "invoice_due_day deve estar entre 1 e 31" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Create auth user
+    const tenantId = await resolveTenantId(adminClient, caller, requestedTenantId);
+    if (!tenantId) {
+      return new Response(JSON.stringify({ error: "Nenhum tenant disponível para vincular o usuário" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const generatedPassword = Math.floor(100000 + Math.random() * 900000).toString();
+    const password: string = role === "student" ? generatedPassword : (body.password || generatedPassword);
+
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { full_name },
+      app_metadata: { tenant_id: tenantId },
     });
 
     if (authError) {
@@ -117,14 +164,29 @@ Deno.serve(async (req) => {
 
     const userId = authData.user.id;
 
-    // Update profile with extra fields
-    // Students must change password on first login
-    const profileUpdates: Record<string, any> = {
+    const { error: tenantMemberError } = await adminClient
+      .from("tenant_members")
+      .insert({
+        tenant_id: tenantId,
+        user_id: userId,
+        role,
+      });
+
+    if (tenantMemberError) {
+      await adminClient.auth.admin.deleteUser(userId);
+      return new Response(JSON.stringify({ error: tenantMemberError.message }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const profileUpdates: Record<string, unknown> = {
       ...(phone && { phone }),
       ...(cpf && { cpf }),
       ...(birth_date && { birth_date }),
       force_password_change: true,
     };
+
     if (Object.keys(profileUpdates).length > 0) {
       await adminClient
         .from("profiles")
@@ -132,14 +194,12 @@ Deno.serve(async (req) => {
         .eq("user_id", userId);
     }
 
-    // Update role (trigger already created student role, so update it)
     if (role === "admin") {
       await adminClient
         .from("user_roles")
         .update({ role: "admin" })
         .eq("user_id", userId);
 
-      // Set admin_role_id if provided
       if (admin_role_id) {
         await adminClient
           .from("profiles")
@@ -147,7 +207,6 @@ Deno.serve(async (req) => {
           .eq("user_id", userId);
       }
 
-      // Delete the auto-created student profile
       await adminClient
         .from("student_profiles")
         .delete()
@@ -158,7 +217,6 @@ Deno.serve(async (req) => {
         .update({ role: "teacher" })
         .eq("user_id", userId);
 
-      // Create teacher profile
       await adminClient
         .from("teacher_profiles")
         .insert({
@@ -167,13 +225,11 @@ Deno.serve(async (req) => {
           ...(pix_key && { pix_key }),
         });
 
-      // Delete the auto-created student profile
       await adminClient
         .from("student_profiles")
         .delete()
         .eq("user_id", userId);
-    } else if (role === "student") {
-      // Update student profile with skill_level, plan and billing preferences
+    } else {
       if (skill_level || plan_id || normalizedInvoiceDueDay !== null) {
         await adminClient
           .from("student_profiles")
@@ -185,7 +241,6 @@ Deno.serve(async (req) => {
           .eq("user_id", userId);
       }
 
-      // Get student profile id for enrollments and invoices
       const { data: sp } = await adminClient
         .from("student_profiles")
         .select("id")
@@ -193,7 +248,6 @@ Deno.serve(async (req) => {
         .single();
 
       if (sp) {
-        // Enroll in selected classes
         const classIdList: string[] = Array.isArray(class_ids) ? class_ids : [];
         if (classIdList.length > 0) {
           const enrollments = classIdList.map((class_id: string) => ({
@@ -201,13 +255,13 @@ Deno.serve(async (req) => {
             student_id: sp.id,
             status: "active",
           }));
+
           const { error: enrollError } = await adminClient.from("enrollments").insert(enrollments);
           if (enrollError) {
             console.error("Enrollment error:", enrollError);
           }
         }
 
-        // Auto-generate first invoice if student has a plan
         if (plan_id) {
           const now = new Date();
           const refMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -225,15 +279,28 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Send WhatsApp welcome message with temporary password if student has phone
     if (role === "student" && phone) {
       try {
-        const { data: cfgRows } = await adminClient
-          .from("system_config")
-          .select("key, value")
-          .in("key", ["app_url"]);
-        const cfgMap = Object.fromEntries((cfgRows || []).map((r: any) => [r.key, r.value || ""]));
-        const appUrl = cfgMap["app_url"] || supabaseUrl.replace("supabase.co", "vercel.app");
+        const [{ data: tenantSettings }, { data: cfgRows }] = await Promise.all([
+          adminClient
+            .from("tenant_settings")
+            .select("config")
+            .eq("tenant_id", tenantId)
+            .maybeSingle(),
+          adminClient
+            .from("system_config")
+            .select("key, value")
+            .in("key", ["app_url"]),
+        ]);
+        const cfgMap = Object.fromEntries((cfgRows || []).map((row: any) => [row.key, row.value || ""]));
+        const tenantConfig =
+          tenantSettings?.config && typeof tenantSettings.config === "object" && !Array.isArray(tenantSettings.config)
+            ? tenantSettings.config
+            : {};
+        const appUrl =
+          (typeof tenantConfig.app_url === "string" && tenantConfig.app_url) ||
+          cfgMap["app_url"] ||
+          supabaseUrl.replace("supabase.co", "vercel.app");
 
         const { data: tpl } = await adminClient
           .from("whatsapp_templates")
@@ -247,10 +314,10 @@ Deno.serve(async (req) => {
           ? tpl.body
               .replace(/\{\{nome\}\}/g, full_name)
               .replace(/\{\{telefone\}\}/g, phone)
-              .replace(/\{\{email\}\}/g, email!)
+              .replace(/\{\{email\}\}/g, email)
               .replace(/\{\{senha\}\}/g, generatedPassword)
               .replace(/\{\{app_url\}\}/g, appUrl)
-          : `Bem-vindo(a), ${full_name}!\n\n📱 Telefone: ${phone}\n🔑 Senha temporária: ${generatedPassword}\n👉 ${appUrl}\n\nNo primeiro acesso você será solicitado(a) a criar uma nova senha.`;
+          : `Bem-vindo(a), ${full_name}!\n\nTelefone: ${phone}\nSenha temporária: ${generatedPassword}\n${appUrl}\n\nNo primeiro acesso você será solicitado(a) a criar uma nova senha.`;
 
         await callerClient.functions.invoke("send-whatsapp", {
           body: {
@@ -258,12 +325,17 @@ Deno.serve(async (req) => {
             message_body: messageBody,
           },
         });
-      } catch (e) {
-        console.error("WhatsApp welcome error:", e);
+      } catch (error) {
+        console.error("WhatsApp welcome error:", error);
       }
     }
 
-    return new Response(JSON.stringify({ user_id: userId, email, generated_password: role === "student" ? generatedPassword : undefined }), {
+    return new Response(JSON.stringify({
+      user_id: userId,
+      email,
+      tenant_id: tenantId,
+      generated_password: role === "student" ? generatedPassword : undefined,
+    }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

@@ -1,0 +1,9 @@
+export { default as ChangePassword } from "@/pages/ChangePassword";
+export { default as CourtBooking } from "@/pages/CourtBooking";
+export { default as ForgotPassword } from "@/pages/ForgotPassword";
+export { default as Index } from "@/pages/Index";
+export { default as LandingPage } from "@/pages/LandingPage";
+export { default as Login } from "@/pages/Login";
+export { default as NotFound } from "@/pages/NotFound";
+export { default as Register } from "@/pages/Register";
+export { default as ResetPassword } from "@/pages/ResetPassword";
