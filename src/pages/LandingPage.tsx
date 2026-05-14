@@ -12,7 +12,6 @@ import {
   Play,
   Share2,
   ShowerHead,
-  Sun,
   Users,
   Waves,
   X,
@@ -21,7 +20,6 @@ import {
 import { cn } from "@/lib/utils";
 import { CourtBookingSection } from "@/components/landing/CourtBookingSection";
 import { TrialFormSection } from "@/components/landing/TrialFormSection";
-import { DayUseBookingSection } from "@/components/landing/DayUseBookingSection";
 import { useLandingData } from "@/components/landing/useLandingData";
 import {
   getWhatsAppLink,
@@ -121,7 +119,7 @@ function SectionTag({ children }: { children: React.ReactNode }) {
 // ─── PAGE ─────────────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
-  const { settings, loaded, getImage, businessHours, dayUsePrice, courtRentalPrice, companyName, galleryImages } = useLandingData();
+  const { settings, loaded, getImage, businessHours, courtRentalPrice, companyName, galleryImages } = useLandingData();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -131,7 +129,6 @@ export default function LandingPage() {
   const whatsappLink = getWhatsAppLink(settings.whatsapp_number, "Olá! Quero mais informações sobre a Estancia Beach.");
   const trialLink = "#aula-teste";
   const courtLink = "#reservar-quadra";
-  const dayUseLink = "#day-use";
 
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 48);
@@ -162,7 +159,6 @@ export default function LandingPage() {
     return isNaN(n) ? fallback : `A partir de R$ ${n.toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`;
   };
 
-  const dayUsePriceDisplay = formatPrice(dayUsePrice, "A partir de R$ 120");
   const courtRentalPriceDisplay = formatPrice(courtRentalPrice, "A partir de R$ 80");
 
   const services = [
@@ -185,26 +181,6 @@ export default function LandingPage() {
       href: courtLink,
       image: getImage("gallery", landingImages.servicesRentals),
       accent: "#F97316",
-    },
-    {
-      id: "dayuse",
-      tag: "Day Use",
-      icon: Sun,
-      headline: "Passe o dia inteiro na arena. Jogue, descanse, repita.",
-      description:
-        "Acesso ilimitado às quadras por um dia inteiro. Bar, vestiário premium e área de convivência incluídos. Ideal para grupos e confraternizações.",
-      perks: [
-        "Acesso ilimitado às quadras",
-        "Bar e área de lazer incluídos",
-        "Vestiário com chuveiro",
-        "Estacionamento gratuito",
-      ],
-      price: dayUsePriceDisplay,
-      unit: "/pessoa",
-      cta: "Reservar Day Use",
-      href: dayUseLink,
-      image: landingImages.galleryLifestyle,
-      accent: "#0EA5E9",
     },
     ...(hasClasses
       ? [
@@ -260,17 +236,6 @@ export default function LandingPage() {
         { n: "01", title: "Escolha a quadra", desc: "Veja as quadras disponíveis e selecione a que prefere." },
         { n: "02", title: "Defina data e horário", desc: "Calendário com disponibilidade em tempo real." },
         { n: "03", title: "Confirme seus dados", desc: "Nome e WhatsApp. Confirmação automática e imediata." },
-      ],
-    },
-    {
-      service: "Day Use",
-      accent: "#0EA5E9",
-      href: dayUseLink,
-      cta: "Reservar Day Use",
-      flow: [
-        { n: "01", title: "Escolha a data", desc: "Selecione o dia em que quer vir." },
-        { n: "02", title: "Quantidade de pessoas", desc: "Informe quantas pessoas virão aproveitar." },
-        { n: "03", title: "Confirme e apareça", desc: "Preencha nome e WhatsApp. Reserva confirmada na hora." },
       ],
     },
     ...(hasClasses
@@ -385,7 +350,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-[#6B5740]">
-              Quadras, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra, venha no day use ou experimente uma aula grátis.
+              Quadras, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra ou experimente uma aula grátis.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -645,9 +610,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DAY USE ──────────────────────────────────────────────── */}
-      {hasRentals && <DayUseBookingSection dayUsePrice={dayUsePrice} />}
-
       {/* ── AULA EXPERIMENTAL ────────────────────────────────────── */}
       {hasClasses && <TrialFormSection settings={settings} />}
 
@@ -690,7 +652,7 @@ export default function LandingPage() {
             Pronto para entrar<br />na quadra?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-[#6B5740]">
-            Reserve agora, venha no day use ou agende sua aula grátis. Sem enrolação.
+            Reserve agora ou agende sua aula grátis. Sem enrolação.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {hasRentals && (
@@ -699,9 +661,6 @@ export default function LandingPage() {
                 <ArrowRight className="h-4 w-4" />
               </CTAPrimary>
             )}
-            <CTAGhost href={dayUseLink} className="text-sm">
-              Reservar Day Use
-            </CTAGhost>
             {hasClasses && (
               <CTAGhost href={trialLink} className="text-sm">
                 Aula grátis
@@ -745,7 +704,6 @@ export default function LandingPage() {
               {hasRentals && (
                 <a href={courtLink} className="text-sm text-[#6B5740] no-underline hover:text-[#1A1208]">Aluguel de quadra</a>
               )}
-              <a href={dayUseLink} className="text-sm text-[#6B5740] no-underline hover:text-[#1A1208]">Day Use</a>
               {hasClasses && (
                 <a href={trialLink} className="text-sm text-[#6B5740] no-underline hover:text-[#1A1208]">Aula experimental</a>
               )}
