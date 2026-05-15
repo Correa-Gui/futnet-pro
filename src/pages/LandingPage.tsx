@@ -12,6 +12,7 @@ import {
   Play,
   Share2,
   ShowerHead,
+  Sun,
   Users,
   Waves,
   X,
@@ -182,6 +183,27 @@ export default function LandingPage() {
       image: getImage("gallery", landingImages.servicesRentals),
       accent: "#F97316",
     },
+    {
+      id: "dayuse",
+      tag: "Day Use",
+      icon: Sun,
+      headline: "Passe o dia inteiro na arena. Jogue, descanse, repita.",
+      description:
+        "Acesso ilimitado às quadras por um dia inteiro. Bar, vestiário premium e área de convivência incluídos. Ideal para grupos e confraternizações.",
+      perks: [
+        "Acesso ilimitado às quadras",
+        "Bar e área de lazer incluídos",
+        "Vestiário com chuveiro",
+        "Estacionamento gratuito",
+      ],
+      price: "Em breve",
+      unit: "",
+      cta: "Em breve",
+      href: null,
+      image: landingImages.galleryLifestyle,
+      accent: "#0EA5E9",
+      comingSoon: true,
+    },
     ...(hasClasses
       ? [
           {
@@ -236,6 +258,18 @@ export default function LandingPage() {
         { n: "01", title: "Escolha a quadra", desc: "Veja as quadras disponíveis e selecione a que prefere." },
         { n: "02", title: "Defina data e horário", desc: "Calendário com disponibilidade em tempo real." },
         { n: "03", title: "Confirme seus dados", desc: "Nome e WhatsApp. Confirmação automática e imediata." },
+      ],
+    },
+    {
+      service: "Day Use",
+      accent: "#0EA5E9",
+      href: null,
+      cta: "Em breve",
+      comingSoon: true,
+      flow: [
+        { n: "01", title: "Escolha a data", desc: "Selecione o dia em que quer vir." },
+        { n: "02", title: "Quantidade de pessoas", desc: "Informe quantas pessoas virão aproveitar." },
+        { n: "03", title: "Confirme e apareça", desc: "Preencha nome e WhatsApp. Reserva confirmada na hora." },
       ],
     },
     ...(hasClasses
@@ -350,7 +384,7 @@ export default function LandingPage() {
             </h1>
 
             <p className="mt-6 max-w-lg text-base leading-relaxed text-[#6B5740]">
-              Quadras, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra ou experimente uma aula grátis.
+              Quadras, bar, vestiário completo e uma comunidade de atletas. Reserve sua quadra, venha no day use ou experimente uma aula grátis.
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
@@ -472,14 +506,20 @@ export default function LandingPage() {
                         <span className="ml-1 text-sm font-normal text-[#9B8770]">{sv.unit}</span>
                       </p>
                     </div>
-                    <CTAPrimary
-                      href={sv.href}
-                      className="shrink-0"
-                      style={{ backgroundColor: sv.accent !== "#F97316" ? sv.accent : undefined } as React.CSSProperties}
-                    >
-                      {sv.cta}
-                      <ArrowRight className="h-4 w-4" />
-                    </CTAPrimary>
+                    {(sv as any).comingSoon ? (
+                      <span className="inline-flex shrink-0 items-center gap-2 rounded-xl px-5 py-3.5 text-sm font-bold cursor-default opacity-60" style={{ backgroundColor: `${sv.accent}18`, color: sv.accent }}>
+                        {sv.cta}
+                      </span>
+                    ) : (
+                      <CTAPrimary
+                        href={sv.href!}
+                        className="shrink-0"
+                        style={{ backgroundColor: sv.accent !== "#F97316" ? sv.accent : undefined } as React.CSSProperties}
+                      >
+                        {sv.cta}
+                        <ArrowRight className="h-4 w-4" />
+                      </CTAPrimary>
+                    )}
                   </div>
                 </div>
               </article>
@@ -592,21 +632,43 @@ export default function LandingPage() {
                   ))}
                 </div>
 
-                <a
-                  href={s.href}
-                  className="mt-2 inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold no-underline transition-all hover:opacity-80"
-                  style={{
-                    borderColor: `${s.accent}30`,
-                    backgroundColor: `${s.accent}8`,
-                    color: s.accent,
-                  }}
-                >
-                  {s.cta}
-                  <ArrowRight className="h-4 w-4" />
-                </a>
+                {(s as any).comingSoon ? (
+                  <span
+                    className="mt-2 inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold cursor-default opacity-60"
+                    style={{ borderColor: `${s.accent}30`, backgroundColor: `${s.accent}8`, color: s.accent }}
+                  >
+                    {s.cta}
+                  </span>
+                ) : (
+                  <a
+                    href={s.href!}
+                    className="mt-2 inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-bold no-underline transition-all hover:opacity-80"
+                    style={{ borderColor: `${s.accent}30`, backgroundColor: `${s.accent}8`, color: s.accent }}
+                  >
+                    {s.cta}
+                    <ArrowRight className="h-4 w-4" />
+                  </a>
+                )}
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── DAY USE — EM BREVE ───────────────────────────────────── */}
+      <section id="day-use" className="border-y border-[#E8DECE] bg-[#EEF8FD] py-16 sm:py-20">
+        <div className="mx-auto max-w-7xl px-6 text-center">
+          <span className="inline-flex items-center gap-2 rounded-full border border-[#0EA5E9]/30 bg-[#0EA5E9]/10 px-4 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-[#0369A1]">
+            <Sun className="h-3.5 w-3.5" />
+            Em breve
+          </span>
+          <h2 className="font-landing-headline mt-4 text-3xl font-extrabold uppercase tracking-tight text-[#1A1208] sm:text-4xl">
+            Day Use na arena.
+          </h2>
+          <p className="mx-auto mt-4 max-w-lg text-sm leading-relaxed text-[#6B5740]">
+            Acesso ilimitado às quadras por um dia inteiro. Bar, vestiário premium e área de convivência incluídos. Ideal para grupos e confraternizações. Estamos preparando tudo — em breve você poderá reservar aqui.
+          </p>
+          <p className="mt-6 text-xs text-[#9B8770]">Agendamentos disponíveis em breve.</p>
         </div>
       </section>
 
@@ -652,7 +714,7 @@ export default function LandingPage() {
             Pronto para entrar<br />na quadra?
           </h2>
           <p className="mx-auto mt-3 max-w-md text-sm text-[#6B5740]">
-            Reserve agora ou agende sua aula grátis. Sem enrolação.
+            Reserve agora, venha no day use ou agende sua aula grátis. Sem enrolação.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             {hasRentals && (
@@ -704,6 +766,7 @@ export default function LandingPage() {
               {hasRentals && (
                 <a href={courtLink} className="text-sm text-[#6B5740] no-underline hover:text-[#1A1208]">Aluguel de quadra</a>
               )}
+              <span className="text-sm text-[#9B8770] cursor-default">Day Use <span className="text-xs">(em breve)</span></span>
               {hasClasses && (
                 <a href={trialLink} className="text-sm text-[#6B5740] no-underline hover:text-[#1A1208]">Aula experimental</a>
               )}
