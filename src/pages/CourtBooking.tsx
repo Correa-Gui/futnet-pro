@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { MapPin, Clock, ArrowLeft, CheckCircle, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
-import { useBusinessHours } from "@/hooks/useBusinessHours";
+import { getHoursForDay, useBusinessHours } from "@/hooks/useBusinessHours";
 
 const bookingSchema = z.object({
   requester_name: z.string().trim().min(2, "Nome deve ter pelo menos 2 caracteres").max(100),
@@ -24,12 +24,6 @@ const bookingSchema = z.object({
 export default function CourtBooking() {
   const { data: businessHours } = useBusinessHours();
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
-  const openHour = businessHours?.open_hour ?? 6;
-  const closeHour = businessHours?.close_hour ?? 22;
-  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
-    const h = i + openHour;
-    return `${String(h).padStart(2, "0")}:00`;
-  });
 
   const [step, setStep] = useState(1);
   const [selectedCourt, setSelectedCourt] = useState<string | null>(null);
@@ -37,6 +31,15 @@ export default function CourtBooking() {
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const selectedDayHours = businessHours && selectedDate
+    ? getHoursForDay(businessHours, selectedDate.getDay())
+    : null;
+  const openHour = selectedDayHours?.open_hour ?? businessHours?.open_hour ?? 6;
+  const closeHour = selectedDayHours?.close_hour ?? businessHours?.close_hour ?? 22;
+  const TIME_SLOTS = Array.from({ length: closeHour - openHour }, (_, i) => {
+    const h = i + openHour;
+    return `${String(h).padStart(2, "0")}:00`;
+  });
 
   const { data: blockedDatesConfig } = useQuery({
     queryKey: ["blocked-dates"],

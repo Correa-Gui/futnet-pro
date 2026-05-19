@@ -22,4 +22,5 @@ export interface BusinessHoursData {
   open_days: number[];
   open_hour: number;
   close_hour: number;
+  per_day?: Record<string, { open_hour: number; close_hour: number }>;
 }

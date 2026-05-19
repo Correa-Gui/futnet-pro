@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 import { toast } from "sonner";
-import { useBusinessHours } from "@/hooks/useBusinessHours";
+import { useBusinessHours, type BusinessHours } from "@/hooks/useBusinessHours";
 import { formatPhoneMask, cleanPhone } from "@/lib/whatsapp";
 import { Section, SectionLabel, SectionTitle } from "./Section";
 
@@ -58,6 +58,21 @@ function addMinutes(time: string, mins: number): string {
 
 function slotLabel(slot: string): string {
   return `${slot} – ${addMinutes(slot, 60)}`;
+}
+
+function getHoursForDate(businessHours: BusinessHours | undefined, date: Date | undefined) {
+  if (!businessHours || !date) {
+    return {
+      openHour: businessHours?.open_hour ?? 6,
+      closeHour: businessHours?.close_hour ?? 22,
+    };
+  }
+
+  const daySchedule = businessHours.per_day?.[String(date.getDay())];
+  return {
+    openHour: daySchedule?.open_hour ?? businessHours.open_hour,
+    closeHour: daySchedule?.close_hour ?? businessHours.close_hour,
+  };
 }
 
 function CourtCard({
@@ -124,8 +139,6 @@ function CourtCard({
 export function CourtBookingSection() {
   const { data: businessHours } = useBusinessHours();
   const openDays = businessHours?.open_days ?? [1, 2, 3, 4, 5, 6];
-  const openHour = businessHours?.open_hour ?? 6;
-  const closeHour = businessHours?.close_hour ?? 22;
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedCourt, setSelectedCourt] = useState<Court | null>(null);
@@ -133,6 +146,7 @@ export function CourtBookingSection() {
   const [selectedSlots, setSelectedSlots] = useState<string[]>([]);
   const [form, setForm] = useState({ requester_name: "", requester_phone: "" });
   const [submitted, setSubmitted] = useState(false);
+  const { openHour, closeHour } = getHoursForDate(businessHours, selectedDate);
 
   const TIME_SLOTS = useMemo(() => {
     const offset = selectedCourt?.slot_offset_minutes ?? 30;
