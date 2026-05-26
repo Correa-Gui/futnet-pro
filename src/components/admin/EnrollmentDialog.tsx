@@ -72,11 +72,10 @@ export default function EnrollmentDialog({ classId, className, open, onOpenChang
 
   const enrollMutation = useMutation({
     mutationFn: async (studentId: string) => {
-      const { error } = await supabase.from('enrollments').insert({
-        class_id: classId,
-        student_id: studentId,
-        status: 'active',
-      });
+      const { error } = await supabase.from('enrollments').upsert(
+        { class_id: classId, student_id: studentId, status: 'active' },
+        { onConflict: 'student_id,class_id' }
+      );
       if (error) throw error;
     },
     onSuccess: () => {
